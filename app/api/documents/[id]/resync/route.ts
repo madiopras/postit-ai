@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { documents } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { syncFaqToFaq, syncSopToVectors } from '@/lib/vector-sync';
+import { db } from '@/lib/db';
+import { documents, faqs, sops } from '@/lib/schema';
+import { syncFaqRecord, syncSopRecord } from '@/lib/vector-sync';
 import { requireAuth } from '@/lib/auth';
+import { isUuid } from '@/lib/api';
 
 /**
  * POST /api/documents/[id]/resync
- * Manually resync a document to vector store
+ *
+ * Re-embed the FAQ or SOP a document chunk came from.
+ *
+ * The previous version re-synced using the *chunk's* own title and content —
+ * so a chunk titled "Prosedur refund (Part 2/3)" was fed back in as if it were
+ * the whole document, re-chunking already-chunked text and baking the part
+ * suffix into the title. Every resync degraded the content further. Resolving
+ * back to the source row is the only correct input.
  */
 export async function POST(
   req: NextRequest,
@@ -18,8 +26,8 @@ export async function POST(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundDocument();
 
-    // Get document
     const doc = await db.query.documents.findFirst({
       where: eq(documents.id, id),
     });
@@ -31,49 +39,46 @@ export async function POST(
       );
     }
 
-    // Resync based on type
-    try {
-      if (!doc.sourceId) {
-        return NextResponse.json(
-          { success: false, error: { code: 'INVALID_DOCUMENT', message: 'Document has no source ID' } },
-          { status: 400 }
-        );
-      }
-
-      if (doc.type === 'faq') {
-        await syncFaqToFaq(doc.sourceId, doc.title || '', doc.content, 'published');
-      } else if (doc.type === 'sop') {
-        await syncSopToVectors(doc.sourceId, doc.title || '', doc.content, 'published');
-      }
-
-      // Update document status to published (synced state)
-      await db
-        .update(documents)
-        .set({ status: 'published', updatedAt: new Date() })
-        .where(eq(documents.id, id));
-
-      return NextResponse.json({
-        success: true,
-        message: 'Document resynced successfully',
-        data: { id: doc.id, status: 'published' },
-      });
-    } catch (syncError) {
-      console.error('[Document Resync] Error syncing document:', syncError);
-
-      // Update document status to error
-      await db
-        .update(documents)
-        .set({ status: 'error', updatedAt: new Date() })
-        .where(eq(documents.id, id));
-
+    if (!doc.sourceId) {
       return NextResponse.json(
         {
           success: false,
-          error: { code: 'SYNC_ERROR', message: 'Failed to resync document to vector store' },
+          error: { code: 'INVALID_DOCUMENT', message: 'Document has no source ID' },
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
+
+    let status: 'published' | 'error';
+
+    if (doc.type === 'faq') {
+      const faq = await db.query.faqs.findFirst({ where: eq(faqs.id, doc.sourceId) });
+      if (!faq) return sourceMissing('FAQ', id);
+      status = await syncFaqRecord(faq.id, faq.question, faq.answer);
+    } else {
+      const sop = await db.query.sops.findFirst({ where: eq(sops.id, doc.sourceId) });
+      if (!sop) return sourceMissing('SOP', id);
+      status = await syncSopRecord(sop.id, sop.title, sop.content);
+    }
+
+    if (status === 'error') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SYNC_ERROR',
+            message: 'Failed to resync document — check the AI configuration',
+          },
+        },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Document resynced successfully',
+      data: { sourceId: doc.sourceId, type: doc.type, status },
+    });
   } catch (error) {
     console.error('[Documents API] Resync error:', error);
     return NextResponse.json(
@@ -81,4 +86,32 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+/**
+ * The chunk outlived the row it was derived from. Clear it out rather than
+ * leaving an unrecoverable orphan in the vector store.
+ */
+async function sourceMissing(label: string, documentId: string) {
+  await db.delete(documents).where(eq(documents.id, documentId));
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: 'SOURCE_NOT_FOUND',
+        message: `Source ${label} no longer exists — the orphaned document was removed`,
+      },
+    },
+    { status: 404 }
+  );
+}
+
+/** A non-uuid id cannot match any row, so answer 404 rather than letting the
+ * Postgres uuid cast fail with a 500. */
+function notFoundDocument() {
+  return NextResponse.json(
+    { success: false, error: { code: 'DOCUMENT_NOT_FOUND', message: 'Document not found' } },
+    { status: 404 }
+  );
 }

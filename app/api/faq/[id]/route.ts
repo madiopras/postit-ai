@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { faqs, documents } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { syncFaqToFaq } from '@/lib/vector-sync';
+import { syncFaqRecord } from '@/lib/vector-sync';
 import { requireAuth } from '@/lib/auth';
+import { isUuid } from '@/lib/api';
 
 // Validation schema for update
 const updateFaqSchema = z.object({
@@ -27,6 +28,7 @@ export async function GET(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundFaq();
 
     const faq = await db.query.faqs.findFirst({
       where: eq(faqs.id, id),
@@ -65,6 +67,7 @@ export async function PUT(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundFaq();
     const body = await req.json();
     const validatedData = updateFaqSchema.parse(body);
 
@@ -80,39 +83,26 @@ export async function PUT(
       );
     }
 
-    const updatedFaq = await db.transaction(async (tx) => {
-      // Update FAQ
-      const [faq] = await tx
-        .update(faqs)
-        .set({
-          ...validatedData,
-          updatedAt: new Date(),
-        })
-        .where(eq(faqs.id, id))
-        .returning();
+    const [updatedFaq] = await db
+      .update(faqs)
+      .set({ ...validatedData, updatedAt: new Date() })
+      .where(eq(faqs.id, id))
+      .returning();
 
-      // Resync to vector store if question or answer changed
-      if (validatedData.question || validatedData.answer) {
-        try {
-          const question = validatedData.question || existingFaq.question;
-          const answer = validatedData.answer || existingFaq.answer;
-          await syncFaqToFaq(faq.id, question, answer, faq.status!);
-        } catch (syncError) {
-          console.error('[FAQ Sync] Error syncing updated FAQ:', syncError);
-          // Update FAQ status to error if sync fails
-          await tx
-            .update(faqs)
-            .set({ status: 'error' })
-            .where(eq(faqs.id, faq.id));
-        }
-      }
-
-      return faq;
-    });
+    // Re-embed only when the text actually changed, and only after the update
+    // has committed — see syncFaqRecord in lib/vector-sync.ts.
+    let status = updatedFaq.status;
+    if (validatedData.question !== undefined || validatedData.answer !== undefined) {
+      status = await syncFaqRecord(
+        updatedFaq.id,
+        updatedFaq.question,
+        updatedFaq.answer
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      data: updatedFaq,
+      data: { ...updatedFaq, status },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -150,6 +140,7 @@ export async function DELETE(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundFaq();
 
     // Check if FAQ exists
     const existingFaq = await db.query.faqs.findFirst({
@@ -164,10 +155,12 @@ export async function DELETE(
     }
 
     await db.transaction(async (tx) => {
-      // Delete from vector store first
-      await tx.delete(documents).where(eq(documents.sourceId, id));
+      // Filter on type as well: source ids come from different tables, so
+      // matching on source_id alone could delete another entity's vectors.
+      await tx
+        .delete(documents)
+        .where(and(eq(documents.type, 'faq'), eq(documents.sourceId, id)));
 
-      // Then delete FAQ
       await tx.delete(faqs).where(eq(faqs.id, id));
     });
 
@@ -184,51 +177,15 @@ export async function DELETE(
   }
 }
 
-/**
- * POST /api/faq/[id]/sync
- * Manual sync single FAQ to vector store
- */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const auth = await requireAuth(req);
-    if (!auth.ok) return auth.response;
+// Manual re-sync lives at POST /api/faq/[id]/sync — the path the dashboard
+// already calls. It used to be a POST on this route, which both read as
+// "create" and left the dashboard's Sync button hitting a 404.
 
-    const { id } = await params;
-
-    // Get FAQ data
-    const faq = await db.query.faqs.findFirst({
-      where: eq(faqs.id, id),
-    });
-
-    if (!faq) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FAQ_NOT_FOUND', message: 'FAQ not found' } },
-        { status: 404 }
-      );
-    }
-
-    // Sync to vector store
-    await syncFaqToFaq(faq.id, faq.question, faq.answer, faq.status!);
-
-    // Update FAQ status to published if sync was successful
-    await db
-      .update(faqs)
-      .set({ status: 'published', updatedAt: new Date() })
-      .where(eq(faqs.id, id));
-
-    return NextResponse.json({
-      success: true,
-      message: 'FAQ synced successfully',
-      data: { id: faq.id, status: 'published' },
-    });
-  } catch (error) {
-    console.error('[FAQ API] Sync error:', error);
-    return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to sync FAQ' } },
-      { status: 500 }
-    );
-  }
+/** A non-uuid id cannot match any row, so answer 404 rather than letting the
+ * Postgres uuid cast fail with a 500. */
+function notFoundFaq() {
+  return NextResponse.json(
+    { success: false, error: { code: 'FAQ_NOT_FOUND', message: 'FAQ not found' } },
+    { status: 404 }
+  );
 }

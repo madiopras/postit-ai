@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { chats, messages } from '@/lib/schema';
+import { isUuid } from '@/lib/api';
 
 export const runtime = 'nodejs';
 
@@ -26,6 +27,10 @@ export async function PATCH(
   try {
     const { messageId } = await params;
 
+    // Guard before querying: a non-uuid would fail the Postgres uuid cast and
+    // surface as a 500 rather than "no such message".
+    if (!isUuid(messageId)) return messageNotFound();
+
     const parsed = feedbackSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json(
@@ -48,23 +53,13 @@ export async function PATCH(
     });
 
     // Same 404 for "missing" and "not yours" so ids cannot be probed.
-    if (!message || message.role !== 'assistant') {
-      return NextResponse.json(
-        { success: false, error: { code: 'MESSAGE_NOT_FOUND', message: 'Message not found' } },
-        { status: 404 }
-      );
-    }
+    if (!message || message.role !== 'assistant') return messageNotFound();
 
     const chat = await db.query.chats.findFirst({
       where: eq(chats.id, message.chatId),
     });
 
-    if (!chat || chat.visitorId !== visitorId) {
-      return NextResponse.json(
-        { success: false, error: { code: 'MESSAGE_NOT_FOUND', message: 'Message not found' } },
-        { status: 404 }
-      );
-    }
+    if (!chat || chat.visitorId !== visitorId) return messageNotFound();
 
     await db.update(messages).set({ feedback }).where(eq(messages.id, messageId));
 
@@ -76,4 +71,11 @@ export async function PATCH(
       { status: 500 }
     );
   }
+}
+
+function messageNotFound() {
+  return NextResponse.json(
+    { success: false, error: { code: 'MESSAGE_NOT_FOUND', message: 'Message not found' } },
+    { status: 404 }
+  );
 }

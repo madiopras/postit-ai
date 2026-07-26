@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sops, documents } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { syncSopToVectors } from '@/lib/vector-sync';
+import { syncSopRecord } from '@/lib/vector-sync';
 import { requireAuth } from '@/lib/auth';
+import { isUuid } from '@/lib/api';
 
 // Validation schema for update
 const updateSopSchema = z.object({
@@ -27,6 +28,7 @@ export async function GET(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundSop();
 
     const sop = await db.query.sops.findFirst({
       where: eq(sops.id, id),
@@ -65,6 +67,7 @@ export async function PUT(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundSop();
     const body = await req.json();
     const validatedData = updateSopSchema.parse(body);
 
@@ -80,39 +83,22 @@ export async function PUT(
       );
     }
 
-    const updatedSop = await db.transaction(async (tx) => {
-      // Update SOP
-      const [sop] = await tx
-        .update(sops)
-        .set({
-          ...validatedData,
-          updatedAt: new Date(),
-        })
-        .where(eq(sops.id, id))
-        .returning();
+    const [updatedSop] = await db
+      .update(sops)
+      .set({ ...validatedData, updatedAt: new Date() })
+      .where(eq(sops.id, id))
+      .returning();
 
-      // Resync to vector store if content or title changed
-      if (validatedData.title || validatedData.content) {
-        try {
-          const title = validatedData.title || existingSop.title;
-          const content = validatedData.content || existingSop.content;
-          await syncSopToVectors(sop.id, title, content, sop.status!);
-        } catch (syncError) {
-          console.error('[SOP Sync] Error syncing updated SOP:', syncError);
-          // Update SOP status to error if sync fails
-          await tx
-            .update(sops)
-            .set({ status: 'error' })
-            .where(eq(sops.id, sop.id));
-        }
-      }
-
-      return sop;
-    });
+    // Re-chunk and re-embed only when the text changed, after the update has
+    // committed — see syncSopRecord in lib/vector-sync.ts.
+    let status = updatedSop.status;
+    if (validatedData.title !== undefined || validatedData.content !== undefined) {
+      status = await syncSopRecord(updatedSop.id, updatedSop.title, updatedSop.content);
+    }
 
     return NextResponse.json({
       success: true,
-      data: updatedSop,
+      data: { ...updatedSop, status },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -150,6 +136,7 @@ export async function DELETE(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
+    if (!isUuid(id)) return notFoundSop();
 
     // Check if SOP exists
     const existingSop = await db.query.sops.findFirst({
@@ -164,12 +151,12 @@ export async function DELETE(
     }
 
     await db.transaction(async (tx) => {
-      // Delete from vector store first
-      await tx.delete(documents).where(
-        eq(documents.sourceId, id)
-      );
+      // Filter on type as well: source ids come from different tables, so
+      // matching on source_id alone could delete another entity's vectors.
+      await tx
+        .delete(documents)
+        .where(and(eq(documents.type, 'sop'), eq(documents.sourceId, id)));
 
-      // Then delete SOP
       await tx.delete(sops).where(eq(sops.id, id));
     });
 
@@ -184,4 +171,13 @@ export async function DELETE(
       { status: 500 }
     );
   }
+}
+
+/** A non-uuid id cannot match any row, so answer 404 rather than letting the
+ * Postgres uuid cast fail with a 500. */
+function notFoundSop() {
+  return NextResponse.json(
+    { success: false, error: { code: 'SOP_NOT_FOUND', message: 'SOP not found' } },
+    { status: 404 }
+  );
 }

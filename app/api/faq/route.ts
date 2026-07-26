@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { faqs, documents } from '@/lib/schema';
+import { faqs } from '@/lib/schema';
 import { eq, like, and, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { syncFaqToFaq } from '@/lib/vector-sync';
+import { syncFaqRecord } from '@/lib/vector-sync';
 import { requireAuth } from '@/lib/auth';
 
-// Validation schemas
+// Validation schema (the update schema lives in app/api/faq/[id]/route.ts)
 const createFaqSchema = z.object({
   question: z.string().min(1, 'Question is required').max(500, 'Question too long'),
   answer: z.string().min(1, 'Answer is required').max(5000, 'Answer too long'),
   category: z.string().max(100).optional(),
-});
-
-const updateFaqSchema = z.object({
-  question: z.string().min(1, 'Question is required').max(500, 'Question too long').optional(),
-  answer: z.string().min(1, 'Answer is required').max(5000, 'Answer too long').optional(),
-  category: z.string().max(100).optional(),
-  status: z.enum(['draft', 'published', 'error']).optional(),
 });
 
 /**
@@ -103,34 +96,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = createFaqSchema.parse(body);
 
-    const newFaq = await db.transaction(async (tx) => {
-      // Insert FAQ
-      const [faq] = await tx
-        .insert(faqs)
-        .values({
-          ...validatedData,
-          status: 'published', // Default to published
-        })
-        .returning();
+    // Insert first and commit, then embed. Embedding is a network call and must
+    // not run inside a transaction — see syncFaqRecord in lib/vector-sync.ts.
+    const [faq] = await db
+      .insert(faqs)
+      .values({ ...validatedData, status: 'draft' })
+      .returning();
 
-      // Sync to vector store
-      try {
-        await syncFaqToFaq(faq.id, faq.question, faq.answer, faq.status!);
-      } catch (syncError) {
-        console.error('[FAQ Sync] Error syncing FAQ:', syncError);
-        // Update FAQ status to error if sync fails
-        await tx
-          .update(faqs)
-          .set({ status: 'error' })
-          .where(eq(faqs.id, faq.id));
-      }
-
-      return faq;
-    });
+    const status = await syncFaqRecord(faq.id, faq.question, faq.answer);
 
     return NextResponse.json({
       success: true,
-      data: newFaq,
+      data: { ...faq, status },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

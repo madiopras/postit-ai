@@ -3,21 +3,14 @@ import { db } from '@/lib/db';
 import { sops, documents } from '@/lib/schema';
 import { eq, like, and, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { syncSopToVectors } from '@/lib/vector-sync';
+import { syncSopRecord } from '@/lib/vector-sync';
 import { requireAuth } from '@/lib/auth';
 
-// Validation schemas
+// Validation schema (the update schema lives in app/api/sop/[id]/route.ts)
 const createSopSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   content: z.string().min(1, 'Content is required').max(50000, 'Content too long'),
   category: z.string().max(100).optional(),
-});
-
-const updateSopSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
-  content: z.string().min(1, 'Content is required').max(50000, 'Content too long').optional(),
-  category: z.string().max(100).optional(),
-  status: z.enum(['draft', 'published', 'error']).optional(),
 });
 
 /**
@@ -104,34 +97,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = createSopSchema.parse(body);
 
-    const newSop = await db.transaction(async (tx) => {
-      // Insert SOP
-      const [sop] = await tx
-        .insert(sops)
-        .values({
-          ...validatedData,
-          status: 'published', // Default to published
-        })
-        .returning();
+    // Commit the row first, then chunk and embed — see syncSopRecord.
+    const [sop] = await db
+      .insert(sops)
+      .values({ ...validatedData, status: 'draft' })
+      .returning();
 
-      // Sync to vector store
-      try {
-        await syncSopToVectors(sop.id, sop.title, sop.content, sop.status!);
-      } catch (syncError) {
-        console.error('[SOP Sync] Error syncing SOP:', syncError);
-        // Update SOP status to error if sync fails
-        await tx
-          .update(sops)
-          .set({ status: 'error' })
-          .where(eq(sops.id, sop.id));
-      }
-
-      return sop;
-    });
+    const status = await syncSopRecord(sop.id, sop.title, sop.content);
 
     return NextResponse.json({
       success: true,
-      data: newSop,
+      data: { ...sop, status },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { faqs } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { syncFaqToFaq } from '@/lib/vector-sync';
+import { syncFaqRecord } from '@/lib/vector-sync';
 import { requireAuth } from '@/lib/auth';
 
 // CSV import schema
@@ -81,37 +80,36 @@ export async function POST(req: NextRequest) {
       errors: [] as Array<{ row: number; question: string; error: string }>,
     };
 
-    // Insert FAQs with sync
+    // Insert each row, then embed it. Embedding is a network call, so it must
+    // stay out of any transaction — see syncFaqRecord in lib/vector-sync.ts.
     for (let i = 0; i < validatedData.data.length; i++) {
       const faqData = validatedData.data[i];
 
       try {
-        await db.transaction(async (tx) => {
-          // Insert FAQ
-          const [faq] = await tx
-            .insert(faqs)
-            .values({
-              question: faqData.question,
-              answer: faqData.answer,
-              category: faqData.category || null,
-              status: 'published',
-            })
-            .returning();
+        const [faq] = await db
+          .insert(faqs)
+          .values({
+            question: faqData.question,
+            answer: faqData.answer,
+            category: faqData.category || null,
+            status: 'draft',
+          })
+          .returning();
 
-          // Sync to vector store
-          try {
-            await syncFaqToFaq(faq.id, faq.question, faq.answer, faq.status!);
-          } catch (syncError) {
-            console.error('[FAQ Sync] Error syncing FAQ:', syncError);
-            // Update FAQ status to error if sync fails
-            await tx
-              .update(faqs)
-              .set({ status: 'error' })
-              .where(eq(faqs.id, faq.id));
-          }
-        });
+        const status = await syncFaqRecord(faq.id, faq.question, faq.answer);
 
-        results.created++;
+        if (status === 'error') {
+          // The row exists but has no usable vector — report it rather than
+          // counting it as a clean import.
+          results.failed++;
+          results.errors.push({
+            row: i + 1,
+            question: faqData.question,
+            error: 'Imported but embedding failed — use Sync to retry',
+          });
+        } else {
+          results.created++;
+        }
       } catch (error) {
         results.failed++;
         results.errors.push({

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { documents } from '@/lib/schema';
+import { documents, faqs, sops } from '@/lib/schema';
 import { embed, embedBatch } from './embedding';
 import { processSopToChunks, processFaqToChunk } from './chunking';
 import { eq, and, isNotNull, sql } from 'drizzle-orm';
@@ -120,6 +120,65 @@ export async function syncSopToVectors(
   } catch (error) {
     console.error('[Vector Sync] SOP sync error:', error);
     throw error;
+  }
+}
+
+/**
+ * Embed a FAQ and record the outcome on the source row.
+ *
+ * Call this *after* the FAQ row is committed, never inside a transaction:
+ * syncing performs a network round-trip to the embedding API, and the previous
+ * code ran it inside `db.transaction()` while writing through the global `db`
+ * connection instead of `tx`. That held a transaction open across a slow HTTP
+ * call, and the document rows it wrote committed independently — so a rolled
+ * back FAQ could leave orphaned vectors behind.
+ *
+ * @returns the status the FAQ ended up in
+ */
+export async function syncFaqRecord(
+  faqId: string,
+  question: string,
+  answer: string
+): Promise<'published' | 'error'> {
+  try {
+    await syncFaqToFaq(faqId, question, answer, 'published');
+    await db
+      .update(faqs)
+      .set({ status: 'published', updatedAt: new Date() })
+      .where(eq(faqs.id, faqId));
+    return 'published';
+  } catch (error) {
+    console.error('[Vector Sync] FAQ record sync failed:', error);
+    await db
+      .update(faqs)
+      .set({ status: 'error', updatedAt: new Date() })
+      .where(eq(faqs.id, faqId));
+    return 'error';
+  }
+}
+
+/**
+ * Chunk, embed and record the outcome for a SOP. See `syncFaqRecord`.
+ */
+export async function syncSopRecord(
+  sopId: string,
+  title: string,
+  content: string
+): Promise<'published' | 'error'> {
+  try {
+    await syncSopToVectors(sopId, title, content, 'published');
+    await db
+      .update(sops)
+      .set({ status: 'published', updatedAt: new Date() })
+      .where(eq(sops.id, sopId));
+    return 'published';
+  } catch (error) {
+    console.error('[Vector Sync] SOP record sync failed:', error);
+    await db
+      .update(sops)
+      .set({ status: 'error', updatedAt: new Date() })
+      .where(eq(sops.id, sopId));
+    return 'error';
   }
 }
 

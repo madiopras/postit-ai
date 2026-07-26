@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq, asc } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { chats, messages } from '@/lib/schema';
+import { isUuid } from '@/lib/api';
 
 export const runtime = 'nodejs';
 
@@ -27,6 +28,10 @@ const missingVisitor = () =>
  * cannot be used to probe which conversation ids exist.
  */
 async function findOwnedChat(chatId: string, visitorId: string) {
+  // Guard before querying: every id column is `uuid`, and Postgres raises a
+  // parse error on anything else, which would surface as a 500.
+  if (!isUuid(chatId)) return null;
+
   const chat = await db.query.chats.findFirst({ where: eq(chats.id, chatId) });
   return chat && chat.visitorId === visitorId ? chat : null;
 }
