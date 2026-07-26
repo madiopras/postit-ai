@@ -1,40 +1,40 @@
 'use client';
 
 import { MoonIcon, SunIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 
 import { Button } from '@/components/ui/button';
+import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 /**
  * Light/dark switch.
  *
- * `resolvedTheme` is undefined during SSR and the first client render, and
- * next-themes fills it in itself — so the usual `mounted` flag (a setState
- * inside an effect, which React Compiler flags) is unnecessary. Until it
- * resolves, a same-sized blank keeps the header from shifting.
+ * Both icons are always rendered and CSS picks one off the `dark` class, so the
+ * server and client produce identical markup. Choosing the icon in JS caused a
+ * hydration mismatch: the inline theme script runs before React hydrates, so the
+ * client already knew the theme while the server had rendered a placeholder.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const { resolvedTheme, setTheme } = useTheme();
-
-  const resolved = resolvedTheme !== undefined;
-  const isDark = resolvedTheme === 'dark';
+  const toggle = () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+    } catch {
+      // Storage blocked (private mode) — the theme still applies for this page.
+    }
+  };
 
   return (
     <Button
       variant="ghost"
       size="icon"
       className={className}
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      aria-label={isDark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
-      title={isDark ? 'Mode terang' : 'Mode gelap'}
+      onClick={toggle}
+      // Static label: deriving it from the theme would reintroduce the mismatch.
+      aria-label="Ganti tema terang/gelap"
+      title="Ganti tema"
     >
-      {!resolved ? (
-        <span className="size-4" />
-      ) : isDark ? (
-        <SunIcon className="size-4" />
-      ) : (
-        <MoonIcon className="size-4" />
-      )}
+      <MoonIcon className="size-4 dark:hidden" />
+      <SunIcon className="size-4 hidden dark:block" />
     </Button>
   );
 }

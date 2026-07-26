@@ -4,7 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/theme-provider";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -31,26 +31,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning: next-themes stamps the `dark` class onto <html>
-    // before React hydrates, so server and client markup differ here by design.
+    // suppressHydrationWarning: the inline script below stamps the `dark` class
+    // onto <html> before React hydrates, so this element differs by design.
     <html
       lang="id"
       suppressHydrationWarning
       className={cn("h-full", "antialiased", inter.variable, lexend.variable, "font-sans", geist.variable)}
     >
-      {/* The Material Symbols webfont that used to be linked here is gone: every
-          icon is now a tree-shaken lucide-react component, so the app no longer
-          blocks on a CDN stylesheet or flashes unstyled ligature text. */}
+      <head>
+        {/* Server-rendered so it runs before first paint — no flash of the wrong
+            theme. A <script> here is fine; one rendered from a client component
+            is not, which is what React 19 was warning about. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster position="top-right" richColors />
-        </ThemeProvider>
+        <TooltipProvider>{children}</TooltipProvider>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
