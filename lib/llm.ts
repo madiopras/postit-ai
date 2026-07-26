@@ -116,7 +116,7 @@ export async function* streamChatCompletion(
             promptTokens = parsed.usage.prompt_tokens || 0;
             completionTokens = parsed.usage.completion_tokens || 0;
           }
-        } catch (e) {
+        } catch {
           // Skip invalid JSON lines
           console.warn('[LLM] Failed to parse stream data:', data);
         }

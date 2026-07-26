@@ -49,7 +49,7 @@ export default function SOPPage() {
       } else {
         throw new Error(result.error?.message || "Failed to fetch SOPs");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load SOPs");
     } finally {
       setLoading(false);
@@ -73,7 +73,7 @@ export default function SOPPage() {
 
       toast.success("SOP deleted successfully");
       fetchSOPs();
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete SOP");
     }
   };

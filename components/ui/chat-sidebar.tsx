@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+import { Bot, Plus, Trash2, X } from 'lucide-react';
 import { Button } from './button';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 /**
  * One conversation belonging to the current visitor.
@@ -41,22 +43,25 @@ export function ChatSidebar({
     `}
     >
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-outline-variant">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[20px]">smart_toy</span>
+              <Bot className="size-5 text-primary-foreground" />
             </div>
-            <h2 className="font-bold text-on-surface">PostIt AI</h2>
+            <h2 className="font-bold text-foreground">PostIt AI</h2>
           </div>
-          {onToggleSidebar && (
-            <button onClick={onToggleSidebar} className="text-on-surface-variant">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          )}
+          <div className="flex items-center">
+            <ThemeToggle />
+            {onToggleSidebar && (
+              <button onClick={onToggleSidebar} className="text-muted-foreground">
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
         </div>
         <Button onClick={onNewChat} className="w-full gap-2">
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <Plus className="size-[18px]" />
           Chat Baru
         </Button>
       </div>
@@ -64,12 +69,12 @@ export function ChatSidebar({
       {/* Session List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {sessions.length === 0 ? (
-          <div className="text-center py-8 text-on-surface-variant">
+          <div className="text-center py-8 text-muted-foreground">
             <p className="text-xs">Belum ada riwayat chat</p>
           </div>
         ) : (
           <>
-            <div className="text-xs font-semibold text-on-surface-variant mb-2 px-2">
+            <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">
               Riwayat Chat
             </div>
             {sessions.map((session) => (
@@ -80,8 +85,8 @@ export function ChatSidebar({
                   group flex items-start gap-2 p-3 rounded-lg cursor-pointer transition-colors
                   ${
                     activeChatId === session.id
-                      ? 'bg-secondary-container text-on-secondary-container'
-                      : 'text-on-surface hover:bg-surface-container-low'
+                      ? 'bg-secondary text-secondary-foreground'
+                      : 'text-foreground hover:bg-muted'
                   }
                 `}
               >
@@ -105,11 +110,11 @@ export function ChatSidebar({
                     e.stopPropagation();
                     onDeleteSession(session.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-error shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
                   title="Hapus percakapan"
                   aria-label={`Hapus percakapan ${session.title ?? ''}`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                  <Trash2 className="size-[18px]" />
                 </button>
               </div>
             ))}

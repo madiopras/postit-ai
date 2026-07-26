@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Bot, ChevronDown, ChevronUp, ThumbsDown, ThumbsUp, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from './button';
 import { Badge } from './badge';
 import { Card } from './card';
@@ -69,13 +72,13 @@ export function ChatMessage({
     <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Avatar */}
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-          isUser ? 'bg-primary text-on-primary' : 'bg-surface text-on-surface border border-outline-variant'
+        <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+          isUser ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground border border-border'
         }`}>
           {isUser ? (
-            <span className="material-symbols-outlined text-[18px]">person</span>
+            <User className="size-[18px]" />
           ) : (
-            <span className="material-symbols-outlined text-[18px]"> smart_toy </span>
+            <Bot className="size-[18px]" />
           )}
         </div>
 
@@ -84,12 +87,21 @@ export function ChatMessage({
           {/* Message bubble */}
           <Card className={`p-4 rounded-xl ${
             isUser 
-              ? 'bg-primary text-on-primary' 
-              : 'bg-surface text-on-surface border border-outline-variant'
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-card text-foreground border border-border'
           }`}>
-            <div className="whitespace-pre-wrap leading-relaxed">
-              {message.content}
-            </div>
+            {isUser ? (
+              // A question is literal text — rendering it as markdown would let
+              // stray asterisks or underscores silently reformat what was typed.
+              <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
+            ) : (
+              // The model replies in markdown. This used to be whitespace-pre-wrap
+              // too, so "**Forgot Password**" and bullet lists arrived on screen
+              // as raw syntax.
+              <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-headings:mt-3 prose-headings:mb-1 prose-pre:bg-muted prose-pre:text-foreground prose-code:before:content-none prose-code:after:content-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+              </div>
+            )}
           </Card>
 
           {/* Sources accordion */}
@@ -97,11 +109,9 @@ export function ChatMessage({
             <div className="w-full">
               <button
                 onClick={() => setShowSources(!showSources)}
-                className="text-label-sm text-primary hover:text-primary/70 flex items-center gap-1"
+                className="text-xs font-medium text-primary hover:text-primary/70 flex items-center gap-1"
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  {showSources ? 'expand_less' : 'expand_more'}
-                </span>
+                {showSources ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                 {showSources ? 'Hide sources' : `${message.sources.length} source${message.sources.length > 1 ? 's' : ''}`}
               </button>
 
@@ -110,10 +120,10 @@ export function ChatMessage({
                   {message.sources.map((source) => (
                     <div 
                       key={source.id} 
-                      className={`text-body-sm p-3 rounded-lg border ${
+                      className={`text-xs p-3 rounded-lg border ${
                         source.type === 'faq'
-                          ? 'bg-primary/10 border-primary/20 text-on-surface'
-                          : 'bg-secondary-container/50 border-secondary-container/30 text-on-surface-variant'
+                          ? 'bg-primary/10 border-primary/20 text-foreground'
+                          : 'bg-secondary/50 border-secondary/40 text-muted-foreground'
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -122,7 +132,7 @@ export function ChatMessage({
                         }>
                           {source.type.toUpperCase()}
                         </Badge>
-                        <span className="font-medium truncate max-w-[200px]">
+                        <span className="font-medium truncate max-w-50">
                           {source.title}
                         </span>
                         <span className="text-xs opacity-60 ml-auto">
@@ -145,26 +155,26 @@ export function ChatMessage({
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-6 w-6 hover:text-emerald-600 ${
-                  feedback === 'thumbs_up' ? 'text-emerald-600' : 'text-on-surface-variant'
+                className={`h-6 w-6 hover:text-success ${
+                  feedback === 'thumbs_up' ? 'text-success' : 'text-muted-foreground'
                 }`}
                 onClick={() => handleFeedback('thumbs_up')}
                 title="Jawaban membantu"
                 aria-pressed={feedback === 'thumbs_up'}
               >
-                <span className="material-symbols-outlined text-[16px]">thumb_up</span>
+                <ThumbsUp className="size-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-6 w-6 hover:text-red-600 ${
-                  feedback === 'thumbs_down' ? 'text-red-600' : 'text-on-surface-variant'
+                className={`h-6 w-6 hover:text-destructive ${
+                  feedback === 'thumbs_down' ? 'text-destructive' : 'text-muted-foreground'
                 }`}
                 onClick={() => handleFeedback('thumbs_down')}
                 title="Jawaban kurang tepat"
                 aria-pressed={feedback === 'thumbs_down'}
               >
-                <span className="material-symbols-outlined text-[16px]">thumb_down</span>
+                <ThumbsDown className="size-4" />
               </Button>
             </div>
           )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { ArrowUp } from 'lucide-react';
 
 /**
  * Props for ChatInput component
@@ -55,7 +56,7 @@ function AutoResizingTextarea({
           }
         }
       }}
-      className="w-full max-h-[200px] bg-transparent border-0 focus:ring-0 text-body-md text-on-surface placeholder:text-on-surface-variant resize-none p-0 leading-relaxed"
+      className="w-full max-h-[200px] bg-transparent border-0 focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground resize-none p-0 leading-relaxed"
     />
   );
 }
@@ -108,8 +109,8 @@ export function ChatInput({
     <div className={`
       flex items-end gap-2 p-2 rounded-xl transition-all duration-200
       ${isFocused 
-        ? 'bg-surface border border-primary ring-2 ring-primary/10' 
-        : 'bg-surface-container-low border border-outline-variant'}
+        ? 'bg-card border border-primary ring-2 ring-primary/10' 
+        : 'bg-muted border border-border'}
     `}>
       <textarea
         ref={textareaRef}
@@ -129,7 +130,7 @@ export function ChatInput({
             }
           }
         }}
-        className="w-full bg-transparent border-0 focus:ring-0 text-body-md text-on-surface placeholder:text-on-surface-variant resize-none p-0 leading-relaxed"
+        className="w-full bg-transparent border-0 focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground resize-none p-0 leading-relaxed"
       />
       <button
         onClick={onSend}
@@ -137,14 +138,12 @@ export function ChatInput({
         className={`
           flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
           ${!value.trim() || disabled
-            ? 'bg-surface-container text-on-surface-variant cursor-not-allowed'
-            : 'bg-primary text-on-primary hover:bg-primary-container active:scale-90'}
+            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+            : 'bg-primary text-primary-foreground hover:bg-primary active:scale-90'}
         `}
         aria-label="Kirim pesan"
       >
-        <span className="material-symbols-outlined text-[20px]">
-          arrow_upward
-        </span>
+        <ArrowUp className="size-5" />
       </button>
     </div>
   );

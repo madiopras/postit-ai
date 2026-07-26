@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -20,7 +20,6 @@ import {
   FileText, 
   Folder,
   Settings,
-  LogOut,
   Bot
 } from "lucide-react"
 
@@ -64,7 +63,6 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
-  const pathname = usePathname()
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })

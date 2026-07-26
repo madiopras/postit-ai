@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Brain, Eye, EyeOff, Save, Sparkles, Wifi } from 'lucide-react';
 
 interface ConfigData {
   embedding: {
@@ -97,7 +98,7 @@ export default function ConfigPage() {
       
       const json = await res.json();
       setEmbeddingTestResult(json);
-    } catch (err) {
+    } catch {
       setEmbeddingTestResult({ success: false, error: 'Failed to test connection' });
     } finally {
       setTestingEmbedding(false);
@@ -124,7 +125,7 @@ export default function ConfigPage() {
       
       const json = await res.json();
       setLlmTestResult(json);
-    } catch (err) {
+    } catch {
       setLlmTestResult({ success: false, error: 'Failed to test connection' });
     } finally {
       setTestingLlm(false);
@@ -183,7 +184,7 @@ export default function ConfigPage() {
 
   if (error) {
     return (
-      <div className="p-6 bg-error-container text-error rounded-xl">
+      <div className="p-6 bg-destructive/10 text-destructive rounded-xl">
         <h2 className="font-headline text-lg mb-2">Error Loading Configuration</h2>
         <p>{error}</p>
       </div>
@@ -194,10 +195,10 @@ export default function ConfigPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-headline text-2xl text-on-surface mb-2">
+        <h1 className="font-headline text-2xl text-foreground mb-2">
           AI Model Configuration
         </h1>
-        <p className="text-body-md text-on-surface-variant">
+        <p className="text-sm text-muted-foreground">
           Configure your AI model endpoints, API keys, and model preferences.
         </p>
       </div>
@@ -205,20 +206,20 @@ export default function ConfigPage() {
       {/* Config Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Embedding Configuration */}
-        <div className="bg-surface border border-outline-variant rounded-xl p-6">
+        <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-2xl text-primary">auto_awesome</span>
+              <Sparkles className="size-6 text-primary" />
               <div>
-                <h2 className="font-headline text-lg text-on-surface">Embedding Model</h2>
-                <p className="text-body-sm text-on-surface-variant">Text embedding configuration</p>
+                <h2 className="font-headline text-lg text-foreground">Embedding Model</h2>
+                <p className="text-xs text-muted-foreground">Text embedding configuration</p>
               </div>
             </div>
             {embeddingTestResult && (
               <span className={`text-xs px-2 py-1 rounded-full ${
                 embeddingTestResult.success 
-                  ? 'bg-emerald-100 text-emerald-700' 
-                  : 'bg-red-100 text-red-700'
+                  ? 'bg-success/10 text-success' 
+                  : 'bg-destructive/10 text-destructive'
               }`}>
                 {embeddingTestResult.success ? 'Connected' : 'Failed'}
               </span>
@@ -228,47 +229,45 @@ export default function ConfigPage() {
           <div className="space-y-4">
             {/* Base URL */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-label-sm text-on-surface-variant">Base URL</label>
+              <label className="text-xs font-medium text-muted-foreground">Base URL</label>
               <input
                 type="text"
                 value={embeddingBaseUrl}
                 onChange={(e) => setEmbeddingBaseUrl(e.target.value)}
                 placeholder={config?.fallback.embeddingBaseUrl || 'http://localhost:20128/v1'}
-                className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
 
             {/* Model Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-label-sm text-on-surface-variant">Model Name</label>
+              <label className="text-xs font-medium text-muted-foreground">Model Name</label>
               <input
                 type="text"
                 value={embeddingModel}
                 onChange={(e) => setEmbeddingModel(e.target.value)}
                 placeholder={config?.fallback.embeddingModel || 'text-embedding-ada-002'}
-                className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-label-sm text-on-surface-variant">API Key</label>
+              <label className="text-xs font-medium text-muted-foreground">API Key</label>
               <div className="relative">
                 <input
                   type={showEmbeddingKey ? 'text' : 'password'}
                   value={embeddingApiKey}
                   onChange={(e) => setEmbeddingApiKey(e.target.value)}
                   placeholder={config?.embedding.hasApiKey ? '••••••••••••' : 'sk-...'}
-                  className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
+                  className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowEmbeddingKey(!showEmbeddingKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {showEmbeddingKey ? 'visibility_off' : 'visibility'}
-                  </span>
+                  {showEmbeddingKey ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                 </button>
               </div>
             </div>
@@ -278,7 +277,7 @@ export default function ConfigPage() {
               <button
                 onClick={handleTestEmbedding}
                 disabled={testingEmbedding || !embeddingBaseUrl}
-                className="w-full bg-surface-container-low border border-outline-variant text-on-surface rounded-xl px-4 py-2.5 hover:bg-surface-container-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-muted border border-border text-foreground rounded-xl px-4 py-2.5 hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {testingEmbedding ? (
                   <>
@@ -287,14 +286,14 @@ export default function ConfigPage() {
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-[18px]">wifi_check</span>
+                    <Wifi className="size-[18px]" />
                     Test Connection
                   </>
                 )}
               </button>
               {embeddingTestResult && (
-                <p className={`text-body-sm mt-2 ${
-                  embeddingTestResult.success ? 'text-emerald-600' : 'text-red-600'
+                <p className={`text-xs mt-2 ${
+                  embeddingTestResult.success ? 'text-success' : 'text-destructive'
                 }`}>
                   {embeddingTestResult.success 
                     ? `✓ Connected (${embeddingTestResult.latency}ms)` 
@@ -306,20 +305,20 @@ export default function ConfigPage() {
         </div>
 
         {/* LLM Configuration */}
-        <div className="bg-surface border border-outline-variant rounded-xl p-6">
+        <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-2xl text-primary">psychology</span>
+              <Brain className="size-6 text-primary" />
               <div>
-                <h2 className="font-headline text-lg text-on-surface">LLM Model</h2>
-                <p className="text-body-sm text-on-surface-variant">Chat completion configuration</p>
+                <h2 className="font-headline text-lg text-foreground">LLM Model</h2>
+                <p className="text-xs text-muted-foreground">Chat completion configuration</p>
               </div>
             </div>
             {llmTestResult && (
               <span className={`text-xs px-2 py-1 rounded-full ${
                 llmTestResult.success 
-                  ? 'bg-emerald-100 text-emerald-700' 
-                  : 'bg-red-100 text-red-700'
+                  ? 'bg-success/10 text-success' 
+                  : 'bg-destructive/10 text-destructive'
               }`}>
                 {llmTestResult.success ? 'Connected' : 'Failed'}
               </span>
@@ -329,47 +328,45 @@ export default function ConfigPage() {
           <div className="space-y-4">
             {/* Base URL */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-label-sm text-on-surface-variant">Base URL</label>
+              <label className="text-xs font-medium text-muted-foreground">Base URL</label>
               <input
                 type="text"
                 value={llmBaseUrl}
                 onChange={(e) => setLlmBaseUrl(e.target.value)}
                 placeholder={config?.fallback.llmBaseUrl || 'http://localhost:20128/v1'}
-                className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
 
             {/* Model Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-label-sm text-on-surface-variant">Model Name</label>
+              <label className="text-xs font-medium text-muted-foreground">Model Name</label>
               <input
                 type="text"
                 value={llmModel}
                 onChange={(e) => setLlmModel(e.target.value)}
                 placeholder={config?.fallback.llmModel || 'gpt-4o-mini'}
-                className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-label-sm text-on-surface-variant">API Key</label>
+              <label className="text-xs font-medium text-muted-foreground">API Key</label>
               <div className="relative">
                 <input
                   type={showLlmKey ? 'text' : 'password'}
                   value={llmApiKey}
                   onChange={(e) => setLlmApiKey(e.target.value)}
                   placeholder={config?.llm.hasApiKey ? '••••••••••••' : 'sk-...'}
-                  className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
+                  className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowLlmKey(!showLlmKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {showLlmKey ? 'visibility_off' : 'visibility'}
-                  </span>
+                  {showLlmKey ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                 </button>
               </div>
             </div>
@@ -379,7 +376,7 @@ export default function ConfigPage() {
               <button
                 onClick={handleTestLlm}
                 disabled={testingLlm || !llmBaseUrl}
-                className="w-full bg-surface-container-low border border-outline-variant text-on-surface rounded-xl px-4 py-2.5 hover:bg-surface-container-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-muted border border-border text-foreground rounded-xl px-4 py-2.5 hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {testingLlm ? (
                   <>
@@ -388,14 +385,14 @@ export default function ConfigPage() {
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-[18px]">wifi_check</span>
+                    <Wifi className="size-[18px]" />
                     Test Connection
                   </>
                 )}
               </button>
               {llmTestResult && (
-                <p className={`text-body-sm mt-2 ${
-                  llmTestResult.success ? 'text-emerald-600' : 'text-red-600'
+                <p className={`text-xs mt-2 ${
+                  llmTestResult.success ? 'text-success' : 'text-destructive'
                 }`}>
                   {llmTestResult.success 
                     ? `✓ Connected (${llmTestResult.latency}ms)` 
@@ -408,11 +405,11 @@ export default function ConfigPage() {
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end pt-4 border-t border-outline-variant">
+      <div className="flex justify-end pt-4 border-t border-border">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-primary text-on-primary rounded-xl px-6 py-2.5 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="bg-primary text-primary-foreground rounded-xl px-6 py-2.5 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {saving ? (
             <>
@@ -421,7 +418,7 @@ export default function ConfigPage() {
             </>
           ) : (
             <>
-              <span className="material-symbols-outlined text-[18px]">save</span>
+              <Save className="size-[18px]" />
               Save Configuration
             </>
           )}

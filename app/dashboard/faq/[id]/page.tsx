@@ -161,7 +161,7 @@ export default function FaqFormPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-on-surface-variant" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -174,10 +174,10 @@ export default function FaqFormPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-headline-lg text-on-surface">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {isNew ? 'Buat FAQ' : 'Edit FAQ'}
           </h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {isNew
               ? 'Tambahkan pertanyaan baru ke knowledge base'
               : `Dibuat ${faq ? new Date(faq.createdAt).toLocaleDateString('id-ID') : ''}`}
@@ -196,7 +196,7 @@ export default function FaqFormPage() {
               <CardContent className="space-y-4">
                 {/* Question */}
                 <div>
-                  <label htmlFor="question" className="text-label-md text-on-surface">
+                  <label htmlFor="question" className="text-sm font-medium text-foreground">
                     Pertanyaan
                   </label>
                   <Input
@@ -206,8 +206,8 @@ export default function FaqFormPage() {
                     {...register('question')}
                   />
                   <div className="flex justify-between mt-1">
-                    <p className="text-label-sm text-error">{errors.question?.message}</p>
-                    <p className="text-label-sm text-on-surface-variant">
+                    <p className="text-xs font-medium text-destructive">{errors.question?.message}</p>
+                    <p className="text-xs font-medium text-muted-foreground">
                       {question?.length ?? 0}/500
                     </p>
                   </div>
@@ -215,7 +215,7 @@ export default function FaqFormPage() {
 
                 {/* Answer */}
                 <div>
-                  <label htmlFor="answer" className="text-label-md text-on-surface">
+                  <label htmlFor="answer" className="text-sm font-medium text-foreground">
                     Jawaban
                   </label>
                   <Textarea
@@ -226,8 +226,8 @@ export default function FaqFormPage() {
                     {...register('answer')}
                   />
                   <div className="flex justify-between mt-1">
-                    <p className="text-label-sm text-error">{errors.answer?.message}</p>
-                    <p className="text-label-sm text-on-surface-variant">
+                    <p className="text-xs font-medium text-destructive">{errors.answer?.message}</p>
+                    <p className="text-xs font-medium text-muted-foreground">
                       {answer?.length ?? 0}/5000
                     </p>
                   </div>
@@ -235,7 +235,7 @@ export default function FaqFormPage() {
 
                 {/* Category */}
                 <div>
-                  <label htmlFor="category" className="text-label-md text-on-surface">
+                  <label htmlFor="category" className="text-sm font-medium text-foreground">
                     Kategori
                   </label>
                   <Input
@@ -244,13 +244,13 @@ export default function FaqFormPage() {
                     aria-invalid={Boolean(errors.category)}
                     {...register('category')}
                   />
-                  <p className="text-label-sm text-error mt-1">{errors.category?.message}</p>
+                  <p className="text-xs font-medium text-destructive mt-1">{errors.category?.message}</p>
                 </div>
 
                 {/* Status — only meaningful when editing */}
                 {!isNew && (
                   <div>
-                    <label className="text-label-md text-on-surface">Status</label>
+                    <label className="text-sm font-medium text-foreground">Status</label>
                     <Select
                       value={status}
                       onValueChange={(value) =>
@@ -267,7 +267,7 @@ export default function FaqFormPage() {
                         <SelectItem value="draft">Draft</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-label-sm text-on-surface-variant mt-1">
+                    <p className="text-xs font-medium text-muted-foreground mt-1">
                       Hanya FAQ berstatus published yang dipakai menjawab di chat.
                     </p>
                   </div>
@@ -306,38 +306,38 @@ export default function FaqFormPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Status Saat Ini</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-body-sm">
+                <CardContent className="space-y-3 text-xs">
                   <div>
                     {faq.status === 'published' && (
-                      <Badge className="bg-tertiary-container text-on-tertiary-container">
+                      <Badge className="bg-primary/10 text-primary">
                         Published
                       </Badge>
                     )}
                     {faq.status === 'draft' && (
-                      <Badge className="bg-secondary-container text-on-secondary-container">
+                      <Badge className="bg-secondary text-secondary-foreground">
                         Draft
                       </Badge>
                     )}
                     {faq.status === 'error' && (
-                      <Badge className="bg-error-container text-on-error-container">
+                      <Badge className="bg-destructive/10 text-destructive">
                         Error
                       </Badge>
                     )}
                   </div>
                   {faq.status === 'error' && (
-                    <p className="text-label-sm text-error">
+                    <p className="text-xs font-medium text-destructive">
                       Embedding terakhir gagal. Menyimpan ulang akan mencobanya lagi.
                     </p>
                   )}
                   <div>
-                    <p className="text-on-surface-variant">Terakhir diubah</p>
-                    <p className="font-medium text-on-surface">
+                    <p className="text-muted-foreground">Terakhir diubah</p>
+                    <p className="font-medium text-foreground">
                       {new Date(faq.updatedAt).toLocaleString('id-ID')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-on-surface-variant">Dipakai menjawab</p>
-                    <p className="font-medium text-on-surface">{faq.usageCount}x</p>
+                    <p className="text-muted-foreground">Dipakai menjawab</p>
+                    <p className="font-medium text-foreground">{faq.usageCount}x</p>
                   </div>
                 </CardContent>
               </Card>
@@ -347,7 +347,7 @@ export default function FaqFormPage() {
               <CardHeader>
                 <CardTitle className="text-base">Cara Kerja</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-body-sm text-on-surface-variant">
+              <CardContent className="space-y-2 text-xs text-muted-foreground">
                 <p>
                   Menyimpan FAQ langsung membuat embedding dan memasukkannya ke vector store,
                   jadi jawabannya bisa langsung dipakai di chat.

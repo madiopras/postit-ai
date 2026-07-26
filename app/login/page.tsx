@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import { AlertCircle, Bot, Loader2, Lock, LogIn, User } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoginForm() {
@@ -46,24 +47,22 @@ function LoginForm() {
       <div className="w-full max-w-md">
         {/* Logo area */}
         <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 rounded-xl bg-primary-container flex items-center justify-center mb-4 shadow-sm">
-            <span className="material-symbols-outlined text-on-primary text-4xl">smart_toy</span>
+          <div className="mx-auto w-16 h-16 rounded-xl bg-primary flex items-center justify-center mb-4 shadow-sm">
+            <Bot className="size-10 text-primary-foreground" />
           </div>
-          <h1 className="text-headline-lg text-on-surface">SimpleAI</h1>
-          <p className="text-body-md text-on-surface-variant mt-2">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">SimpleAI</h1>
+          <p className="text-sm text-muted-foreground mt-2">Sign in to your account</p>
         </div>
 
         {/* Card */}
-        <div className="bg-surface-container rounded-xl shadow-sm border border-outline-variant p-8">
+        <div className="bg-muted rounded-xl shadow-sm border border-border p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="username" className="block text-label-md text-on-surface mb-2">
+              <label htmlFor="username" className="block text-sm font-medium text-foreground mb-2">
                 Username
               </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-on-surface-variant text-xl">
-                  person
-                </span>
+                <User className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
                   id="username"
                   type="text"
@@ -72,19 +71,17 @@ function LoginForm() {
                   placeholder="Enter your username"
                   required
                   autoFocus
-                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-body-md"
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-label-md text-on-surface mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
                 Password
               </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-on-surface-variant text-xl">
-                  lock
-                </span>
+                <Lock className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
                   id="password"
                   type="password"
@@ -92,14 +89,14 @@ function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-body-md"
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-error-container border border-error text-on-error-container text-body-md rounded-lg px-4 py-3 flex items-start gap-3">
-                <span className="material-symbols-outlined text-xl flex-shrink-0">error</span>
+              <div className="bg-destructive/10 border border-destructive text-destructive text-sm rounded-lg px-4 py-3 flex items-start gap-3">
+                <AlertCircle className="size-5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -107,16 +104,16 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-primary hover:bg-primary-container text-on-primary font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-label-md"
+              className="w-full py-3 px-4 bg-primary hover:bg-primary text-primary-foreground font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
             >
               {loading ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+                  <Loader2 className="size-5 animate-spin" />
                   Signing in...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-xl">login</span>
+                  <LogIn className="size-5" />
                   Sign In
                 </>
               )}
@@ -124,7 +121,7 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-label-sm text-on-surface-variant mt-6">
+        <p className="text-center text-xs font-medium text-muted-foreground mt-6">
           SimpleAI Dashboard — Authorized access only
         </p>
       </div>
@@ -137,8 +134,8 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-xl bg-primary-container flex items-center justify-center shadow-sm animate-pulse">
-            <span className="material-symbols-outlined text-on-primary text-4xl">smart_toy</span>
+          <div className="mx-auto w-16 h-16 rounded-xl bg-primary flex items-center justify-center shadow-sm animate-pulse">
+            <Bot className="size-10 text-primary-foreground" />
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Bot, Plus } from 'lucide-react';
 import { ChatMessage, type SourceCitation } from '@/components/ui/chat-message';
 import { ChatInput } from '@/components/ui/chat-input';
 import { ChatSidebar, type ChatSession } from '@/components/ui/chat-sidebar';
@@ -210,7 +211,7 @@ export default function Chat() {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar (Desktop) */}
-      <div className="w-64 hidden md:flex flex-col border-r border-outline-variant bg-surface">
+      <div className="w-64 hidden md:flex flex-col border-r border-border bg-card">
         <ChatSidebar
           sessions={sessions}
           activeChatId={chatId}
@@ -223,18 +224,18 @@ export default function Chat() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col relative">
         {/* Mobile Header */}
-        <header className="md:hidden h-16 border-b border-outline-variant bg-surface flex items-center justify-between px-4">
+        <header className="md:hidden h-16 border-b border-border bg-card flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-on-primary text-2xl">smart_toy</span>
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <Bot className="size-6 text-primary-foreground" />
             </div>
-            <span className="text-headline-sm text-on-surface">PostIt AI</span>
+            <span className="text-lg font-semibold text-foreground">PostIt AI</span>
           </div>
           <button
             onClick={handleNewChat}
-            className="p-2 rounded-lg hover:bg-surface-container-high transition-colors"
+            className="p-2 rounded-lg hover:bg-accent transition-colors"
           >
-            <span className="material-symbols-outlined text-on-surface text-2xl">add</span>
+            <Plus className="size-6 text-foreground" />
           </button>
         </header>
 
@@ -246,12 +247,12 @@ export default function Chat() {
           {/* Empty state */}
           {messages.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4">
-              <div className="w-20 h-20 bg-primary-container rounded-xl flex items-center justify-center shadow-sm">
-                <span className="material-symbols-outlined text-on-primary text-5xl">smart_toy</span>
+              <div className="w-20 h-20 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+                <Bot className="size-12 text-primary-foreground" />
               </div>
               <div className="text-center">
-                <h2 className="text-headline-md text-on-surface mb-2">Halo! Saya PostIt AI</h2>
-                <p className="text-body-md text-on-surface-variant max-w-md">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Halo! Saya PostIt AI</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
                   Saya bisa membantu Anda dengan pertanyaan seputar SOP dan FAQ perusahaan.
                   Silakan tanyakan apa saja!
                 </p>
@@ -259,13 +260,13 @@ export default function Chat() {
               <div className="flex flex-wrap justify-center gap-3 mt-2">
                 <button
                   onClick={() => setInput('Bagaimana cara reset password?')}
-                  className="bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-lg text-label-md hover:bg-secondary-fixed transition-colors"
+                  className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-secondary transition-colors"
                 >
                   Reset password
                 </button>
                 <button
                   onClick={() => setInput('Bagaimana prosedur refund?')}
-                  className="bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-lg text-label-md hover:bg-secondary-fixed transition-colors"
+                  className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-secondary transition-colors"
                 >
                   Prosedur refund
                 </button>
@@ -291,7 +292,7 @@ export default function Chat() {
           {/* Typing indicator */}
           {showTypingIndicator && (
             <div className="flex justify-start">
-              <div className="bg-surface-container border border-outline-variant rounded-xl p-4 flex items-center gap-2">
+              <div className="bg-muted border border-border rounded-xl p-4 flex items-center gap-2">
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
@@ -301,14 +302,14 @@ export default function Chat() {
 
           {/* Error banner */}
           {error && (
-            <div className="mx-auto max-w-md w-full rounded-lg border border-error/30 bg-error/10 px-4 py-3">
-              <p className="text-body-sm text-error">{error}</p>
+            <div className="mx-auto max-w-md w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+              <p className="text-xs text-destructive">{error}</p>
             </div>
           )}
         </main>
 
         {/* Input Area (sticky bottom) */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface via-surface to-transparent pt-8 pb-4">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-8 pb-4">
           <div className="px-4">
             <ChatInput
               value={input}
@@ -317,7 +318,7 @@ export default function Chat() {
               disabled={loading || !visitorId}
               placeholder="Tanya sesuatu..."
             />
-            <p className="text-label-sm text-on-surface-variant text-center mt-2 opacity-60">
+            <p className="text-xs font-medium text-muted-foreground text-center mt-2 opacity-60">
               PostIt AI dapat membuat kesalahan. Periksa informasi penting.
             </p>
           </div>

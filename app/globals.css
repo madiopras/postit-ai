@@ -5,90 +5,66 @@
 @custom-variant dark (&:is(.dark *));
 @plugin "@tailwindcss/typography";
 
+/*
+ * One token system.
+ *
+ * The app previously carried two: a Material 3 set defined here as literal hex
+ * (`--color-on-surface`, `--color-surface-container`, …) used by the chat,
+ * login, config and FAQ screens, and shadcn's set used by everything else. They
+ * could not both be right, and the M3 half was hardcoded light — it never
+ * changed under `.dark`, so dark mode was broken by construction.
+ *
+ * The surviving system is shadcn's, because all 29 primitives in components/ui
+ * are written against it; choosing M3 would have meant forking every one of
+ * them and re-forking on each `npx shadcn add`.
+ *
+ * The *values* below are the Material palette from docs/enhancement/go1/design.md,
+ * so the product still looks Material — the change is in the plumbing, not the
+ * appearance. Every foreground/background pair here was checked against WCAG AA
+ * (lowest is 6.15:1; body text 16.3:1 light, 17.0:1 dark).
+ */
 @theme inline {
-  --color-primary: #3525cd;
-  --color-primary-container: #4f46e5;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #dad7ff;
-  --color-primary-fixed: #e2dfff;
-  --color-primary-fixed-dim: #c3c0ff;
-  --color-on-primary-fixed: #0f0069;
-  --color-on-primary-fixed-variant: #3323cc;
-
-  --color-secondary: #006591;
-  --color-secondary-container: #39b8fd;
-  --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #004666;
-  --color-secondary-fixed: #c9e6ff;
-  --color-secondary-fixed-dim: #89ceff;
-  --color-on-secondary-fixed: #001e2f;
-  --color-on-secondary-fixed-variant: #004c6e;
-
-  --color-tertiary: #7e3000;
-  --color-tertiary-container: #a44100;
-  --color-on-tertiary: #ffffff;
-  --color-on-tertiary-container: #ffd2be;
-  --color-tertiary-fixed: #ffdbcc;
-  --color-tertiary-fixed-dim: #ffb695;
-  --color-on-tertiary-fixed: #351000;
-  --color-on-tertiary-fixed-variant: #7b2f00;
-
-  --color-error: #ba1a1a;
-  --color-error-container: #ffdad6;
-  --color-on-error: #ffffff;
-  --color-on-error-container: #93000a;
-
-  --color-background: #f7f9fb;
-  --color-on-background: #191c1e;
-  --color-surface: #f7f9fb;
-  --color-surface-bright: #f7f9fb;
-  --color-surface-dim: #d8dadc;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f2f4f6;
-  --color-surface-container: #eceef0;
-  --color-surface-container-high: #e6e8ea;
-  --color-surface-container-highest: #e0e3e5;
-  --color-surface-variant: #e0e3e5;
-  --color-on-surface: #191c1e;
-  --color-on-surface-variant: #464555;
-  --color-inverse-surface: #2d3133;
-  --color-inverse-on-surface: #eff1f3;
-  --color-inverse-primary: #c3c0ff;
-  --color-outline: #777587;
-  --color-outline-variant: #c7c4d8;
-  --color-surface-tint: #4d44e3;
-
   --font-sans: var(--font-sans);
   --font-headline: var(--font-lexend);
   --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+
+  --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -98,100 +74,100 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-on-background);
-  font-family: var(--font-sans), "Inter", sans-serif;
-}
-
-/* Hide scrollbar for chat */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Glass header/footer */
-.glass-header {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(25, 28, 30, 0.1);
-}
-.glass-footer {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(25, 28, 30, 0.1);
-}
-
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Material 3 light palette (design.md §2.1) mapped onto shadcn roles. */
+  --background: #f8f9ff; /* M3 background */
+  --foreground: #0b1c30; /* M3 on-surface */
+  --card: #ffffff; /* M3 surface-container-lowest */
+  --card-foreground: #0b1c30;
+  --popover: #ffffff;
+  --popover-foreground: #0b1c30;
+  --primary: #3525cd; /* M3 primary */
+  --primary-foreground: #ffffff; /* M3 on-primary */
+  --secondary: #dae2fd; /* M3 secondary-container */
+  --secondary-foreground: #3f465c;
+  --muted: #eff4ff; /* M3 surface-container-low */
+  --muted-foreground: #464555; /* M3 on-surface-variant */
+  --accent: #e5eeff; /* M3 surface-container */
+  --accent-foreground: #0b1c30;
+  --destructive: #ba1a1a; /* M3 error */
+  --destructive-foreground: #ffffff;
+  /*
+   * Reserved status roles. Screens were hardcoding bg-emerald-100 /
+   * text-red-700 etc., which are fixed light-mode values that would have stayed
+   * light under `.dark`. Stepped for text contrast (5.3:1 and 5.6:1 here), and
+   * always paired with an icon or label so state never rides on color alone.
+   */
+  --success: #0a7a0a;
+  --warning: #8a5a00;
+  --border: #c7c4d8; /* M3 outline-variant */
+  --input: #c7c4d8;
+  --ring: #3525cd;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b1c30;
+  --sidebar-primary: #3525cd;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5eeff;
+  --sidebar-accent-foreground: #0b1c30;
+  --sidebar-border: #c7c4d8;
+  --sidebar-ring: #3525cd;
+
+  /*
+   * Categorical chart slots, validated for colorblind separation against this
+   * app's surfaces (worst adjacent CVD ΔE 24.7, normal-vision 33.6). These were
+   * greyscale — chroma 0 — which left every multi-series chart separable by
+   * lightness alone.
+   */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+
+  /* M3 leans on softer corners than shadcn's default 10px. */
+  --radius: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Extends the six dark tokens sketched in design.md §2.2 to the full set. */
+  --background: #0a0e1a;
+  --foreground: #eaf1ff;
+  --card: #121726; /* M3 dark surface */
+  --card-foreground: #eaf1ff;
+  --popover: #121726;
+  --popover-foreground: #eaf1ff;
+  --primary: #c3c0ff; /* M3 inverse-primary */
+  --primary-foreground: #0f0069; /* M3 on-primary-fixed */
+  --secondary: #1a2035;
+  --secondary-foreground: #eaf1ff;
+  --muted: #1a2035; /* M3 dark surface-container-low */
+  --muted-foreground: #a8b2c8;
+  --accent: #232a42;
+  --accent-foreground: #eaf1ff;
+  --destructive: #ffb4ab; /* M3 dark error */
+  --destructive-foreground: #690005;
+  --success: #4ade80; /* re-stepped for the dark surface, 10.3:1 on cards */
+  --warning: #fab219;
+  --border: #2a3348;
+  --input: #2a3348;
+  --ring: #c3c0ff;
+
+  --sidebar: #121726;
+  --sidebar-foreground: #eaf1ff;
+  --sidebar-primary: #c3c0ff;
+  --sidebar-primary-foreground: #0f0069;
+  --sidebar-accent: #232a42;
+  --sidebar-accent-foreground: #eaf1ff;
+  --sidebar-border: #2a3348;
+  --sidebar-ring: #c3c0ff;
+
+  /* Same five hues, stepped for the dark surface — not an automatic flip. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
 }
 
 @layer base {
@@ -200,6 +176,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), "Inter", sans-serif;
   }
   html {
     @apply font-sans;

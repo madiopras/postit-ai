@@ -9,6 +9,19 @@
 
 ---
 
+> **Status implementasi (diperbarui Fase 5).**
+> Dokumen ini semula mendeskripsikan sistem token Material 3 yang berdiri sendiri.
+> Kenyataannya token M3 hanya sebagian yang pernah aktif, dan `tailwind.config.ts`
+> — tempat seluruh skala tipografi didefinisikan — **tidak pernah terbaca** oleh
+> Tailwind v4 (tidak ada direktif `@config`), sehingga kelas seperti
+> `text-headline-lg` tidak menghasilkan CSS sama sekali.
+>
+> Sejak Fase 5, sumber kebenaran tunggalnya adalah **variabel CSS shadcn** di
+> `app/globals.css`. Nilai warnanya diambil dari palette M3 di bawah, jadi
+> tampilannya tetap Material — yang berubah adalah pipa-nya, bukan rupanya.
+> Tabel di §2.1/§2.2 kini dibaca sebagai *nilai sumber*, dan kolom "Token shadcn"
+> menunjukkan nama yang benar-benar dipakai di kode.
+
 ## 2. Design Tokens
 
 ### 2.1 Warna (Light Mode)
@@ -33,18 +46,57 @@
 | `error` | `#ba1a1a` | Destructive actions, error states |
 | `error-container` | `#ffdad6` | Error snackbars, backgrounds |
 
-### 2.2 Warna (Dark Mode) — Rencana
+
+#### Pemetaan ke token shadcn (yang dipakai di kode)
+
+| Nilai M3 | Token shadcn | Kelas Tailwind |
+|---|---|---|
+| `background` `#f8f9ff` | `--background` | `bg-background` |
+| `surface-container-lowest` `#ffffff` | `--card` | `bg-card` |
+| `surface-container-low` `#eff4ff` | `--muted` | `bg-muted` |
+| `surface-container` `#e5eeff` | `--accent` | `bg-accent` |
+| `on-surface` `#0b1c30` | `--foreground` | `text-foreground` |
+| `on-surface-variant` `#464555` | `--muted-foreground` | `text-muted-foreground` |
+| `primary` `#3525cd` | `--primary` | `bg-primary` / `text-primary` |
+| `on-primary` `#ffffff` | `--primary-foreground` | `text-primary-foreground` |
+| `secondary-container` `#dae2fd` | `--secondary` | `bg-secondary` |
+| `outline-variant` `#c7c4d8` | `--border` | `border-border` |
+| `outline` `#777587` | `--input` | `border-input` |
+| `error` `#ba1a1a` | `--destructive` | `text-destructive` |
+
+Selain itu ditambahkan dua peran status yang tidak ada di shadcn dan sebelumnya
+di-hardcode (`bg-emerald-100`, `text-red-700`) sehingga tidak ikut dark mode:
+`--success` (`#0a7a0a` / `#4ade80`) dan `--warning` (`#8a5a00` / `#fab219`).
+Seluruh pasangan latar/teks diuji terhadap WCAG AA; yang terendah 5,3:1.
+
+### 2.2 Warna (Dark Mode) — **Terimplementasi**
 
 | Token | Hex |
 |-------|-----|
-| `background` | `#0a0e1a` |
-| `surface` | `#121726` |
-| `surface-container-low` | `#1a2035` |
-| `on-surface` | `#eaf1ff` |
-| `primary` | `#c3c0ff` |
-| `primary-container` | `#3323cc` |
+| `background` | `#0a0e1a` | `--background` |
+| `surface` | `#121726` | `--card`, `--popover`, `--sidebar` |
+| `surface-container-low` | `#1a2035` | `--muted`, `--secondary` |
+| `on-surface` | `#eaf1ff` | `--foreground` |
+| `primary` | `#c3c0ff` | `--primary` |
+| `on-primary-fixed` | `#0f0069` | `--primary-foreground` |
+| `error` (dark) | `#ffb4ab` | `--destructive` |
+| `outline` (dark) | `#2a3348` | `--border`, `--input` |
+
+Diaktifkan lewat `next-themes` (`attribute="class"`, `defaultTheme="system"`);
+tombol pengalih ada di header dashboard dan di sidebar chat.
 
 ### 2.3 Typography
+
+> **Catatan:** skala di bawah tidak pernah menghasilkan CSS — ia didefinisikan di
+> `tailwind.config.ts` yang diabaikan Tailwind v4. Sejak Fase 5 kode memakai
+> kelas Tailwind bawaan; tabel ini disimpan sebagai acuan niat desain.
+>
+> Padanan yang dipakai: Headline Large → `text-2xl font-semibold tracking-tight`,
+> Headline Medium → `text-xl font-semibold tracking-tight`, Headline Small →
+> `text-lg font-semibold`, Body Large → `text-base`, Body Medium → `text-sm`,
+> Body Small → `text-xs`, Label Medium → `text-sm font-medium`, Label Small →
+> `text-xs font-medium`.
+
 
 | Level | Font | Weight | Size | Line Height | Letter Spacing |
 |-------|------|--------|------|-------------|----------------|
@@ -269,23 +321,36 @@ Transition default: `transition-all duration-150` on all interactive elements.
 
 ## 7. Icon Guidelines
 
-- Gunakan **Material Symbols Outlined** saja
-- Ukuran icon default: 24px (`text-[24px]`)
-- Icon dalam tombol: 20px (`text-[20px]`)
-- Icon kecil (chip/badge): 16px (`text-[16px]`)
-- CSS untuk Material Symbols:
-```css
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-```
+> **Diubah di Fase 5.** Semula dokumen ini mewajibkan Material Symbols Outlined,
+> sementara dashboard sudah memakai `lucide-react` — jadi aplikasi menjalankan
+> dua set ikon sekaligus, salah satunya lewat webfont CDN.
+
+- Gunakan **`lucide-react`** saja. Alasannya: ter-tree-shake (hanya ikon yang
+  dipakai yang masuk bundle), tidak menambah permintaan jaringan ke CDN, dan
+  tidak menimbulkan FOUT berupa teks ligature yang sempat terbaca sebelum font
+  termuat. Material Symbols dimuat sebagai webfont sehingga tidak punya satu pun
+  dari sifat itu.
+- Ukuran memakai kelas `size-*`, bukan `text-*`:
+  - default `size-6` (24px)
+  - dalam tombol `size-5` (20px)
+  - kecil (chip/badge) `size-4` (16px)
+- Ikon adalah komponen React, jadi warnanya mengikuti `currentColor` — beri
+  warna lewat token teks (`text-muted-foreground`, `text-destructive`), jangan
+  hex langsung, supaya ikut berubah di dark mode.
 
 ---
 
-## 8. Font Loading (Tailwind Config)
+## 8. Font Loading
+
+> **Catatan:** `tailwind.config.ts` sudah dihapus di Fase 5 — Tailwind v4 tidak
+> pernah membacanya (tidak ada `@config`), sehingga seluruh isinya inert. Token
+> sekarang didefinisikan langsung di `app/globals.css` lewat `@theme inline`,
+> dan font dimuat via `next/font` di `app/layout.tsx`.
+>
+> Cuplikan di bawah dipertahankan sebagai riwayat.
 
 ```typescript
-// tailwind.config.ts
+// tailwind.config.ts (historis — file ini sudah tidak ada)
 const config = {
   theme: {
     extend: {

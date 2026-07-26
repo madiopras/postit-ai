@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { BarChart3, CheckCircle2, Download, FileText, Loader2, MoreVertical, Pencil, Plus, RefreshCw, Search, SquarePen, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
@@ -230,13 +231,13 @@ export default function FAQManagementPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge className="bg-tertiary-container text-on-tertiary-container hover:bg-tertiary-container">Published</Badge>;
+        return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Published</Badge>;
       case 'draft':
-        return <Badge className="bg-secondary-container text-on-secondary-container hover:bg-secondary-container">Draft</Badge>;
+        return <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary">Draft</Badge>;
       case 'error':
-        return <Badge className="bg-error-container text-on-error-container hover:bg-error-container">Error</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">Error</Badge>;
       default:
-        return <Badge className="bg-surface-container text-on-surface-variant hover:bg-surface-container">{status}</Badge>;
+        return <Badge className="bg-muted text-muted-foreground hover:bg-muted">{status}</Badge>;
     }
   };
 
@@ -247,8 +248,8 @@ export default function FAQManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg text-on-surface">FAQ Management</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">FAQ Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Update, organize, and monitor your AI's knowledge base.
           </p>
         </div>
@@ -266,23 +267,23 @@ export default function FAQManagementPage() {
           />
           <button
             onClick={() => document.getElementById('csv-import')?.click()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline text-label-md text-on-surface hover:bg-surface-container-high transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
-            <span className="material-symbols-outlined text-xl">upload</span>
+            <Upload className="size-5" />
             Import CSV
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline text-label-md text-on-surface hover:bg-surface-container-high transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
-            <span className="material-symbols-outlined text-xl">download</span>
+            <Download className="size-5" />
             Export CSV
           </button>
           <button
             onClick={() => router.push('/dashboard/faq/new')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-label-md hover:bg-primary-container transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary transition-colors"
           >
-            <span className="material-symbols-outlined text-xl">add</span>
+            <Plus className="size-5" />
             New FAQ
           </button>
         </div>
@@ -290,50 +291,50 @@ export default function FAQManagementPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface-container rounded-xl p-4 border border-outline-variant">
+        <div className="bg-muted rounded-xl p-4 border border-border">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-on-primary-container">description</span>
+            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
+              <FileText className="size-6 text-primary-foreground" />
             </div>
             <div>
-              <p className="text-label-sm text-on-surface-variant">Total FAQs</p>
-              <p className="text-headline-md text-on-surface">{total}</p>
+              <p className="text-xs font-medium text-muted-foreground">Total FAQs</p>
+              <p className="text-xl font-semibold tracking-tight text-foreground">{total}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-surface-container rounded-xl p-4 border border-outline-variant">
+        <div className="bg-muted rounded-xl p-4 border border-border">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-tertiary-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-on-tertiary-container">check_circle</span>
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="size-6 text-primary" />
             </div>
             <div>
-              <p className="text-label-sm text-on-surface-variant">Published</p>
-              <p className="text-headline-md text-on-surface">{faqs.filter(f => f.status === 'published').length}</p>
+              <p className="text-xs font-medium text-muted-foreground">Published</p>
+              <p className="text-xl font-semibold tracking-tight text-foreground">{faqs.filter(f => f.status === 'published').length}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-surface-container rounded-xl p-4 border border-outline-variant">
+        <div className="bg-muted rounded-xl p-4 border border-border">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-secondary-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-on-secondary-container">edit_note</span>
+            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+              <SquarePen className="size-6 text-secondary-foreground" />
             </div>
             <div>
-              <p className="text-label-sm text-on-surface-variant">Draft Items</p>
-              <p className="text-headline-md text-on-surface">{faqs.filter(f => f.status === 'draft').length}</p>
+              <p className="text-xs font-medium text-muted-foreground">Draft Items</p>
+              <p className="text-xl font-semibold tracking-tight text-foreground">{faqs.filter(f => f.status === 'draft').length}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-surface-container rounded-xl p-4 border border-outline-variant">
+        <div className="bg-muted rounded-xl p-4 border border-border">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary-fixed flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-on-primary-fixed">analytics</span>
+            <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center">
+              <BarChart3 className="size-6 text-accent-foreground" />
             </div>
             <div>
-              <p className="text-label-sm text-on-surface-variant">Avg. Accuracy</p>
-              <p className="text-headline-md text-on-surface">
+              <p className="text-xs font-medium text-muted-foreground">Avg. Accuracy</p>
+              <p className="text-xl font-semibold tracking-tight text-foreground">
                 {faqs.length > 0 ? `${Math.round(faqs.reduce((sum, f) => sum + f.accuracy, 0) / faqs.length)}%` : '0%'}
               </p>
             </div>
@@ -342,10 +343,10 @@ export default function FAQManagementPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-container rounded-xl p-4 border border-outline-variant">
+      <div className="bg-muted rounded-xl p-4 border border-border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+            <Search className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search questions and answers..."
               value={search}
@@ -353,7 +354,7 @@ export default function FAQManagementPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-10 bg-surface border-outline-variant"
+              className="pl-10 bg-card border-border"
             />
           </div>
           
@@ -361,7 +362,7 @@ export default function FAQManagementPage() {
             setCategory(value || '');
             setPage(1);
           }}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-surface border-outline-variant">
+            <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
@@ -378,7 +379,7 @@ export default function FAQManagementPage() {
             setStatus(value || '');
             setPage(1);
           }}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-surface border-outline-variant">
+            <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -392,77 +393,77 @@ export default function FAQManagementPage() {
       </div>
 
       {/* FAQ Table */}
-      <div className="bg-surface-container rounded-xl border border-outline-variant overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant">
-          <h2 className="text-headline-sm text-on-surface">FAQ List</h2>
+      <div className="bg-muted rounded-xl border border-border overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">FAQ List</h2>
         </div>
         <div className="p-6">
           {loading ? (
             <div className="flex justify-center items-center h-32">
-              <span className="material-symbols-outlined animate-spin text-4xl text-on-surface-variant">progress_activity</span>
+              <Loader2 className="size-10 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <>
-              <div className="border border-outline-variant rounded-lg overflow-hidden">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-surface-container-high border-b border-outline-variant hover:bg-surface-container-high">
-                      <TableHead className="text-label-md text-on-surface-variant">Question</TableHead>
-                      <TableHead className="text-label-md text-on-surface-variant">Category</TableHead>
-                      <TableHead className="text-label-md text-on-surface-variant">Status</TableHead>
-                      <TableHead className="text-label-md text-on-surface-variant">Usage</TableHead>
-                      <TableHead className="text-label-md text-on-surface-variant">Accuracy</TableHead>
-                      <TableHead className="text-label-md text-on-surface-variant">Last Updated</TableHead>
-                      <TableHead className="text-label-md text-on-surface-variant text-right">Actions</TableHead>
+                    <TableRow className="bg-accent border-b border-border hover:bg-accent">
+                      <TableHead className="text-sm font-medium text-muted-foreground">Question</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Category</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Usage</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Accuracy</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Last Updated</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {faqs.map((faq) => (
-                      <TableRow key={faq.id} className="group border-b border-outline-variant hover:bg-surface-container-high">
-                        <TableCell className="text-body-md text-on-surface font-medium max-w-xs truncate">
+                      <TableRow key={faq.id} className="group border-b border-border hover:bg-accent">
+                        <TableCell className="text-sm text-foreground font-medium max-w-xs truncate">
                           {faq.question.replace(/'/g, "'")}
                         </TableCell>
                         <TableCell>
                           {faq.category ? (
-                            <Badge variant="secondary" className="capitalize bg-secondary-fixed text-on-secondary-fixed">
+                            <Badge variant="secondary" className="capitalize bg-secondary text-secondary-foreground">
                               {faq.category}
                             </Badge>
                           ) : (
-                            <span className="text-body-md text-on-surface-variant">-</span>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(faq.status)}
                         </TableCell>
                         <TableCell>
-                          <span className="text-body-md text-on-surface">{faq.usageCount}</span>
+                          <span className="text-sm text-foreground">{faq.usageCount}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-body-md text-on-surface">{faq.accuracy}%</span>
+                          <span className="text-sm text-foreground">{faq.accuracy}%</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-body-md text-on-surface-variant">
+                          <span className="text-sm text-muted-foreground">
                             {new Date(faq.updatedAt).toLocaleDateString()}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger>
-                              <button className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-surface-container-highest transition-all">
-                                <span className="material-symbols-outlined text-xl text-on-surface">more_vert</span>
+                              <button className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-accent transition-all">
+                                <MoreVertical className="size-5 text-foreground" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-surface-container border-outline-variant">
-                              <DropdownMenuItem onClick={() => router.push(`/dashboard/faq/${faq.id}`)} className="text-body-md">
-                                <span className="material-symbols-outlined text-xl mr-2">edit</span>
+                            <DropdownMenuContent align="end" className="bg-muted border-border">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/faq/${faq.id}`)} className="text-sm">
+                                <Pencil className="size-5 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSync(faq.id)} className="text-body-md">
-                                <span className="material-symbols-outlined text-xl mr-2">sync</span>
+                              <DropdownMenuItem onClick={() => handleSync(faq.id)} className="text-sm">
+                                <RefreshCw className="size-5 mr-2" />
                                 Sync
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(faq.id)} className="text-body-md text-error">
-                                <span className="material-symbols-outlined text-xl mr-2">delete</span>
+                              <DropdownMenuItem onClick={() => handleDelete(faq.id)} className="text-sm text-destructive">
+                                <Trash2 className="size-5 mr-2" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -477,14 +478,14 @@ export default function FAQManagementPage() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
-                  <div className="text-body-md text-on-surface-variant">
+                  <div className="text-sm text-muted-foreground">
                     Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} entries
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setPage(Math.max(1, page - 1))}
                       disabled={page === 1}
-                      className="px-4 py-2 rounded-lg border border-outline text-label-md text-on-surface hover:bg-surface-container-high disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       Previous
                     </button>
@@ -495,10 +496,10 @@ export default function FAQManagementPage() {
                           <button
                             key={pageNum}
                             onClick={() => setPage(pageNum)}
-                            className={`w-10 h-10 rounded-lg text-label-md transition-colors ${
+                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
                               page === pageNum
-                                ? 'bg-primary text-on-primary'
-                                : 'border border-outline text-on-surface hover:bg-surface-container-high'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'border border-input text-foreground hover:bg-accent'
                             }`}
                           >
                             {pageNum}
@@ -509,7 +510,7 @@ export default function FAQManagementPage() {
                     <button
                       onClick={() => setPage(Math.min(totalPages, page + 1))}
                       disabled={page === totalPages}
-                      className="px-4 py-2 rounded-lg border border-outline text-label-md text-on-surface hover:bg-surface-container-high disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       Next
                     </button>

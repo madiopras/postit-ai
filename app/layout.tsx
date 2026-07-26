@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -20,8 +21,8 @@ const lexend = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "SimpleAI",
-  description: "Chatbot SOP & FAQ",
+  title: "PostIt AI",
+  description: "Smart Answers, Instant Actions — chatbot SOP & FAQ perusahaan",
 };
 
 export default function RootLayout({
@@ -30,21 +31,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning: next-themes stamps the `dark` class onto <html>
+    // before React hydrates, so server and client markup differ here by design.
     <html
       lang="id"
+      suppressHydrationWarning
       className={cn("h-full", "antialiased", inter.variable, lexend.variable, "font-sans", geist.variable)}
     >
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+      {/* The Material Symbols webfont that used to be linked here is gone: every
+          icon is now a tree-shaken lucide-react component, so the app no longer
+          blocks on a CDN stylesheet or flashes unstyled ligature text. */}
       <body className="min-h-full bg-background text-foreground">
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
-        <Toaster position="top-right" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster position="top-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

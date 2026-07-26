@@ -7,13 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -259,17 +253,17 @@ export default function SOPFormPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Current Status</p>
                   {sop.status === 'published' && (
-                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                    <Badge className="bg-success/10 text-success hover:bg-success/10">
                       Published
                     </Badge>
                   )}
                   {sop.status === 'draft' && (
-                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                    <Badge className="bg-warning/10 text-warning hover:bg-warning/10">
                       Draft
                     </Badge>
                   )}
                   {sop.status === 'error' && (
-                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                    <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">
                       Error
                     </Badge>
                   )}
