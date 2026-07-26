@@ -1,5 +1,9 @@
 # Rules & Conventions — PostIt AI
 
+> **Status: terimplementasi.** Konvensi di bawah dipertahankan; yang berubah
+> saat pembangunan diberi catatan langsung di tempatnya. Bisa diperiksa dengan
+> `npm run lint`, `npm run typecheck`, dan `npm test` — ketiganya bersih.
+
 ## 1. Coding Standards
 
 ### 1.1 TypeScript
@@ -167,20 +171,45 @@ const CHUNK_CONFIG = {
 - API Route Handler → Server-side only (jangan import client hooks)
 - Gunakan `fetch` di Server Component, bukan axios/fetch wrapper client-side
 
-### 4.2 Middleware
+### 4.2 Proxy (dulu Middleware)
+
+> **Next.js 16 mengganti nama konvensi `middleware.ts` menjadi `proxy.ts`**
+> (ada codemod resmi `middleware-to-proxy`), dan Proxy kini default ke runtime
+> Node.js. NextAuth tidak dipakai, jadi tidak ada `export { auth as middleware }`.
+
 ```typescript
-// middleware.ts
-export { auth as middleware } from '@/auth';
+// proxy.ts
+const PUBLIC_PATHS = new Set([
+  '/', '/login', '/api/auth/login', '/api/auth/logout',
+  '/api/chat', '/api/chat/sessions',
+]);
+const PUBLIC_PREFIXES = ['/api/chat/sessions/', '/api/feedback/'];
+
+export async function proxy(request: NextRequest) { /* … */ }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/api/dashboard/:path*'],
+  matcher: [
+    '/((?!_next/static|_next/image|.*\\.(?:webp|avif|png|jpe?g|gif|svg|ico|webmanifest|txt|xml|woff2?)$).*)',
+  ],
 };
 ```
 
+Aturannya:
+
+- **Allow-list, bukan deny-list.** Yang tidak disebut publik wajib JWT. Versi
+  deny-list sempat melewatkan seluruh `/api/*` dengan asumsi tiap handler
+  memeriksa sendiri — padahal hanya `/api/config*` yang melakukannya.
+- **Kecualikan berkas statis di `matcher`.** Tanpa daftar ekstensi itu, seluruh
+  isi `public/` ikut diarahkan ke `/login`.
+- **Proxy bukan lapisan otorisasi tunggal.** Dokumentasi Next.js menyatakan
+  demikian, jadi setiap route handler admin tetap memanggil `requireAuth()`.
+- **Balas JSON 401 untuk `/api/*`,** bukan redirect — klien API akan membaca
+  halaman login HTML sebagai 200 yang tak terparse.
+
 ### 4.3 Route Groups
-- `(auth)` — Login page
-- `(main)` — Chat page
-- `dashboard` — Protected dashboard pages
+
+Route group `(auth)` / `(main)` tidak jadi dipakai; strukturnya cukup datar:
+`/` (chat publik), `/login`, dan `/dashboard/*`.
 
 ---
 
@@ -329,12 +358,64 @@ export async function GET() {
 
 ## 8. Security Checklist
 
-- [x] All `/dashboard/*` routes protected by middleware
-- [x] Credentials auth uses bcrypt/jose JWT
-- [x] API routes validate input with zod
-- [x] CORS: only allow same-origin requests
-- [x] No sensitive data in client bundle (API keys, secrets)
-- [x] SQL injection: always use parameterized queries (Drizzle ORM handles this)
-- [x] Rate limiting: apply per-IP for `/api/chat` (unauthenticated endpoint)
-- [ ] Audit logging: log all CRUD operations in dashboard
-- [ ] CSRF: NextAuth handles this for credential login
+Status akhir. Yang dicentang sudah diverifikasi terhadap kode, bukan diasumsikan.
+
+- [x] Seluruh `/dashboard/*` terproteksi `proxy.ts`, **dan** tiap route handler
+      admin memanggil `requireAuth()` sendiri
+- [x] Auth memakai bcrypt (12 rounds) + JWT `jose` (HS256, 7 hari)
+- [x] `JWT_SECRET` wajib — tidak ada fallback hardcoded
+- [x] Input API divalidasi `zod`
+- [x] Query terparameterisasi lewat Drizzle
+- [x] Rate limit per-IP di `/api/chat` (20/menit) — endpoint publik tanpa auth
+- [x] **API key provider dienkripsi at rest** (AES-256-GCM) dan tidak pernah
+      dikembalikan ke browser; `GET /api/config` hanya mengirim mask
+- [x] Tidak ada secret di bundle klien
+- [x] Berkas statis dikecualikan dari proxy tanpa melebarkan akses rute
+- [x] Id dinamis divalidasi UUID sebelum menyentuh query (dulu 500, kini 404)
+- [x] Endpoint publik yang menerima `visitorId` memverifikasi kepemilikan di
+      server dan menjawab 404 bila tidak cocok — id tidak bisa dienumerasi
+- [ ] **Audit logging** untuk operasi CRUD dashboard — belum dikerjakan
+- [ ] **CSRF** — catatan lama menyebut "NextAuth handles this", tapi NextAuth
+      tidak dipakai. Mitigasi saat ini hanya `SameSite=Lax` pada cookie sesi,
+      yang menahan request lintas situs sederhana tapi bukan pengganti token
+      CSRF. Perlu ditinjau sebelum produksi.
+
+### 8.1 Insiden yang tercatat
+
+Dua secret pernah ikut ter-commit dan **wajib dirotasi**, karena menghapusnya
+dari berkas tidak menghapusnya dari riwayat git:
+
+| Secret | Lokasi | Status |
+|--------|--------|--------|
+| Google API key | `.vscode/mcp.json` | Sudah di-gitignore; **rotasi menunggu akses Cloud Console** |
+| `ROUTER_API_KEY` | `architecture.md` §7 | Sudah diredaksi; **sudah masuk riwayat git dan masih berlaku — rotasi wajib** |
+
+Aturan yang mengikutinya: **jangan pernah menaruh nilai rahasia di dokumen.**
+`.env.example` adalah satu-satunya tempat mencantumkan nama variabel, dan
+nilainya selalu kosong.
+
+---
+
+## 9. Testing
+
+Vitest, 47 test di 6 berkas (`npm test`). Setiap suite menjaga bug yang benar-
+benar pernah lolos ke kode, bukan sekadar mengejar coverage:
+
+| Berkas | Menjaga |
+|--------|---------|
+| `tests/retrieval.integration.test.ts` | Urutan retrieval, ambang skor sebelum `LIMIT`, filter `published`. Berjalan terhadap pgvector sungguhan di schema throwaway |
+| `tests/sse.test.ts` | Parser frame SSE: nama event terbaca, frame terbelah antar-chunk tersusun ulang |
+| `tests/crypto.test.ts` | Plaintext tidak bocor, ciphertext yang diutak-atik ditolak, nilai lama tetap terbaca |
+| `tests/embedding.test.ts` | Satu vektor per input, urutan dipulihkan bila provider mengacak |
+| `tests/chunking.test.ts` | Batas ukuran chunk, tidak ada isi hilang, sufiks `(Part n/m)` tidak bertumpuk |
+| `tests/rate-limit.test.ts` | Sliding window, isolasi antar-pemanggil, `retryAfter` |
+
+Test integrasi melewatkan dirinya sendiri bila `DATABASE_URL` kosong, jadi suite
+unit tetap bisa jalan di mana saja.
+
+**Uji mutasi.** Penjaganya diverifikasi dengan menghidupkan kembali bug aslinya:
+`ORDER BY` yang terbalik menggagalkan 2 test, parser yang membuang baris
+`event:` menggagalkan 4. Test yang tidak pernah gagal tidak menjaga apa pun.
+
+Belum ada suite E2E berbasis browser — lingkungan pengembangan tidak punya
+browser headless.

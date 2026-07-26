@@ -1,8 +1,13 @@
 # PRD: PostIt AI — Chatbot & Admin Dashboard
 
 > **Brand:** PostIt AI  
-> **Tagline:** Smart Answers, Instant Actions.  
-> **Design Source:** Google Stitch (`docs/stitch/*.html`)
+> **Tagline:** Smart Answers, Instant Actions.
+
+> **Status: terimplementasi.** Dokumen ini semula rencana; kini disesuaikan
+> dengan kode yang benar-benar dibangun. Bagian yang berbeda dari rencana awal
+> diberi catatan, bukan dihapus, supaya keputusannya bisa ditelusuri.
+> Referensi "Design Source: Google Stitch (`docs/stitch/*.html`)" dihapus —
+> direktori itu tidak pernah ada di repo.
 
 ---
 
@@ -31,14 +36,34 @@ Semua data disimpan di **PostgreSQL + pgvector**. Embedding & LLM menggunakan en
 | **Dashboard** | `/dashboard/*` | ✅ Wajib login | Hanya admin yang bisa akses |
 | **API Chat** | `/api/chat` | ❌ Tanpa auth | Chat endpoint publik |
 | **API CRUD** | `/api/faq`, `/api/sop`, dll | ✅ Protected | Hanya dari sisi server/dashboard |
+| **API riwayat chat** | `/api/chat/sessions*` | ❌ Tanpa auth | Diverifikasi lewat `visitorId`, bukan sesi |
+| **API feedback** | `/api/feedback/[messageId]` | ❌ Tanpa auth | Idem |
+
+> **Berbeda dari rencana:** `GET /api/faq` dan `GET /api/sop` semula dirancang
+> publik. Keduanya kini terproteksi — tidak ada konsumen publik (chat hanya
+> memakai `/api/chat`), sementara membiarkannya terbuka berarti mengekspos
+> seluruh knowledge base termasuk draft ke siapa pun.
+>
+> Route publik yang menerima `visitorId` memverifikasi kepemilikan di server dan
+> menjawab **404** bila tidak cocok, sehingga id percakapan tidak bisa
+> dienumerasi.
 
 ### 2.1 Admin Login
-- Login sederhana menggunakan **credentials** (email + password) via NextAuth.js v5 (Auth.js)
-- Admin credentials disimpan di environment variables:
-  - `ADMIN_EMAIL=admin@postit.ai`
-  - `ADMIN_PASSWORD=postit-admin-2024`
+
+> **Berbeda dari rencana.** NextAuth.js tidak jadi dipakai: paket-nya sempat
+> terpasang tapi tidak pernah tersambung, dan sudah dihapus. Autentikasinya JWT
+> langsung, yang sudah berfungsi dan tidak menuntut penulisan ulang proxy, login,
+> serta sesi demi provider OAuth yang tidak dibutuhkan.
+
+- Login **username + password**, diverifikasi terhadap tabel `users`
+  (bukan environment variable)
+- Password di-hash `bcryptjs` (12 rounds); token ditandatangani `jose` (HS256)
+- Admin dibuat lewat `npm run seed:admin`, menerima `ADMIN_USERNAME` dan
+  `ADMIN_PASSWORD` sebagai override agar default `admin/admin123` tidak terbawa
 - Tidak ada registrasi publik
-- Session menggunakan JWT, expire 24 jam
+- Sesi JWT di cookie httpOnly `simpleai_token`, **berlaku 7 hari**
+- `JWT_SECRET` wajib — tidak ada nilai fallback, aplikasi menolak berjalan
+  tanpanya supaya default yang diketahui publik tidak bisa memalsukan token
 
 ---
 
@@ -228,17 +253,20 @@ import { Inter } from 'next/font/google'
 
 ## 7. Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Next.js 16 (App Router, Server Actions, Streaming) |
-| **Styling** | Tailwind CSS + custom design tokens |
-| **Icons** | Material Symbols Outlined |
-| **Fonts** | Geist (local) + Inter (Google Fonts) |
-| **Auth** | NextAuth.js v5 (Credentials provider) |
-| **Database** | PostgreSQL 16 + pgvector (Docker) |
-| **ORM** | Drizzle ORM |
-| **AI SDK** | OpenAI-compatible (via 9router atau endpoint lain) |
-| **Charts** | Recharts (dashboard) |
+| Layer | Rencana | Terpasang |
+|-------|---------|-----------|
+| **Framework** | Next.js 16 | Next.js 16.2.11 — `middleware.ts` berganti nama jadi `proxy.ts` |
+| **Styling** | Tailwind + token kustom | Tailwind v4, **satu** sistem token (shadcn) berisi nilai palet M3 |
+| **Icons** | Material Symbols Outlined | **`lucide-react`** — ter-tree-shake, tanpa webfont CDN (lihat design.md §7) |
+| **Fonts** | Geist + Inter | sama, via `next/font` |
+| **Auth** | NextAuth.js v5 | **`jose` + `bcryptjs`** langsung; NextAuth dihapus |
+| **Database** | PostgreSQL 16 + pgvector | PostgreSQL **17** + pgvector (Docker) |
+| **ORM** | Drizzle ORM | sama — `generate` + `migrate`, bukan `push` |
+| **AI SDK** | OpenAI-compatible | sama, endpoint & model diatur dari dashboard |
+| **Charts** | Recharts | sama, palet kategorikal tervalidasi CVD |
+| **Markdown** | — | `react-markdown` + `remark-gfm` untuk jawaban asisten |
+| **Tema** | — | Script inline server-rendered; dark mode aktif |
+| **Test** | — | **Vitest**, 47 test di 6 berkas |
 
 ---
 
@@ -348,8 +376,15 @@ src/
 │   ├── llm.ts
 │   ├── rag.ts
 │   ├── schema.ts
+│   ├── crypto.ts                 # AES-256-GCM untuk secret at rest
+│   ├── stats.ts                  # Agregasi dashboard
+│   ├── sse.ts                    # Parser frame SSE
+│   ├── rate-limit.ts             # Sliding window per IP
+│   ├── api.ts                    # Guard UUID
 │   └── utils.ts
-├── middleware.ts
+├── tests/                        # Vitest — 47 test
+├── proxy.ts                      # (Next 16 mengganti nama middleware.ts)
+├── vitest.config.ts
 ├── drizzle.config.ts
 ├── package.json
 ├── docker-compose.yml
@@ -360,24 +395,36 @@ src/
 
 ## 11. API Endpoints
 
+Daftar aktual. Perbedaan dari rencana: `/api/auth/me` dan `/api/index` tidak
+pernah dibuat (yang pertama tidak dibutuhkan, indexing terjadi otomatis saat
+simpan), sementara route chat-session, feedback, documents, sync dan stats
+bertambah.
+
 | Method | Path | Auth | Deskripsi |
 |--------|------|------|-----------|
-| POST | `/api/auth/login` | - | Login admin, return JWT cookie |
-| POST | `/api/auth/logout` | - | Hapus cookie JWT |
-| GET | `/api/auth/me` | JWT | Get current user info |
-| POST | `/api/chat` | - | Chat dengan RAG (SSE stream) |
-| GET | `/api/faq` | - | List FAQ (published) |
-| POST | `/api/faq` | JWT | Create FAQ |
-| PUT | `/api/faq/[id]` | JWT | Update FAQ |
-| DELETE | `/api/faq/[id]` | JWT | Delete FAQ |
-| GET | `/api/sop` | - | List SOP (published) |
-| POST | `/api/sop` | JWT | Create SOP |
-| PUT | `/api/sop/[id]` | JWT | Update SOP |
-| DELETE | `/api/sop/[id]` | JWT | Delete SOP |
-| POST | `/api/index` | JWT | Process & index FAQ/SOP ke vector store |
-| **GET** | **`/api/config`** | **JWT** | **Get current configuration** |
-| **PUT** | **`/api/config`** | **JWT** | **Update configuration** |
-| **POST** | **`/api/config/test`** | **JWT** | **Test koneksi ke endpoint** |
+| POST | `/api/auth/login` | – | Login, set cookie JWT |
+| POST | `/api/auth/logout` | – | Hapus cookie |
+| POST | `/api/chat` | – | Jawaban RAG (SSE). Rate limit 20/menit per IP |
+| GET | `/api/chat/sessions?visitorId=` | – | Daftar percakapan pengunjung |
+| GET | `/api/chat/sessions/[id]?visitorId=` | – | Riwayat satu percakapan |
+| DELETE | `/api/chat/sessions/[id]?visitorId=` | – | Hapus percakapan |
+| PATCH | `/api/feedback/[messageId]` | – | Thumbs up/down pada jawaban |
+| GET | `/api/faq` | JWT | Daftar FAQ (search, kategori, status, paginasi) |
+| POST | `/api/faq` | JWT | Buat FAQ, langsung di-embed |
+| GET/PUT/DELETE | `/api/faq/[id]` | JWT | Baca, ubah, hapus |
+| POST | `/api/faq/[id]/sync` | JWT | Embed ulang satu FAQ |
+| GET/POST | `/api/faq/import-export` | JWT | Ekspor / impor CSV |
+| GET/POST/DELETE | `/api/sop` | JWT | Daftar, buat, hapus (via `?id=`) |
+| GET/PUT/DELETE | `/api/sop/[id]` | JWT | Baca, ubah, hapus |
+| GET | `/api/documents` | JWT | Isi vector store (filter tipe/status/tanpa-vektor) |
+| POST | `/api/documents/[id]/resync` | JWT | Bangun ulang dari record sumber |
+| GET | `/api/stats` | JWT | Agregat dashboard + tren 30 hari |
+| GET/PUT | `/api/config` | JWT | Baca (key ter-mask) / simpan konfigurasi |
+| POST | `/api/config/test` | JWT | Uji koneksi endpoint |
+
+Semua respons memakai amplop `{ success, data?, meta?, error? }`. Id dinamis
+yang bukan UUID dijawab **404**, bukan 500 — Postgres menolak cast `uuid` dan
+errornya dulu lolos sebagai 500.
 
 ---
 
@@ -393,25 +440,52 @@ CREATE TABLE app_config (
   llm_base_url       TEXT,
   llm_model          TEXT,
   llm_api_key        TEXT,   -- encrypted at rest
-  is_active          BOOLEAN DEFAULT true,
+  is_active          TEXT DEFAULT 'false',   -- 'true' | 'false', bukan boolean
   updated_by         UUID REFERENCES users(id),
   created_at         TIMESTAMPTZ DEFAULT NOW(),
   updated_at         TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
-Hanya 1 row dengan `is_active = true` yang digunakan. Semua config lama tetap disimpan untuk audit trail.
+Hanya 1 row dengan `is_active = 'true'` yang digunakan. Semua config lama tetap
+disimpan untuk audit trail.
+
+**Catatan implementasi:**
+
+- `is_active` bertipe `TEXT` (`'true'`/`'false'`), bukan `BOOLEAN` — schema
+  Drizzle mendefinisikannya begitu dan query membandingkan terhadap string.
+- Komentar "encrypted at rest" **kini benar**. Sempat tidak: key tersimpan
+  plaintext sampai diperbaiki dengan AES-256-GCM (`lib/crypto.ts`), memakai
+  `CONFIG_ENCRYPTION_KEY`. Nilai lama tanpa prefiks `v1:` tetap terbaca dan
+  ikut terenkripsi saat penyimpanan berikutnya.
+- Karena tiap penyimpanan menyisipkan baris **baru** (tabel ini merangkap audit
+  trail), key yang tidak dikirim harus dibawa maju secara eksplisit — kalau
+  tidak, mengubah nama model saja akan menghapus key dari baris aktif.
 
 ---
 
 ## 13. Milestone
 
-| Fase | Fitur | Durasi |
+Selesai seluruhnya. Penomoran di sini (P0–P6) berbeda dari `phase-plan.md`
+(Phase 0–8) — lihat dokumen itu untuk rincian per fase beserta apa yang
+sebenarnya ditemukan.
+
+| Fase | Fitur | Status |
 |------|-------|--------|
-| P0 | Schema DB, seed admin, setup project | Done |
-| P1 | Auth (login, logout, middleware) | Next |
-| P2 | Dashboard CRUD FAQ & SOP | Next |
-| P3 | Configuration (app_config, API, UI) | Next |
-| P4 | Indexing (embedding → vector store) | Next |
-| P5 | Chat UI + streaming + feedback | Next |
-| P6 | Polish, responsive, bug fixing | Final |
+| P0 | Schema DB, seed admin, setup project | ✅ Selesai — baseline migration ditulis ulang; `push` diganti `generate`+`migrate` |
+| P1 | Auth (login, logout, proteksi rute) | ✅ Selesai — model auth dibalik dari deny-list ke allow-list |
+| P2 | Dashboard CRUD FAQ & SOP | ✅ Selesai — halaman form FAQ dibangun dari nol |
+| P3 | Configuration (app_config, API, UI) | ✅ Selesai — plus enkripsi key dan mask |
+| P4 | Indexing (embedding → vector store) | ✅ Selesai — urutan retrieval diperbaiki, binding pgvector diperbaiki |
+| P5 | Chat UI + streaming + feedback | ✅ Selesai — parser SSE ditulis ulang, riwayat & sitasi berfungsi |
+| P6 | Polish, responsive, bug fixing | ✅ Selesai — dark mode, error boundary, drawer mobile, 47 test |
+
+### Yang belum dikerjakan
+
+- **Suite E2E berbasis browser.** Lingkungan pengembangan tidak punya browser
+  headless, jadi UI diverifikasi lewat CSS terkompilasi, respons HTTP, dan
+  hitungan kontras — bukan secara visual. Playwright adalah langkah berikutnya.
+- **Audit logging** untuk mutasi dashboard (`rules.md` §8 masih menandainya terbuka).
+- **Kolom `accuracy` di `faqs`** tidak pernah diisi apa pun.
+- **Kualitas retrieval belum ditala** — belum ada reranking, hybrid search, atau
+  query rewriting; masih top-5 cosine murni atas dokumen `published`.

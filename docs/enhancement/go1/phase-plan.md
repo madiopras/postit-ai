@@ -1,10 +1,23 @@
 # Phase Plan — PostIt AI (Goal 1)
 
 > **Project:** PostIt AI — Chatbot RAG untuk FAQ & SOP  
-> **Stack:** Next.js 16 + Drizzle ORM + pgvector (PostgreSQL 16) + 9router (embedding/LLM)  
-> **Estimasi Total:** ~7–10 hari kerja
+> **Stack:** Next.js 16 + Drizzle ORM + pgvector (PostgreSQL 17) + endpoint OpenAI-compatible  
+> **Estimasi Awal:** ~7–10 hari kerja
+
+> **Status: seluruh fase selesai.** Rencana per-fase di bawah dipertahankan apa
+> adanya sebagai catatan niat. Yang benar-benar terjadi ada di bagian
+> **Hasil Aktual** di akhir dokumen — urutan pengerjaannya berbeda dari rencana
+> ini, karena scaffolding-nya ternyata sudah ~80% ada tetapi jalur kritisnya
+> putus di beberapa titik.
 
 ---
+
+> ⚠️ **Phase 0–8 di bawah adalah rencana awal, bukan catatan pelaksanaan.**
+> Beberapa detailnya sudah tidak berlaku — `middleware.ts` kini `proxy.ts`,
+> `AUTH_SECRET`/`ADMIN_EMAIL` tidak dipakai, `/api/index` dan `/api/auth/me`
+> tidak pernah dibuat, dan schema Drizzle ada di `lib/` bukan `/db`. Untuk
+> keadaan sebenarnya lihat **Hasil Aktual** di akhir dokumen, `architecture.md`
+> §8, dan `README_SETUP.md`.
 
 ## Phase 0: Project Init & Infrastructure ⚙️ (Day 1)
 
@@ -190,6 +203,69 @@ Phase 6 (SOP Dashboard)       Phase 7 (Documents Monitor)
 4. Gunakan `git checkout -b feature/phase-N` per phase
 5. Commit message prefix: `feat(phase-N): ...`
 
+> Poin 4 tidak diikuti: semua pekerjaan berada di satu branch
+> `feat/postit-baseline` dengan satu commit per fase. Alasannya, seluruh kerja
+> sebelumnya belum pernah ter-commit sama sekali (repo hanya berisi
+> `Initial commit from Create Next App`), sehingga yang lebih mendesak adalah
+> menyelamatkannya lebih dulu sebagai baseline.
+
 ---
 
-*Last updated: 2026-07-26 (Updated with Config System as Phase 2)*
+## Hasil Aktual
+
+Pengerjaan tidak mengikuti Phase 0–8 di atas. Setelah menganalisis kode yang
+ada, urutannya disusun ulang berdasarkan **apa yang memblokir produk agar bisa
+berfungsi**, bukan berdasarkan urutan fitur.
+
+Temuan pembuka: `README_SETUP.md` mencentang "Phase 1–8 complete" untuk
+semuanya, padahal chatbot-nya **tidak pernah berfungsi sekali pun**. Klaim itu
+kemungkinan besar penyebab bug retrieval bertahan tanpa terdeteksi — tidak ada
+yang merasa perlu memverifikasi apa yang sudah dinyatakan selesai.
+
+| Fase | Fokus | Commit |
+|------|-------|--------|
+| 0 | P0 blockers: inversi retrieval, model auth terbalik, JWT secret | `4260060` |
+| 1 | Fondasi DB & DevEx: npm scripts, `.env.example`, baseline migration, index | `4260060` |
+| 2 | Chat publik end-to-end: parser SSE, riwayat, feedback, rate limit | `594bb4a` |
+| 3 | Admin CRUD lengkap: form FAQ, route sync, perbaikan transaksi & resync | `fe3bf01` |
+| 4 | Dashboard nyata + Documents monitoring | `c40ad7a` |
+| 5 | Unifikasi design system, dark mode, render markdown | `047d929` |
+| 6 | Hardening: enkripsi key, error boundary, perbaikan kehilangan data | `630a9cc` |
+| 7 | Test pertama proyek, hapus kode mati, koreksi dokumentasi | `a3df23d` |
+
+### Bug utama yang ditemukan dan diperbaiki
+
+Yang paling merusak, semuanya tidak terlihat dari luar:
+
+1. **Retrieval rusak berlapis.** Query mengurutkan *similarity menaik* sehingga
+   mengembalikan dokumen paling tidak relevan; ambang skor dijalankan setelah
+   `LIMIT` sehingga sering membuang seluruh halaman; dan query-nya bahkan tidak
+   bisa dieksekusi (`cannot cast type record to vector`). Fungsi itu tampaknya
+   belum pernah benar-benar berjalan.
+2. **Model auth terbalik.** Chat publik terkunci di balik login, sementara
+   `POST /api/faq`, `/api/sop`, `/api/embed`, dan `/api/documents/*/resync`
+   terbuka tanpa autentikasi.
+3. **`tailwind.config.ts` inert.** Tailwind v4 mengabaikan config JS tanpa
+   direktif `@config`, sehingga seluruh skala tipografi — ~100 pemakaian —
+   tidak pernah menghasilkan CSS.
+4. **Menyimpan konfigurasi menghapus API key.** Form tidak pernah menerima key,
+   lalu mengirim string kosong yang disimpan sebagai `null`.
+5. **Resync mengorupsi konten.** Ia me-resync memakai judul dan isi milik
+   *chunk*, sehingga `"Judul (Part 2/3)"` diumpankan balik sebagai dokumen utuh.
+6. **Halaman form FAQ tidak ada sama sekali** — daftar FAQ menautkan ke rute
+   yang 404, jadi FAQ hanya bisa dibaca dan dihapus.
+7. **Berkas statis terkunci di balik auth** — seluruh isi `public/` diarahkan
+   ke `/login`.
+
+### Yang tidak jadi dikerjakan
+
+- `/api/index` dan `/api/auth/me` — tidak dibutuhkan; indexing terjadi otomatis
+  saat menyimpan.
+- NextAuth — dihapus; auth JWT langsung sudah berfungsi.
+- Suite E2E berbasis browser — lingkungan pengembangan tidak punya browser
+  headless. Ini gap yang paling layak ditutup berikutnya.
+
+---
+
+*Terakhir diperbarui: setelah Fase 7 selesai — dokumen ini disesuaikan dengan
+kode yang benar-benar dibangun.*

@@ -340,6 +340,35 @@ Transition default: `transition-all duration-150` on all interactive elements.
 
 ---
 
+## 7.1 Avatar
+
+Lima avatar ilustrasi di `public/avatars/*.webp` (256px, ~4KB), dipotong dari
+satu sheet sumber menjadi bingkai persegi kepala-dan-bahu:
+
+| Berkas | Dipakai untuk |
+|--------|---------------|
+| `admin.webp` | Akun admin di sidebar dashboard |
+| `sales.webp` | Asisten di chat — headset membacanya sebagai support |
+| `manajer.webp`, `akuntan.webp`, `staf-hrd.webp` | Pengunjung chat |
+
+Aturannya:
+
+- **WebP, bukan PNG** — sekitar seperempat ukurannya untuk ilustrasi datar
+  seperti ini, dan didukung semua browser yang jadi target Next 16.
+- **Pengunjung dipilih deterministik dari `visitorId`** (`lib/avatars.ts`),
+  bukan acak dan bukan satu wajah untuk semua. Chat tidak punya akun, jadi tidak
+  ada identitas nyata untuk digambar — tetapi menempelkan wajah yang sama pada
+  setiap orang asing membuat semua percakapan tampak dari orang yang sama.
+  Hasilnya konsisten antar-reload tanpa menyimpan apa pun.
+- **Ikon lucide tetap menjadi fallback** `Avatar`, untuk saat gambar belum
+  termuat atau `visitorId` belum diketahui.
+- Jangan pakai `grayscale` pada avatar ini — warnanya justru pembedanya.
+
+> Berkas di `public/` harus dikecualikan dari `matcher` di `proxy.ts`. Tanpa itu
+> seluruh aset statis diarahkan ke `/login`.
+
+---
+
 ## 8. Font Loading
 
 > **Catatan:** `tailwind.config.ts` sudah dihapus di Fase 5 — Tailwind v4 tidak
