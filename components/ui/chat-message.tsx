@@ -7,6 +7,8 @@ import remarkGfm from 'remark-gfm';
 import { Button } from './button';
 import { Badge } from './badge';
 import { Card } from './card';
+import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+import { ASSISTANT_AVATAR, avatarForVisitor } from '@/lib/avatars';
 
 /**
  * Source citation for RAG
@@ -47,6 +49,11 @@ export function ChatMessage({
 
   const isUser = message.role === 'user';
 
+  // Each browser keeps the same face across reloads without anything being
+  // stored — the chat has no accounts, and one shared face for every stranger
+  // would read as if they were all the same person.
+  const avatar = isUser ? avatarForVisitor(visitorId) : ASSISTANT_AVATAR;
+
   // A message only becomes ratable once the server has persisted it and sent
   // its id back in the `done` frame.
   const canGiveFeedback = !isUser && Boolean(message.id) && Boolean(visitorId);
@@ -71,16 +78,16 @@ export function ChatMessage({
   return (
     <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-        {/* Avatar */}
-        <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground border border-border'
-        }`}>
-          {isUser ? (
-            <User className="size-[18px]" />
-          ) : (
-            <Bot className="size-[18px]" />
-          )}
-        </div>
+        {/* Avatar — illustrated, with the lucide icon kept as the fallback for
+            when the image has not loaded or the visitor id is not known yet. */}
+        <Avatar className="shrink-0 size-8 mr-3 border border-border">
+          <AvatarImage src={avatar?.src} alt={avatar?.label ?? ''} />
+          <AvatarFallback
+            className={isUser ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground'}
+          >
+            {isUser ? <User className="size-4.5" /> : <Bot className="size-4.5" />}
+          </AvatarFallback>
+        </Avatar>
 
         {/* Message content */}
         <div className="flex flex-col gap-2">

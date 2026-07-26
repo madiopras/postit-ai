@@ -22,12 +22,13 @@ import {
   Settings,
   Bot
 } from "lucide-react"
+import { ADMIN_AVATAR } from "@/lib/avatars"
 
 const data = {
   user: {
     name: "Admin",
-    email: "admin@simpleai.com",
-    avatar: "/avatars/admin.jpg",
+    email: "admin@postit.ai",
+    avatar: ADMIN_AVATAR.src,
   },
   navMain: [
     {

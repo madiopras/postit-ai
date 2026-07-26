@@ -84,9 +84,14 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Run on everything except Next.js internals and static assets.
+     * Run on everything except Next.js internals and static files.
      * `/api/*` is deliberately included — it is protected by the allow-list above.
+     *
+     * The trailing extension group covers everything served from public/. Without
+     * it those files fall through to the allow-list, which does not name them, so
+     * every image, favicon, robots.txt and manifest was answered with a 302 to
+     * /login. It went unnoticed only because public/ held nothing the app used.
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|.*\\.(?:webp|avif|png|jpe?g|gif|svg|ico|webmanifest|txt|xml|woff2?)$).*)',
   ],
 };
