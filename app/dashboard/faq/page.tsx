@@ -459,10 +459,15 @@ export default function FAQManagementPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
-                            <DropdownMenuTrigger>
-                              <button className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-accent transition-all">
-                                <MoreVertical className="size-5 text-foreground" />
-                              </button>
+                            {/* The trigger already renders a <button>; wrapping
+                                one inside it nested two buttons, which is
+                                invalid HTML and broke hydration. Style the
+                                trigger directly instead. */}
+                            <DropdownMenuTrigger
+                              className="p-2 rounded-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100 hover:bg-accent transition-all"
+                              aria-label={`Aksi untuk ${faq.question}`}
+                            >
+                              <MoreVertical className="size-5 text-foreground" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-muted border-border">
                               <DropdownMenuItem onClick={() => router.push(`/dashboard/faq/${faq.id}`)} className="text-sm">
