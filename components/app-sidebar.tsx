@@ -47,6 +47,11 @@ const data = {
       url: "/dashboard/sop",
       icon: <FileText />,
     },
+    {
+      title: "Documents",
+      url: "/dashboard/documents",
+      icon: <Folder />,
+    },
   ],
   navSecondary: [
     {

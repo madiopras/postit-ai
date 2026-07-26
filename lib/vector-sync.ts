@@ -268,30 +268,6 @@ export async function searchSimilarDocuments(
   }
 }
 
-/**
- * Get document count by type and status
- */
-export async function getDocumentStats(): Promise<{
-  faqs: { total: number; published: number; draft: number; error: number };
-  sops: { total: number; published: number; draft: number; error: number };
-}> {
-  const allDocs = await db.select().from(documents);
-  
-  const faqs = allDocs.filter(d => d.type === 'faq');
-  const sops = allDocs.filter(d => d.type === 'sop');
-
-  return {
-    faqs: {
-      total: faqs.length,
-      published: faqs.filter(d => d.status === 'published').length,
-      draft: faqs.filter(d => d.status === 'draft').length,
-      error: faqs.filter(d => d.status === 'error').length,
-    },
-    sops: {
-      total: sops.length,
-      published: sops.filter(d => d.status === 'published').length,
-      draft: sops.filter(d => d.status === 'draft').length,
-      error: sops.filter(d => d.status === 'error').length,
-    },
-  };
-}
+// Document counts now live in lib/stats.ts, aggregated in SQL. The version that
+// used to sit here selected every row — including every 1536-dimension
+// embedding — and counted them in JavaScript.
