@@ -183,30 +183,6 @@ export async function syncSopRecord(
 }
 
 /**
- * Delete vector documents for a FAQ
- */
-export async function deleteFaqVectors(faqId: string): Promise<void> {
-  await db
-    .delete(documents)
-    .where(and(
-      eq(documents.type, 'faq'),
-      eq(documents.sourceId, faqId)
-    ));
-}
-
-/**
- * Delete vector documents for a SOP
- */
-export async function deleteSopVectors(sopId: string): Promise<void> {
-  await db
-    .delete(documents)
-    .where(and(
-      eq(documents.type, 'sop'),
-      eq(documents.sourceId, sopId)
-    ));
-}
-
-/**
  * Search similar documents using vector similarity
  */
 export interface SearchResult {

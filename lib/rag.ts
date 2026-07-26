@@ -164,34 +164,4 @@ export async function* ragStream(
   }
 }
 
-/**
- * Execute RAG pipeline without streaming (returns complete response)
- * 
- * @param userMessage - User's question
- * @param options - RAG options
- * @returns Complete response with sources
- */
-export async function ragQuery(
-  userMessage: string,
-  options: RagOptions = {}
-): Promise<RagResponse> {
-  const chunks: string[] = [];
-  const sources: RagSource[] = [];
-
-  for await (const chunk of ragStream(
-    userMessage,
-    options,
-    undefined,
-    (source) => sources.push(source)
-  )) {
-    if (chunk.content) {
-      chunks.push(chunk.content);
-    }
-  }
-
-  return {
-    content: chunks.join(''),
-    sources,
-  };
-}
 

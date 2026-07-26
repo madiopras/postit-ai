@@ -1,389 +1,227 @@
-# PostIt AI - Chatbot RAG Setup & Deployment Guide
+# PostIt AI — Setup & Development Guide
 
-> **Project:** PostIt AI — Chatbot RAG untuk FAQ & SOP  
-> **Stack:** Next.js 16 + Drizzle ORM + pgvector (PostgreSQL 16) + 9router (embedding/LLM)
+RAG chatbot over a company's FAQ and SOP knowledge base, with an admin dashboard
+to manage it.
 
-## 🚀 Quick Start
+- **Chat (`/`)** — public, no login. Streams answers with source citations.
+- **Dashboard (`/dashboard/*`)** — admin only. FAQ/SOP CRUD, vector-store
+  monitoring, and AI model configuration that applies without a redeploy.
 
-### Prerequisites
-- Node.js 18+ 
-- Docker & Docker Compose
-- PostgreSQL 16 (via Docker)
-- Environment variables configured
+---
 
-### 1. Installation
+## Quick start
 
 ```bash
-# Clone repository
-git clone <repo-url>
-cd simpleai
-
-# Install dependencies
+git clone <repo> && cd simpleai
 npm install
 
-# Setup environment variables
-cp .env.example .env.local
-# Edit .env.local with your configuration
+cp .env.example .env      # then fill in the blank values — see below
+docker compose up -d      # Postgres 17 + pgvector
+
+npm run db:migrate        # creates the extension, 7 tables and 9 indexes
+npm run seed:admin        # admin / admin123
+npm run seed              # 5 FAQ + 5 SOP, embedded and published
+
+npm run dev               # http://localhost:3000
 ```
 
-### 2. Database Setup
+`npm run seed` calls the embedding API, so an AI endpoint has to be reachable
+first (`ROUTER_BASE_URL`). Everything else works without one.
+
+### Prerequisites
+
+| | |
+|---|---|
+| Node.js | 20.12+ (uses `process.loadEnvFile`) |
+| Docker | for Postgres + pgvector |
+| AI endpoint | anything OpenAI-compatible exposing `/embeddings` and `/chat/completions` |
+
+---
+
+## Environment
+
+`.env.example` is the authoritative list — every variable in it is read by the
+code. Verify with:
 
 ```bash
-# Start PostgreSQL with pgvector
-docker-compose up -d
-
-# Run Drizzle migrations
-npx drizzle-kit push
-
-# (Optional) Seed initial data
-npm run seed
+grep -rho "process\.env\.[A-Z_0-9]*" app lib scripts proxy.ts | sort -u
 ```
 
-### 3. Environment Configuration
+Three values are blank in the template and must be filled in:
 
-Create `.env.local`:
+| Variable | Why |
+|---|---|
+| `JWT_SECRET` | Signs the admin session. No fallback — the app throws without it, so a known default can never be used to forge a token. |
+| `CONFIG_ENCRYPTION_KEY` | Encrypts the provider API keys stored in `app_config`. Losing it means re-entering those keys. |
+| `ROUTER_API_KEY` | Bearer token for the AI endpoint. |
 
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/postit_ai
+Generate the two secrets with `openssl rand -base64 32`.
 
-# Auth
-AUTH_SECRET=your-secret-key-here
+**Config resolution order is `app_config` table → environment → built-in
+default.** Anything saved at `/dashboard/config` overrides the env values, which
+exist mainly to get a working instance before the first login.
 
-# Embedding Service (9router)
-NEXT_PUBLIC_ROUTER_EMBEDDING=http://localhost:8001
-EMBEDDING_API_KEY=your-embedding-api-key
+> The embedding model must output **1536 dimensions** to match the
+> `vector(1536)` column. Switching to a different width needs a schema migration
+> and a full re-embed of every document.
 
-# LLM Service (9router)
-NEXT_PUBLIC_ROUTER_LLM=http://localhost:8002
-LLM_API_KEY=your-llm-api-key
+---
+
+## Commands
+
+| Command | |
+|---|---|
+| `npm run dev` | Development server |
+| `npm run build` / `start` | Production build and serve |
+| `npm test` | Vitest suite (see below) |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run db:generate` | Generate a migration from `lib/schema.ts` |
+| `npm run db:migrate` | Apply pending migrations |
+| `npm run db:studio` | Drizzle Studio |
+| `npm run seed` / `seed:admin` | Sample content / admin user |
+
+**Use `db:generate` + `db:migrate`, not `db:push`.** `push` cannot express
+`CREATE EXTENSION vector` or the HNSW index, both of which live in the migration
+files.
+
+---
+
+## Architecture
+
+```
+app/
+  page.tsx                   public chat (SSE client)
+  login/                     admin login
+  dashboard/                 overview, faq, sop, documents, config
+  api/
+    chat/                    POST: streaming RAG. sessions/[id]: history
+    feedback/[messageId]/    thumbs up/down
+    faq/  sop/               CRUD + /[id]/sync
+    documents/               vector-store listing + /[id]/resync
+    stats/                   dashboard aggregates
+    config/                  AI model configuration + /test
+    auth/                    login, logout
+lib/
+  rag.ts                     retrieve → build prompt → stream
+  vector-sync.ts             chunk, embed, upsert, similarity search
+  embedding.ts  llm.ts       OpenAI-compatible clients
+  config.ts                  DB > env resolution, 30s cache
+  crypto.ts                  AES-256-GCM for secrets at rest
+  auth.ts                    JWT sign/verify, requireAuth()
+  sse.ts                     SSE frame parser
+  rate-limit.ts              sliding window
+  stats.ts  chunking.ts  schema.ts  db.ts  api.ts
+proxy.ts                     auth allow-list (Next 16 renamed middleware → proxy)
+tests/                       Vitest
 ```
 
-### 4. Development
+### Request flow
+
+```
+question
+  → embed (one call)
+  → pgvector cosine search, published only, ordered by distance
+  → top 5 injected into the system prompt
+  → LLM streamed back as SSE
+  → persisted; ids returned in the terminal `done` frame
+```
+
+### Auth model
+
+`proxy.ts` runs an explicit **allow-list**: `/`, `/login`, `/api/auth/*`,
+`/api/chat`, `/api/chat/sessions*`, `/api/feedback/*`. Everything else needs a
+valid JWT. Admin route handlers additionally call `requireAuth()` — Next.js
+documents Proxy as unsuitable for authorization on its own.
+
+Public endpoints that take a `visitorId` verify ownership server-side and answer
+`404` on a mismatch, so conversation ids cannot be enumerated.
+
+---
+
+## Testing
 
 ```bash
-# Start development server
-npm run dev
-
-# Open browser
-open http://localhost:3000
+npm test
 ```
 
-## 📋 Project Structure
+47 tests across 6 files. Every suite guards a bug that actually shipped:
 
-```
-simpleai/
-├── app/
-│   ├── api/
-│   │   ├── auth/              # Authentication
-│   │   ├── chat/              # Chat with RAG
-│   │   ├── config/            # Config management
-│   │   ├── faq/               # FAQ CRUD
-│   │   ├── sop/               # SOP CRUD
-│   │   ├── documents/         # Documents monitoring
-│   │   └── embed/             # Embedding service
-│   ├── dashboard/
-│   │   ├── config/            # Config UI
-│   │   ├── faq/               # FAQ management
-│   │   ├── sop/               # SOP management
-│   │   └── documents/         # Documents monitoring
-│   ├── login/                 # Login page
-│   ├── page.tsx               # Chat interface
-│   └── layout.tsx             # Root layout
-├── components/
-│   ├── ui/                    # Shadcn UI components
-│   ├── chat-*                 # Chat components
-│   ├── error-boundary.tsx     # Error handling
-│   └── ...
-├── lib/
-│   ├── auth.ts                # Authentication
-│   ├── config.ts              # Config management
-│   ├── db.ts                  # Database client
-│   ├── embedding.ts           # Embedding service
-│   ├── llm.ts                 # LLM service
-│   ├── rag.ts                 # RAG pipeline
-│   ├── chunking.ts            # Text chunking
-│   ├── vector-sync.ts         # Vector store sync
-│   └── schema.ts              # Database schema
-├── middleware.ts              # Auth middleware
-├── drizzle.config.ts          # Drizzle config
-└── package.json
-```
+| File | Guards |
+|---|---|
+| `tests/retrieval.integration.test.ts` | Retrieval ordering. The query sorted by *similarity ascending*, returning the least relevant documents first; the score filter then ran after `LIMIT`. Runs against real pgvector in a throwaway schema. |
+| `tests/sse.test.ts` | The chat client split network chunks on newlines with no buffering and discarded `event:` lines, so the `done` frame carrying citations was never seen. |
+| `tests/crypto.test.ts` | API keys must not be readable in the database, and a tampered ciphertext must fail rather than be sent as a bearer token. |
+| `tests/embedding.test.ts` | `embed()` returned only the first vector for an array input; providers may also return a batch out of order. |
+| `tests/chunking.test.ts` | Chunk size, no lost content, and exactly one `(Part n/m)` suffix per title. |
+| `tests/rate-limit.test.ts` | The sliding window protecting the public, unauthenticated `/api/chat`. |
 
-## 🔐 Authentication
+The retrieval suite skips itself when `DATABASE_URL` is unset, so the unit tests
+run anywhere. To include it:
 
-### Login
-- URL: `http://localhost:3000/login`
-- Default user: `admin` / `admin123`
-
-### Protected Routes
-- `/dashboard/*` - Admin dashboard (protected)
-- Middleware redirects to login if not authenticated
-
-## 🧠 Core Features
-
-### 1. Configuration Management
-**Endpoint:** `GET/PUT /api/config`
-- Manage embedding & LLM models dynamically
-- Test connectivity before applying
-- No redeployment needed
-
-### 2. FAQ Management
-**Endpoints:** `GET/POST/PUT/DELETE /api/faq`
-- Full CRUD operations
-- Automatic vector embedding
-- Search, filter, pagination
-- Status tracking (draft/published/error)
-
-**UI:** Dashboard → FAQ
-- Create/edit/delete forms
-- Search & filter
-- Manual resync
-- Pagination
-
-### 3. SOP Management
-**Endpoints:** `GET/POST/PUT/DELETE /api/sop`
-- Full CRUD operations
-- Content chunking with preview
-- Automatic vector sync
-- Status tracking
-
-**UI:** Dashboard → SOP
-- Chunk preview visualization
-- Create/edit/delete forms
-- Content size monitoring
-- Manual resync
-
-### 4. Chat Interface
-**Endpoint:** `POST /api/chat` (streaming)
-- RAG-powered responses
-- Real-time streaming
-- Source attribution
-- Session history
-
-**UI:** Home page (`/`)
-- Real-time chat
-- Sources panel
-- Session management
-
-### 5. Documents Monitoring
-**Endpoints:** `GET /api/documents`, `POST /api/documents/[id]/resync`
-- Real-time vector store status
-- Statistics dashboard
-- Error recovery
-- Advanced filtering
-
-**UI:** Dashboard → Documents
-- Statistics cards
-- Status filtering
-- Manual resync controls
-- Pagination
-
-## 🗄️ Database Schema
-
-### Key Tables
-- `users` - Admin authentication
-- `faqs` - FAQ content
-- `sops` - SOP content
-- `documents` - Vector embeddings
-- `chats` - Chat sessions
-- `messages` - Chat messages
-- `app_config` - AI model configuration
-
-### Data Types
-- `embedding` - pgvector (1536 dimensions)
-- `status` - 'draft' | 'published' | 'error'
-- `type` - 'faq' | 'sop'
-
-## 🔄 RAG Pipeline
-
-### Flow
-1. **Content Creation** - FAQ/SOP created in dashboard
-2. **Chunking** - Content split into ~800 token chunks
-3. **Embedding** - Each chunk converted to vector
-4. **Storage** - Vectors stored in pgvector with metadata
-5. **Query** - User question embedded and searched
-6. **Retrieval** - Top-K similar documents found
-7. **Generation** - LLM generates response with context
-
-### Configuration
-- Chunk size: ~800 tokens (3.2KB)
-- Chunk overlap: 400 characters
-- Search limit: 5 documents
-- Min similarity score: 0.5
-
-## ✅ Phase Completion Checklist
-
-### Phase 1-4: Core Infrastructure ✓
-- [x] Project initialization & database
-- [x] Authentication & middleware
-- [x] Config system with dynamic models
-- [x] Core RAG pipeline
-- [x] Chat UI with streaming
-
-### Phase 5-6: Content Management ✓
-- [x] FAQ CRUD & vector sync
-- [x] SOP CRUD with chunking
-- [x] Import/export CSV support
-
-### Phase 7-8: Monitoring & Polish ✓
-- [x] Documents monitoring dashboard
-- [x] Error recovery with manual resync
-- [x] Error boundaries for UI
-- [x] Skeleton loading states
-- [x] Toast notifications
-- [x] Responsive mobile design
-
-## 🧪 Testing
-
-### Health Checks
 ```bash
-# API health
-curl http://localhost:3000/api/config
-
-# Test embedding
-curl -X POST http://localhost:3000/api/config/test \
-  -H "Content-Type: application/json" \
-  -d '{"type":"embedding"}'
-
-# Test LLM
-curl -X POST http://localhost:3000/api/config/test \
-  -H "Content-Type: application/json" \
-  -d '{"type":"llm"}'
+set -a; . ./.env; set +a && npm test
 ```
 
-### Manual Test Flow
-1. Login with admin credentials
-2. Configure embedding & LLM services
-3. Create sample FAQs
-4. Create sample SOPs
-5. Test chat with RAG
-6. Verify documents syncing
-7. Test error recovery
+There is no browser-based E2E suite yet — see Status below.
 
-## 📊 Performance
+---
 
-### Caching
-- Config cached in memory (1-hour TTL)
-- Next.js response caching
-- Database query optimization
+## Deployment notes
 
-### Vector Search
-- Cosine similarity via pgvector
-- Top-K retrieval (default: 5)
-- Fast indexed lookups
+- **Single instance assumed.** The config cache and the rate limiter both live
+  in process memory. With N replicas the effective rate limit is N× the
+  configured value, and a config change takes up to 30s to reach every worker.
+  Move both to Redis before scaling out.
+- **Rotate `CONFIG_ENCRYPTION_KEY` deliberately.** Stored API keys become
+  unreadable and fall back to the env values; re-enter them at
+  `/dashboard/config`.
+- **Change the seeded admin password.** `seed:admin` accepts `ADMIN_USERNAME`
+  and `ADMIN_PASSWORD` to avoid the `admin123` default.
 
-### Pagination
-- Default: 10 items per page
-- Efficient offset-based pagination
-- Configurable page size
+---
 
-## 🚀 Production Deployment
+## Troubleshooting
 
-### Build & Deploy
-```bash
-# Production build
-npm run build
+| Symptom | Cause |
+|---|---|
+| `JWT_SECRET is not set` at startup | Fill it in — there is deliberately no fallback. |
+| Saving config returns `CONFIG_ENCRYPTION_KEY is not set` | Same; needed to encrypt the API keys. |
+| Chat answers `Embedding base URL not configured` | No `ROUTER_BASE_URL` in env and nothing saved at `/dashboard/config`. |
+| Content saved but never cited | Its status is `error` — the embed call failed. Check `/dashboard/documents`, then Sync. |
+| `cannot cast type record to vector` | An embedding was interpolated into a raw `sql` template without going through `toVector()`. |
 
-# Start production server
-npm start
-```
+---
 
-### Environment Setup
-- Set `AUTH_SECRET` to secure random value
-- Configure `DATABASE_URL` for production DB
-- Set embedding & LLM endpoints
-- Use environment variables for API keys
+## Status
 
-### Database Migrations
-```bash
-# Run migrations in production
-npx drizzle-kit push:pg
-```
+Implemented and verified end to end: public chat with citations, multi-
+conversation history, feedback, FAQ/SOP CRUD with vector sync, documents
+monitoring with resync, dashboard statistics, dynamic AI configuration with
+encrypted keys, dark mode.
 
-### Monitoring
-- Check error logs in dashboard
-- Monitor document sync status
-- Track chat usage & feedback
-- Review API response times
+Known gaps:
 
-## 🐛 Troubleshooting
+- **No browser E2E suite.** The environment this was built in had no headless
+  browser, so the UI has been verified through compiled CSS, HTTP responses and
+  contrast maths — not visually. Adding Playwright is the obvious next step.
+- **No audit logging** for dashboard mutations (`rules.md` §8 lists it as open).
+- **`accuracy` on `faqs` is never written** — the dashboard shows a column
+  nothing populates.
+- **Retrieval quality is untuned.** No reranking, hybrid search or query
+  rewriting; plain top-5 cosine over `published` documents.
 
-### Database Connection Error
-```
-Solution: Check DATABASE_URL and PostgreSQL is running
-docker-compose ps  # Verify containers
-```
+> Earlier revisions of this file claimed every phase was complete. They were
+> not — among other things the retrieval query was inverted and could not
+> execute at all, and the dashboard was still the unmodified shadcn demo. The
+> list above is meant to be checkable against the code.
 
-### Embedding Service Not Found
-```
-Solution: Configure NEXT_PUBLIC_ROUTER_EMBEDDING
-Check 9router service is running on correct port
-```
+---
 
-### LLM Service Timeout
-```
-Solution: Configure NEXT_PUBLIC_ROUTER_LLM
-Increase timeout in lib/llm.ts if needed
-```
+## Further reading
 
-### Vector Search No Results
-```
-Solution: Check documents are synced in Documents page
-Run manual resync on failed documents
-```
-
-## 📚 API Documentation
-
-### Chat API
-```
-POST /api/chat
-Content-Type: application/json
-
-{
-  "message": "How to...",
-  "sessionId": "uuid"
-}
-
-Response: Server-Sent Events (streaming)
-```
-
-### FAQ CRUD
-```
-GET /api/faq?search=...&category=...&status=...&page=1&pageSize=10
-POST /api/faq { question, answer, category }
-PUT /api/faq/{id} { question?, answer?, category?, status? }
-DELETE /api/faq/{id}
-```
-
-### SOP CRUD
-```
-GET /api/sop?search=...&category=...&status=...&page=1&pageSize=10
-POST /api/sop { title, content, category }
-PUT /api/sop/{id} { title?, content?, category?, status? }
-DELETE /api/sop/{id}
-```
-
-### Documents API
-```
-GET /api/documents?search=...&type=...&status=...&page=1&pageSize=10
-POST /api/documents/{id}/resync
-```
-
-### Config API
-```
-GET /api/config
-PUT /api/config { embeddingBaseUrl, embeddingModel, llmBaseUrl, llmModel }
-POST /api/config/test { type: 'embedding' | 'llm' }
-```
-
-## 📝 License
-
-PostIt AI - Open Source RAG Chatbot
-
-## 🤝 Support
-
-For issues or questions, please check:
-- Phase plan: `enhancement/go1/phase-plan.md`
-- Architecture: `enhancement/go1/architecture.md`
-- PRD: `enhancement/go1/prd.md`
+`docs/enhancement/go1/` — `prd.md`, `architecture.md`, `schema.md`, `design.md`,
+`rules.md`, `phase-plan.md`. `design.md` has been updated to match the code;
+the others still describe the original intent and differ in places from what was
+built.
