@@ -38,39 +38,43 @@ export default function SOPFormPage() {
   const [chunks, setChunks] = useState<string[]>([]);
   const [showChunkPreview, setShowChunkPreview] = useState(false);
 
-  // Fetch SOP if editing
+  // Fetch SOP if editing. `loading` already starts false for a new SOP, so
+  // there is nothing to set synchronously here — every write happens in a
+  // promise callback, guarded against landing after unmount.
   useEffect(() => {
-    if (isNew) {
-      setLoading(false);
-      return;
-    }
+    if (isNew) return;
 
-    const fetchSop = async () => {
-      try {
-        const response = await fetch(`/api/sop/${sopId}`);
-        const data = await response.json();
+    let cancelled = false;
 
-        if (data.success) {
-          setSop(data.data);
-          setFormData({
-            title: data.data.title,
-            content: data.data.content,
-            category: data.data.category || '',
-          });
-        } else {
+    fetch(`/api/sop/${sopId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled) return;
+
+        if (!data.success) {
           toast.error('Failed to load SOP');
           router.push('/dashboard/sop');
+          return;
         }
-      } catch (error) {
+
+        setSop(data.data);
+        setFormData({
+          title: data.data.title,
+          content: data.data.content,
+          category: data.data.category || '',
+        });
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
         console.error('Error fetching SOP:', error);
         toast.error('Failed to load SOP');
         router.push('/dashboard/sop');
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
 
-    fetchSop();
+    return () => {
+      cancelled = true;
+    };
   }, [sopId, isNew, router]);
 
   const generateChunkPreview = (content: string) => {

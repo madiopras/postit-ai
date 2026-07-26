@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Plus } from 'lucide-react';
+import { Bot, Menu, Plus } from 'lucide-react';
 import { ChatMessage, type SourceCitation } from '@/components/ui/chat-message';
 import { ChatInput } from '@/components/ui/chat-input';
 import { ChatSidebar, type ChatSession } from '@/components/ui/chat-sidebar';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useVisitorId } from '@/hooks/use-visitor-id';
 import { parseSseStream } from '@/lib/sse';
 
@@ -223,9 +224,29 @@ export default function Chat() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col relative">
-        {/* Mobile Header */}
+        {/* Mobile Header — the sidebar is hidden below md, so history and the
+            theme toggle are only reachable through this drawer. Without it a
+            phone user could start new chats but never reopen an old one. */}
         <header className="md:hidden h-16 border-b border-border bg-card flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
+            <Sheet>
+              <SheetTrigger
+                className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors"
+                aria-label="Buka riwayat chat"
+              >
+                <Menu className="size-6 text-foreground" />
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetTitle className="sr-only">Riwayat chat</SheetTitle>
+                <ChatSidebar
+                  sessions={sessions}
+                  activeChatId={chatId}
+                  onNewChat={handleNewChat}
+                  onSelectSession={handleSelectSession}
+                  onDeleteSession={handleDeleteSession}
+                />
+              </SheetContent>
+            </Sheet>
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <Bot className="size-6 text-primary-foreground" />
             </div>

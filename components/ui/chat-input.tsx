@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
 
 /**
@@ -15,54 +15,15 @@ interface ChatInputProps {
   textareaRows?: number;
 }
 
-/**
- * Auto-resizing textarea component
- */
-function AutoResizingTextarea({
-  value,
-  onChange,
-  placeholder,
-  disabled,
-  textareaRows = 1,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  textareaRows?: number;
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [value]);
-
-  return (
-    <textarea
-      ref={textareaRef}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      disabled={disabled}
-      rows={textareaRows}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-          }
-        }
-      }}
-      className="w-full max-h-[200px] bg-transparent border-0 focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground resize-none p-0 leading-relaxed"
-    />
-  );
-}
+const MAX_HEIGHT_PX = 200;
 
 /**
- * Chat input component with auto-resize textarea and send button
+ * Chat input with an auto-growing textarea.
+ *
+ * The file previously carried a second, unused `AutoResizingTextarea`
+ * component plus a duplicate keydown handler and a `setTimeout(…, 0)` resize
+ * hack — all dead. Height is now driven by one layout effect against the ref,
+ * so it settles before paint instead of one frame late.
  */
 export function ChatInput({
   value,
@@ -75,71 +36,57 @@ export function ChatInput({
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleFocus = () => setIsFocused(true);
-  const handleBlur = () => setIsFocused(false);
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    // Collapse first so shrinking works, then grow to fit.
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+  }, [value]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter sends; Shift+Enter inserts a newline.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (value.trim()) {
-        onSend();
-      }
+      if (value.trim() && !disabled) onSend();
     }
   };
 
-  const [height, setHeight] = useState<string>('auto');
-
-  const handleAutoResize = useCallback(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      setHeight(`${Math.min(textareaRef.current.scrollHeight, 200)}px`);
-    }
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-    setHeight('auto');
-    setTimeout(() => {
-      if (e.target) {
-        setHeight(`${Math.min(e.target.scrollHeight, 200)}px`);
-      }
-    }, 0);
-  };
+  const canSend = Boolean(value.trim()) && !disabled;
 
   return (
-    <div className={`
+    <div
+      className={`
       flex items-end gap-2 p-2 rounded-xl transition-all duration-200
-      ${isFocused 
-        ? 'bg-card border border-primary ring-2 ring-primary/10' 
-        : 'bg-muted border border-border'}
-    `}>
+      ${
+        isFocused
+          ? 'bg-card border border-primary ring-2 ring-primary/10'
+          : 'bg-muted border border-border'
+      }
+    `}
+    >
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={handleInputChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
         rows={textareaRows}
-        style={{ height }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (value.trim()) {
-              onSend();
-            }
-          }
-        }}
-        className="w-full bg-transparent border-0 focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground resize-none p-0 leading-relaxed"
+        className="w-full max-h-50 bg-transparent border-0 focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground resize-none p-0 leading-relaxed"
       />
       <button
         onClick={onSend}
-        disabled={!value.trim() || disabled}
+        disabled={!canSend}
         className={`
-          flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
-          ${!value.trim() || disabled
-            ? 'bg-muted text-muted-foreground cursor-not-allowed'
-            : 'bg-primary text-primary-foreground hover:bg-primary active:scale-90'}
+          shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
+          ${
+            canSend
+              ? 'bg-primary text-primary-foreground hover:bg-primary active:scale-90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
+          }
         `}
         aria-label="Kirim pesan"
       >

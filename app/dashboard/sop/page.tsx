@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -38,28 +38,46 @@ export default function SOPPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const fetchSOPs = async () => {
+  /** Plain fetch with no state writes, so the effect below can call it. */
+  const loadSOPs = useCallback(async (): Promise<SOP[]> => {
+    const res = await fetch("/api/sop");
+    if (!res.ok) throw new Error("Failed to fetch SOPs");
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error?.message || "Failed to fetch SOPs");
+    return result.data;
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await fetch("/api/sop");
-      if (!res.ok) throw new Error("Failed to fetch SOPs");
-      const result = await res.json();
-      if (result.success) {
-        setSops(result.data);
-      } else {
-        throw new Error(result.error?.message || "Failed to fetch SOPs");
-      }
+      setSops(await loadSOPs());
     } catch {
       toast.error("Failed to load SOPs");
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadSOPs]);
 
+  // `cancelled` guards against a response landing after unmount.
   useEffect(() => {
-    fetchSOPs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let cancelled = false;
+
+    loadSOPs()
+      .then((data) => {
+        if (cancelled) return;
+        setSops(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        toast.error("Failed to load SOPs");
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSOPs]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this SOP?")) return;
@@ -72,7 +90,7 @@ export default function SOPPage() {
       if (!res.ok) throw new Error("Failed to delete");
 
       toast.success("SOP deleted successfully");
-      fetchSOPs();
+      refresh();
     } catch {
       toast.error("Failed to delete SOP");
     }

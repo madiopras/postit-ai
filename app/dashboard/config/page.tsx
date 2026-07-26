@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { Brain, Eye, EyeOff, Save, Sparkles, Wifi } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ConfigData {
   embedding: {
     baseUrl: string;
     model: string;
     hasApiKey: boolean;
+    apiKeyPreview: string;
   };
   llm: {
     baseUrl: string;
     model: string;
     hasApiKey: boolean;
+    apiKeyPreview: string;
   };
   fallback: {
     embeddingBaseUrl: string;
@@ -139,16 +142,19 @@ export default function ConfigPage() {
       const res = await fetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        // An untouched key field is omitted, not sent as ''. Sending '' would
+        // clear the stored key — and since the field is never pre-filled, that
+        // used to happen on every save that only changed a model name.
         body: JSON.stringify({
           embedding: {
             baseUrl: embeddingBaseUrl,
             model: embeddingModel,
-            apiKey: embeddingApiKey,
+            ...(embeddingApiKey ? { apiKey: embeddingApiKey } : {}),
           },
           llm: {
             baseUrl: llmBaseUrl,
             model: llmModel,
-            apiKey: llmApiKey,
+            ...(llmApiKey ? { apiKey: llmApiKey } : {}),
           },
         }),
       });
@@ -156,18 +162,22 @@ export default function ConfigPage() {
       const json = await res.json();
       
       if (json.success) {
-        alert('Configuration saved successfully!');
-        // Reload config
+        toast.success('Konfigurasi tersimpan');
+        // Clear the key inputs: their value is now stored, and leaving them
+        // filled would re-send the same secret on the next save.
+        setEmbeddingApiKey('');
+        setLlmApiKey('');
+
         const reloadRes = await fetch('/api/config');
         const reloadJson = await reloadRes.json();
         if (reloadJson.success) {
           setConfig(reloadJson.data);
         }
       } else {
-        alert('Failed to save: ' + json.error?.message);
+        toast.error(json.error?.message ?? 'Gagal menyimpan konfigurasi');
       }
     } catch (err) {
-      alert('Failed to save configuration');
+      toast.error('Gagal menyimpan konfigurasi');
       console.error(err);
     } finally {
       setSaving(false);
@@ -259,7 +269,7 @@ export default function ConfigPage() {
                   type={showEmbeddingKey ? 'text' : 'password'}
                   value={embeddingApiKey}
                   onChange={(e) => setEmbeddingApiKey(e.target.value)}
-                  placeholder={config?.embedding.hasApiKey ? '••••••••••••' : 'sk-...'}
+                  placeholder={config?.embedding.hasApiKey ? `Tersimpan: ${config.embedding.apiKeyPreview} — isi untuk mengganti` : 'sk-...'}
                   className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
                 />
                 <button
@@ -358,7 +368,7 @@ export default function ConfigPage() {
                   type={showLlmKey ? 'text' : 'password'}
                   value={llmApiKey}
                   onChange={(e) => setLlmApiKey(e.target.value)}
-                  placeholder={config?.llm.hasApiKey ? '••••••••••••' : 'sk-...'}
+                  placeholder={config?.llm.hasApiKey ? `Tersimpan: ${config.llm.apiKeyPreview} — isi untuk mengganti` : 'sk-...'}
                   className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
                 />
                 <button

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { appConfig } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { decryptSecret, encryptSecret } from '@/lib/crypto';
 
 /**
  * Config interface untuk AI Model Configuration
@@ -15,12 +16,34 @@ export interface AiConfig {
 }
 
 /**
- * In-memory cache untuk config (singleton pattern)
- * Cache di-invalidate setiap kali config di-update
+ * In-memory cache untuk config (singleton pattern).
+ *
+ * The cache lives in one process. `saveAiConfig` invalidates its own copy, but
+ * a second worker keeps serving its stale one until the TTL lapses — so the TTL
+ * is the real upper bound on how long a model change takes to apply everywhere.
+ * 30 seconds keeps that window short; the previous 5 minutes meant an admin
+ * could switch models and watch requests keep hitting the old one.
  */
 let cachedConfig: AiConfig | null = null;
 let cacheTimestamp: number = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 menit
+const CACHE_TTL = 30 * 1000;
+
+/**
+ * Decrypt a stored key, or drop it if it cannot be read.
+ *
+ * A key that fails to decrypt (rotated CONFIG_ENCRYPTION_KEY, corrupted row)
+ * must not be passed on as-is — that would send ciphertext as a bearer token.
+ * Returning undefined lets the env fallback take over instead.
+ */
+function readSecret(stored: string | null, label: string): string | undefined {
+  if (!stored) return undefined;
+  try {
+    return decryptSecret(stored);
+  } catch (error) {
+    console.error(`[Config] Could not decrypt ${label}; falling back to env.`, error);
+    return undefined;
+  }
+}
 
 /**
  * Load config dari database dengan fallback ke environment variables
@@ -46,10 +69,10 @@ export async function getAiConfig(): Promise<AiConfig> {
       const config: AiConfig = {
         embeddingBaseUrl: activeConfig[0].embeddingBaseUrl || undefined,
         embeddingModel: activeConfig[0].embeddingModel || undefined,
-        embeddingApiKey: activeConfig[0].embeddingApiKey || undefined,
+        embeddingApiKey: readSecret(activeConfig[0].embeddingApiKey, 'embedding API key'),
         llmBaseUrl: activeConfig[0].llmBaseUrl || undefined,
         llmModel: activeConfig[0].llmModel || undefined,
-        llmApiKey: activeConfig[0].llmApiKey || undefined,
+        llmApiKey: readSecret(activeConfig[0].llmApiKey, 'LLM API key'),
       };
 
       // Merge dengan environment variables sebagai fallback
@@ -96,24 +119,45 @@ export function invalidateConfigCache(): void {
  * Simpan config baru ke database
  * - Set row lama is_active = 'false'
  * - Insert row baru dengan is_active = 'true'
+ *
+ * API keys are encrypted before they touch the row. Because each save inserts a
+ * new row rather than updating in place (the table doubles as an audit trail),
+ * an omitted key has to be carried forward explicitly — otherwise editing just
+ * the model name would drop the key from the new active row.
  */
 export async function saveAiConfig(config: AiConfig, updatedBy?: string): Promise<void> {
   const now = new Date();
-  
-  // Set semua row lama menjadi inactive
+
+  // Read the outgoing row first so undefined keys can be preserved.
+  const [current] = await db
+    .select()
+    .from(appConfig)
+    .where(eq(appConfig.isActive, 'true'))
+    .limit(1);
+
+  /**
+   * undefined -> keep whatever is already stored (still encrypted, no re-crypt)
+   * ''        -> explicit clear
+   * value     -> encrypt the new secret
+   */
+  const nextSecret = (incoming: string | undefined, stored: string | null): string | null => {
+    if (incoming === undefined) return stored ?? null;
+    if (incoming === '') return null;
+    return encryptSecret(incoming);
+  };
+
   await db
     .update(appConfig)
     .set({ isActive: 'false', updatedAt: now })
     .where(eq(appConfig.isActive, 'true'));
 
-  // Insert row baru
   await db.insert(appConfig).values({
     embeddingBaseUrl: config.embeddingBaseUrl || null,
     embeddingModel: config.embeddingModel || null,
-    embeddingApiKey: config.embeddingApiKey || null,
+    embeddingApiKey: nextSecret(config.embeddingApiKey, current?.embeddingApiKey ?? null),
     llmBaseUrl: config.llmBaseUrl || null,
     llmModel: config.llmModel || null,
-    llmApiKey: config.llmApiKey || null,
+    llmApiKey: nextSecret(config.llmApiKey, current?.llmApiKey ?? null),
     isActive: 'true',
     updatedBy: updatedBy ? updatedBy as unknown as import('@/lib/schema').User['id'] : null,
     createdAt: now,
@@ -122,6 +166,20 @@ export async function saveAiConfig(config: AiConfig, updatedBy?: string): Promis
 
   // Invalidate cache
   invalidateConfigCache();
+}
+
+/**
+ * Read and discard the body of a successful probe.
+ *
+ * Deliberately does not JSON.parse. A 2xx already answers the only question a
+ * connection test asks — is the endpoint reachable and the key accepted — and
+ * some OpenAI-compatible gateways append a stray `data: [DONE]` after the JSON
+ * object even for non-streaming calls. Parsing strictly turned that into
+ * "Unexpected non-whitespace character after JSON", so the LLM test always
+ * failed against a perfectly working endpoint.
+ */
+async function drainBody(response: Response): Promise<void> {
+  await response.text().catch(() => '');
 }
 
 /**
@@ -160,7 +218,7 @@ export async function testConnection(
         };
       }
 
-      await response.json();
+      await drainBody(response);
     } else {
       // Test LLM endpoint
       const testPayload = {
@@ -188,7 +246,7 @@ export async function testConnection(
         };
       }
 
-      await response.json();
+      await drainBody(response);
     }
 
     const latency = Date.now() - startTime;

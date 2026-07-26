@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getAiConfig, saveAiConfig } from '@/lib/config';
 import { requireAuth } from '@/lib/auth';
+import { maskSecret } from '@/lib/crypto';
+
+/**
+ * `apiKey` is deliberately optional and nullable:
+ *   omitted -> keep the stored key (the form never receives it, so a save that
+ *              only changes the model must not wipe it)
+ *   ''      -> clear the key
+ *   value   -> replace it
+ */
+const endpointSchema = z.object({
+  baseUrl: z.string().trim().max(500),
+  model: z.string().trim().max(200),
+  apiKey: z.string().max(500).optional(),
+});
+
+const configSchema = z.object({
+  embedding: endpointSchema,
+  llm: endpointSchema,
+});
 
 /**
  * GET /api/config
@@ -19,12 +39,16 @@ export async function GET(req: NextRequest) {
         embedding: {
           baseUrl: config.embeddingBaseUrl || '',
           model: config.embeddingModel || '',
-          hasApiKey: !!config.embeddingApiKey,
+          hasApiKey: Boolean(config.embeddingApiKey),
+          // A masked preview, never the key itself — enough to tell which
+          // credential is configured without handing it back to the browser.
+          apiKeyPreview: maskSecret(config.embeddingApiKey ?? ''),
         },
         llm: {
           baseUrl: config.llmBaseUrl || '',
           model: config.llmModel || '',
-          hasApiKey: !!config.llmApiKey,
+          hasApiKey: Boolean(config.llmApiKey),
+          apiKeyPreview: maskSecret(config.llmApiKey ?? ''),
         },
         // Tampilkan fallback values dari env
         fallback: {
@@ -53,27 +77,34 @@ export async function PUT(req: NextRequest) {
     const auth = await requireAuth(req);
     if (!auth.ok) return auth.response;
 
-    const body = await req.json();
-    const { embedding, llm } = body;
-
-    // Validate input
-    if (!embedding || !llm) {
+    const parsed = configSchema.safeParse(await req.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION_ERROR', message: 'Missing embedding or llm config' } },
+        {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid configuration',
+            details: parsed.error.issues,
+          },
+        },
         { status: 400 }
       );
     }
 
-    const config = {
-      embeddingBaseUrl: embedding.baseUrl || null,
-      embeddingModel: embedding.model || null,
-      embeddingApiKey: embedding.apiKey || null,
-      llmBaseUrl: llm.baseUrl || null,
-      llmModel: llm.model || null,
-      llmApiKey: llm.apiKey || null,
-    };
+    const { embedding, llm } = parsed.data;
 
-    await saveAiConfig(config, auth.session.userId);
+    await saveAiConfig(
+      {
+        embeddingBaseUrl: embedding.baseUrl || undefined,
+        embeddingModel: embedding.model || undefined,
+        embeddingApiKey: embedding.apiKey,
+        llmBaseUrl: llm.baseUrl || undefined,
+        llmModel: llm.model || undefined,
+        llmApiKey: llm.apiKey,
+      },
+      auth.session.userId
+    );
 
     return NextResponse.json({
       success: true,
@@ -81,8 +112,16 @@ export async function PUT(req: NextRequest) {
     });
   } catch (error) {
     console.error('[Config API] PUT error:', error);
+
+    // A missing CONFIG_ENCRYPTION_KEY is an operator problem, not a bug —
+    // say so instead of returning a generic 500.
+    const message =
+      error instanceof Error && error.message.includes('CONFIG_ENCRYPTION_KEY')
+        ? error.message
+        : 'Internal server error';
+
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
+      { success: false, error: { code: 'INTERNAL_ERROR', message } },
       { status: 500 }
     );
   }

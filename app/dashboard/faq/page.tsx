@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BarChart3, CheckCircle2, Download, FileText, Loader2, MoreVertical, Pencil, Plus, RefreshCw, Search, SquarePen, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -54,58 +54,69 @@ export default function FAQManagementPage() {
   const [pageSize] = useState(10);
   const [categories, setCategories] = useState<string[]>([]);
 
-  // Fetch FAQs
-  const fetchFaqs = async () => {
+  /** Pure fetches — no state writes, so effects can await them safely. */
+  const loadFaqs = useCallback(async () => {
+    const params = new URLSearchParams({
+      search,
+      category,
+      status,
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+
+    const response = await fetch(`/api/faq?${params}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error?.message ?? 'Failed to fetch FAQs');
+    return { rows: data.data as FAQ[], total: (data.meta?.total as number) || 0 };
+  }, [search, category, status, page, pageSize]);
+
+  const loadCategories = useCallback(async () => {
+    const response = await fetch('/api/faq');
+    const data = await response.json();
+    if (!data.success) return [] as string[];
+    return Array.from(
+      new Set((data.data as FAQ[]).map((faq) => faq.category).filter(Boolean))
+    ) as string[];
+  }, []);
+
+  /** Imperative refresh after a mutation. */
+  const refresh = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        search,
-        category,
-        status,
-        page: page.toString(),
-        pageSize: pageSize.toString(),
-      });
-      
-      const response = await fetch(`/api/faq?${params}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setFaqs(data.data);
-        setTotal(data.meta?.total || 0);
-      } else {
-        toast.error('Failed to fetch FAQs');
-      }
-    } catch (error) {
-      console.error('Error fetching FAQs:', error);
+      const { rows, total: count } = await loadFaqs();
+      setFaqs(rows);
+      setTotal(count);
+    } catch {
       toast.error('Failed to fetch FAQs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadFaqs]);
 
-  // Fetch categories
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/faq');
-      const data = await response.json();
-      
-      if (data.success) {
-        const uniqueCategories = Array.from(
-          new Set(data.data.map((faq: FAQ) => faq.category).filter(Boolean))
-        );
-        setCategories(uniqueCategories as string[]);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
+  // Re-runs whenever a filter changes; `cancelled` keeps a slow earlier
+  // response from overwriting a newer one.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    fetchFaqs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    fetchCategories();
-  }, [search, category, status, page]);
+    let cancelled = false;
+
+    Promise.all([loadFaqs(), loadCategories()])
+      .then(([faqResult, cats]) => {
+        if (cancelled) return;
+        setFaqs(faqResult.rows);
+        setTotal(faqResult.total);
+        setCategories(cats);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Error fetching FAQs:', error);
+        toast.error('Failed to fetch FAQs');
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadFaqs, loadCategories]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this FAQ?')) {
@@ -121,7 +132,7 @@ export default function FAQManagementPage() {
       
       if (data.success) {
         toast.success('FAQ deleted successfully');
-        fetchFaqs();
+        refresh();
       } else {
         toast.error(data.error?.message || 'Failed to delete FAQ');
       }
@@ -141,7 +152,7 @@ export default function FAQManagementPage() {
       
       if (data.success) {
         toast.success('FAQ synced successfully');
-        fetchFaqs();
+        refresh();
       } else {
         toast.error(data.error?.message || 'Failed to sync FAQ');
       }
@@ -218,7 +229,7 @@ export default function FAQManagementPage() {
         if (result.data.failed > 0) {
           toast.error(`Failed to import ${result.data.failed} FAQs`);
         }
-        fetchFaqs();
+        refresh();
       } else {
         toast.error(result.error?.message || 'Failed to import FAQs');
       }
@@ -250,7 +261,7 @@ export default function FAQManagementPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">FAQ Management</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Update, organize, and monitor your AI's knowledge base.
+            Kelola, atur, dan pantau knowledge base AI Anda.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
