@@ -17,7 +17,27 @@ const PUBLIC_PATHS = new Set([
   '/api/auth/login',
   '/api/auth/logout',
   '/api/chat', // public chat backend
+  '/api/chat/sessions', // a visitor's own conversation list
 ]);
+
+/**
+ * Public routes with a dynamic segment, matched by prefix.
+ *
+ * These are reachable without a session but are not unguarded: each handler
+ * requires a matching `visitorId` and answers 404 when it does not own the
+ * record, so conversation ids cannot be enumerated.
+ */
+const PUBLIC_PREFIXES = [
+  '/api/chat/sessions/', // GET/DELETE one conversation
+  '/api/feedback/', // PATCH thumbs up/down on an answer
+];
+
+function isPublic(pathname: string): boolean {
+  return (
+    PUBLIC_PATHS.has(pathname) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
 
 /** Headers the app derives from the session; never trust them from the client. */
 const SESSION_HEADERS = ['x-user-id', 'x-user-role'] as const;
@@ -32,7 +52,7 @@ export async function proxy(request: NextRequest) {
     requestHeaders.delete(header);
   }
 
-  if (PUBLIC_PATHS.has(pathname)) {
+  if (isPublic(pathname)) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 

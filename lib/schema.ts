@@ -69,15 +69,19 @@ export const documents = pgTable('documents', {
 ]);
 
 // ─── Chats ──────────────────────────────────────────────
+// One row per *conversation*. `visitor_id` identifies the browser (a UUID kept
+// in localStorage), so one visitor can hold many conversations. The previous
+// `session_id` column conflated the two — the API looked up a chat by it with
+// findFirst, which capped every visitor at a single conversation for life.
 export const chats = pgTable('chats', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: text('title').default('New Chat'),
-  sessionId: text('session_id'),
+  visitorId: text('visitor_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
-  // Anonymous visitors are looked up by session_id (app/api/chat/route.ts).
-  index('idx_chats_session_id').on(table.sessionId),
+  // Sidebar lists a visitor's conversations, most recently updated first.
+  index('idx_chats_visitor_id').on(table.visitorId, table.updatedAt),
 ]);
 
 // ─── Messages ───────────────────────────────────────────

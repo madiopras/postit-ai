@@ -2,6 +2,7 @@ import { embed } from './embedding';
 import { streamChatCompletion, type ChatMessage, type StreamingChunk } from './llm';
 import { searchSimilarDocuments, type SearchResult } from './vector-sync';
 
+
 /**
  * RAG (Retrieval-Augmented Generation) Pipeline
  * 
@@ -20,6 +21,7 @@ export interface RagOptions {
 }
 
 export interface RagSource {
+  id: string;
   title: string;
   content: string;
   type: 'faq' | 'sop';
@@ -79,13 +81,66 @@ Answer questions based on the following knowledge base.
 }
 
 /**
- * Execute RAG pipeline with streaming
- * 
+ * Retrieve the knowledge-base context for a question.
+ *
+ * Split out from `ragStream` so a caller that already needs the sources — to
+ * send citations to the client, say — can retrieve once and pass them into
+ * `ragStreamFromSources`. Previously the chat route embedded and searched, then
+ * `ragStream` embedded and searched again: two paid embedding calls per message.
+ */
+export async function retrieveSources(
+  userMessage: string,
+  options: RagOptions = {}
+): Promise<RagSource[]> {
+  const { maxSources = 5, minScore = 0.5 } = options;
+
+  const queryEmbedding = await embed(userMessage);
+  const searchResults = await searchSimilarDocuments(queryEmbedding, maxSources, minScore);
+
+  return searchResults.map(toRagSource);
+}
+
+/** Map a vector-store hit to the shape the prompt builder and clients use. */
+export function toRagSource(result: SearchResult): RagSource {
+  return {
+    id: result.id,
+    title: result.title,
+    content: result.content,
+    type: result.type,
+    score: result.score,
+    chunkIndex: result.chunkIndex,
+  };
+}
+
+/**
+ * Stream an answer from context that has already been retrieved.
+ *
+ * @param userMessage - User's question
+ * @param sources - Context to inject, from `retrieveSources`
+ * @param onChunk - Callback for each streaming chunk
+ */
+export async function* ragStreamFromSources(
+  userMessage: string,
+  sources: RagSource[],
+  onChunk?: (chunk: StreamingChunk) => void
+): AsyncGenerator<StreamingChunk> {
+  const messages: ChatMessage[] = [
+    { role: 'system', content: buildSystemPrompt(sources) },
+    { role: 'user', content: userMessage },
+  ];
+
+  for await (const chunk of streamChatCompletion(messages, onChunk)) {
+    yield chunk;
+  }
+}
+
+/**
+ * Execute the full RAG pipeline with streaming: retrieve, then generate.
+ *
  * @param userMessage - User's question
  * @param options - RAG options
  * @param onChunk - Callback for each streaming chunk
- * @param onSource - Callback when sources are retrieved
- * @returns Promise resolving to complete response
+ * @param onSource - Callback for each retrieved source
  */
 export async function* ragStream(
   userMessage: string,
@@ -93,66 +148,16 @@ export async function* ragStream(
   onChunk?: (chunk: StreamingChunk) => void,
   onSource?: (source: RagSource) => void
 ): AsyncGenerator<StreamingChunk> {
-  const {
-    maxSources = 5,
-    minScore = 0.5,
-  } = options;
-
   try {
-    // Step 1: Embed the user query
-    const queryEmbedding = await embed(userMessage);
+    const sources = await retrieveSources(userMessage, options);
 
-    // Step 2: Search for similar documents
-    const searchResults = await searchSimilarDocuments(
-      queryEmbedding,
-      maxSources,
-      minScore
-    );
-
-    // Step 3: Build sources array
-    const sources: RagSource[] = searchResults.map(r => ({
-      title: r.title,
-      content: r.content,
-      type: r.type,
-      score: r.score,
-      chunkIndex: r.chunkIndex,
-    }));
-
-    // Notify about sources
     if (onSource) {
       for (const source of sources) {
         onSource(source);
       }
     }
 
-    // Step 4: Build messages with context
-    const systemPrompt = buildSystemPrompt(sources);
-    
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ];
-
-    // Step 5: Stream LLM response
-    let accumulatedContent = '';
-    let promptTokens = 0;
-    let completionTokens = 0;
-
-    for await (const chunk of streamChatCompletion(messages, (c) => {
-      if (onChunk) onChunk(c);
-    })) {
-      if (chunk.content) {
-        accumulatedContent += chunk.content;
-      }
-      
-      if (chunk.usage) {
-        promptTokens = chunk.usage.prompt_tokens;
-        completionTokens = chunk.usage.completion_tokens;
-      }
-
-      yield chunk;
-    }
-
+    yield* ragStreamFromSources(userMessage, sources, onChunk);
   } catch (error) {
     console.error('[RAG] Error:', error);
     throw error;
@@ -190,23 +195,3 @@ export async function ragQuery(
   };
 }
 
-/**
- * Get relevant sources for a query (without generating response)
- * Useful for previewing context before generating answer
- */
-export async function getRelevantSources(
-  query: string,
-  maxSources: number = 5,
-  minScore: number = 0.5
-): Promise<RagSource[]> {
-  const queryEmbedding = await embed(query);
-  const results = await searchSimilarDocuments(queryEmbedding, maxSources, minScore);
-
-  return results.map(r => ({
-    title: r.title,
-    content: r.content,
-    type: r.type,
-    score: r.score,
-    chunkIndex: r.chunkIndex,
-  }));
-}

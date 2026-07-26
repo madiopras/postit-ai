@@ -1,150 +1,153 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChatMessage } from '@/components/ui/chat-message';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ChatMessage, type SourceCitation } from '@/components/ui/chat-message';
 import { ChatInput } from '@/components/ui/chat-input';
-import { ChatSidebar } from '@/components/ui/chat-sidebar';
-
-interface ChatSession {
-  id: string;
-  title: string;
-  sessionId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import { ChatSidebar, type ChatSession } from '@/components/ui/chat-sidebar';
+import { useVisitorId } from '@/hooks/use-visitor-id';
+import { parseSseStream } from '@/lib/sse';
 
 interface Message {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
-  id?: string;
-  sources?: any[];
-  feedback?: string;
+  sources?: SourceCitation[];
+  feedback?: 'thumbs_up' | 'thumbs_down' | null;
 }
 
+/** Plain fetch, no state — so effects can call it without setting state directly. */
+async function fetchSessions(visitorId: string): Promise<ChatSession[]> {
+  const res = await fetch(`/api/chat/sessions?visitorId=${encodeURIComponent(visitorId)}`);
+  if (!res.ok) return [];
+  const body = await res.json();
+  return body.data ?? [];
+}
 
 export default function Chat() {
+  const visitorId = useVisitorId();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [chatId, setChatId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
 
-  // Load sessions on mount
+  /** Imperative refresh, used after sending a message or deleting a chat. */
+  const refreshSessions = useCallback(async () => {
+    if (!visitorId) return;
+    try {
+      setSessions(await fetchSessions(visitorId));
+    } catch (err) {
+      console.error('Failed to load sessions:', err);
+    }
+  }, [visitorId]);
+
+  // Load the sidebar once a visitor id is available. `cancelled` guards against
+  // a response landing after the id changed or the component unmounted.
   useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        const res = await fetch('/api/chat/sessions');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.data) {
-            setSessions(data.data);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load sessions:', error);
-      }
+    if (!visitorId) return;
+
+    let cancelled = false;
+    fetchSessions(visitorId)
+      .then((data) => {
+        if (!cancelled) setSessions(data);
+      })
+      .catch((err) => console.error('Failed to load sessions:', err));
+
+    return () => {
+      cancelled = true;
     };
-    loadSessions();
-  }, []);
+  }, [visitorId]);
+
+  // Keep the newest message in view as it streams in.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: mainRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
-    
-    const userMsg: Message = { role: 'user', content: input };
-    setMessages((m) => [...m, userMsg]);
-    
-    const currentInput = input;
+    const question = input.trim();
+    if (!question || loading || !visitorId) return;
+
+    const userMsg: Message = { role: 'user', content: question };
+    const history = [...messages, userMsg];
+
+    setMessages([...history, { role: 'assistant', content: '' }]);
     setInput('');
     setLoading(true);
+    setError(null);
 
-    // Create session if not exists
-    if (!sessionId) {
-      const newSessionId = crypto.randomUUID();
-      setSessionId(newSessionId);
-    }
+    // Mutate only the assistant placeholder appended above.
+    const updateAssistant = (patch: Partial<Message>) => {
+      setMessages((current) => {
+        const copy = [...current];
+        const last = copy.length - 1;
+        if (last >= 0 && copy[last].role === 'assistant') {
+          copy[last] = { ...copy[last], ...patch };
+        }
+        return copy;
+      });
+    };
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: [...messages, userMsg],
-          sessionId: sessionId || undefined,
+        body: JSON.stringify({
+          messages: history.map(({ role, content }) => ({ role, content })),
+          visitorId,
+          chatId: chatId ?? undefined,
         }),
       });
 
-      if (!res.body) {
-        setLoading(false);
-        return;
+      if (!res.ok || !res.body) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error?.message ?? 'Gagal menghubungi server');
       }
 
-      // Parse SSE stream
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantMsg = '';
-      
-      // Add empty assistant message placeholder
-      setMessages((m) => [...m, { role: 'assistant', content: '' }]);
+      let answer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          
-          const json = line.slice(6).trim();
-          if (!json || json === '[DONE]') continue;
-          
-          try {
-            const parsed = JSON.parse(json);
-            
-            // Handle status events
-            if (parsed.event) {
-              if (parsed.event === 'done' && parsed.data?.usage) {
-                // Update message with usage info
-              }
-              continue;
-            }
-            
-            // Handle content chunks
-            if (parsed.content) {
-              assistantMsg += parsed.content;
-            }
-            
-            // Update message
-            setMessages((m) => {
-              const copy = [...m];
-              if (copy.length > 1) {
-                copy[copy.length - 1] = { ...copy[copy.length - 1], content: assistantMsg };
-              }
-              return copy;
-            });
-          } catch (e) {
-            console.error('Parse error:', e);
-          }
+      for await (const frame of parseSseStream(res.body)) {
+        let payload: Record<string, unknown>;
+        try {
+          payload = JSON.parse(frame.data);
+        } catch {
+          continue;
+        }
+
+        if (frame.event === 'error') {
+          throw new Error((payload.message as string) ?? 'Terjadi kesalahan');
+        }
+
+        if (frame.event === 'done') {
+          // The server assigns ids only after persisting, so citations and the
+          // feedback target arrive with this final frame.
+          if (payload.chatId) setChatId(payload.chatId as string);
+          updateAssistant({
+            id: (payload.messageId as string) ?? undefined,
+            sources: (payload.sources as SourceCitation[]) ?? [],
+          });
+          continue;
+        }
+
+        // Unnamed frames carry answer text; named 'status' frames are progress.
+        if (frame.event === 'message' && typeof payload.content === 'string') {
+          answer += payload.content;
+          updateAssistant({ content: answer });
         }
       }
-      
-      // Reload sessions to get updated list
-      try {
-        const sessRes = await fetch('/api/chat/sessions');
-        if (sessRes.ok) {
-          const data = await sessRes.json();
-          if (data.data) {
-            setSessions(data.data);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to reload sessions:', err);
-      }
 
-    } catch (error) {
-      console.error('Chat error:', error);
+      await refreshSessions();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      setError(message);
+      // Drop the empty placeholder so the error is not shown as a blank reply.
+      setMessages((current) =>
+        current.length && current[current.length - 1].content === ''
+          ? current.slice(0, -1)
+          : current
+      );
     } finally {
       setLoading(false);
     }
@@ -152,23 +155,57 @@ export default function Chat() {
 
   const handleNewChat = () => {
     setMessages([]);
-    setSessionId('');
+    setChatId(null);
     setInput('');
+    setError(null);
   };
 
-  const handleSelectSession = (selSessionId: string) => {
-    // Load messages for selected session
-    setSessionId(selSessionId);
+  const handleSelectSession = async (selectedChatId: string) => {
+    if (!visitorId || selectedChatId === chatId) return;
+
     setLoading(true);
-    
-    fetch(`/api/chat/sessions?sessionId=${selSessionId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.data?.[0]) {
-          setSessionId(data.data[0].sessionId || '');
-        }
-      });
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/chat/sessions/${selectedChatId}?visitorId=${encodeURIComponent(visitorId)}`
+      );
+      if (!res.ok) throw new Error('Percakapan tidak ditemukan');
+
+      const body = await res.json();
+      setMessages(
+        (body.data?.messages ?? []).map((m: Message & { sources?: SourceCitation[] }) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          sources: m.sources ?? [],
+          feedback: m.feedback ?? null,
+        }))
+      );
+      setChatId(selectedChatId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat percakapan');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleDeleteSession = async (targetChatId: string) => {
+    if (!visitorId) return;
+    try {
+      await fetch(
+        `/api/chat/sessions/${targetChatId}?visitorId=${encodeURIComponent(visitorId)}`,
+        { method: 'DELETE' }
+      );
+      if (targetChatId === chatId) handleNewChat();
+      await refreshSessions();
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+    }
+  };
+
+  const showTypingIndicator =
+    loading && messages[messages.length - 1]?.role === 'assistant' &&
+    messages[messages.length - 1]?.content === '';
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
@@ -176,13 +213,10 @@ export default function Chat() {
       <div className="w-64 hidden md:flex flex-col border-r border-outline-variant bg-surface">
         <ChatSidebar
           sessions={sessions}
-          activeSessionId={sessionId}
+          activeChatId={chatId}
           onNewChat={handleNewChat}
           onSelectSession={handleSelectSession}
-          onClearHistory={() => {
-            setMessages([]);
-            setSessionId('');
-          }}
+          onDeleteSession={handleDeleteSession}
         />
       </div>
 
@@ -194,10 +228,10 @@ export default function Chat() {
             <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
               <span className="material-symbols-outlined text-on-primary text-2xl">smart_toy</span>
             </div>
-            <span className="text-headline-sm text-on-surface">SimpleAI</span>
+            <span className="text-headline-sm text-on-surface">PostIt AI</span>
           </div>
-          <button 
-            onClick={handleNewChat} 
+          <button
+            onClick={handleNewChat}
             className="p-2 rounded-lg hover:bg-surface-container-high transition-colors"
           >
             <span className="material-symbols-outlined text-on-surface text-2xl">add</span>
@@ -209,13 +243,6 @@ export default function Chat() {
           ref={mainRef}
           className="flex-1 overflow-y-auto p-4 md:p-6 pb-32 flex flex-col gap-4"
         >
-          {/* Date Divider */}
-          <div className="flex justify-center my-4">
-            <span className="text-label-sm text-on-surface-variant bg-surface-container py-2 px-4 rounded-full">
-              Hari Ini
-            </span>
-          </div>
-
           {/* Empty state */}
           {messages.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4">
@@ -223,7 +250,7 @@ export default function Chat() {
                 <span className="material-symbols-outlined text-on-primary text-5xl">smart_toy</span>
               </div>
               <div className="text-center">
-                <h2 className="text-headline-md text-on-surface mb-2">Halo! Saya SimpleAI</h2>
+                <h2 className="text-headline-md text-on-surface mb-2">Halo! Saya PostIt AI</h2>
                 <p className="text-body-md text-on-surface-variant max-w-md">
                   Saya bisa membantu Anda dengan pertanyaan seputar SOP dan FAQ perusahaan.
                   Silakan tanyakan apa saja!
@@ -231,16 +258,16 @@ export default function Chat() {
               </div>
               <div className="flex flex-wrap justify-center gap-3 mt-2">
                 <button
-                  onClick={() => setInput('Apa itu SOP?')}
+                  onClick={() => setInput('Bagaimana cara reset password?')}
                   className="bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-lg text-label-md hover:bg-secondary-fixed transition-colors"
                 >
-                  Apa itu SOP?
+                  Reset password
                 </button>
                 <button
-                  onClick={() => setInput('Bagaimana cara menggunakan layanan ini?')}
+                  onClick={() => setInput('Bagaimana prosedur refund?')}
                   className="bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-lg text-label-md hover:bg-secondary-fixed transition-colors"
                 >
-                  Cara Penggunaan
+                  Prosedur refund
                 </button>
               </div>
             </div>
@@ -248,17 +275,34 @@ export default function Chat() {
 
           {/* Messages */}
           {messages.map((m, i) => (
-            <ChatMessage key={i} message={m as any} />
+            <ChatMessage
+              key={m.id ?? `${m.role}-${i}`}
+              message={{
+                id: m.id ?? '',
+                role: m.role,
+                content: m.content,
+                sources: m.sources,
+                feedback: m.feedback ?? null,
+              }}
+              visitorId={visitorId}
+            />
           ))}
 
-          {/* Loading state */}
-          {loading && messages[messages.length - 1]?.content === '' && (
+          {/* Typing indicator */}
+          {showTypingIndicator && (
             <div className="flex justify-start">
               <div className="bg-surface-container border border-outline-variant rounded-xl p-4 flex items-center gap-2">
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
               </div>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {error && (
+            <div className="mx-auto max-w-md w-full rounded-lg border border-error/30 bg-error/10 px-4 py-3">
+              <p className="text-body-sm text-error">{error}</p>
             </div>
           )}
         </main>
@@ -270,11 +314,11 @@ export default function Chat() {
               value={input}
               onChange={setInput}
               onSend={handleSend}
-              disabled={loading}
+              disabled={loading || !visitorId}
               placeholder="Tanya sesuatu..."
             />
             <p className="text-label-sm text-on-surface-variant text-center mt-2 opacity-60">
-              SimpleAI dapat membuat kesalahan. Periksa informasi penting.
+              PostIt AI dapat membuat kesalahan. Periksa informasi penting.
             </p>
           </div>
         </div>

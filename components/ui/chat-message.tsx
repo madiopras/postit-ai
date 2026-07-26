@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from './button';
 import { Badge } from './badge';
 import { Card } from './card';
@@ -32,22 +32,37 @@ export interface ChatMessage {
 /**
  * Chat message component
  */
-export function ChatMessage({ message }: { message: ChatMessage }) {
+export function ChatMessage({
+  message,
+  visitorId,
+}: {
+  message: ChatMessage;
+  visitorId?: string;
+}) {
   const [feedback, setFeedback] = useState(message.feedback || null);
   const [showSources, setShowSources] = useState(false);
 
   const isUser = message.role === 'user';
 
-  const handleFeedback = (type: 'thumbs_up' | 'thumbs_down') => {
-    if (message.sources) {
-      const feedbackApi = `/api/feedback/${message.id}`;
-      fetch(feedbackApi, {
-        method: 'POST',
+  // A message only becomes ratable once the server has persisted it and sent
+  // its id back in the `done` frame.
+  const canGiveFeedback = !isUser && Boolean(message.id) && Boolean(visitorId);
+
+  const handleFeedback = async (type: 'thumbs_up' | 'thumbs_down') => {
+    const previous = feedback;
+    setFeedback(type); // optimistic
+
+    try {
+      const res = await fetch(`/api/feedback/${message.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback: type }),
-      }).catch(console.error);
+        body: JSON.stringify({ feedback: type, visitorId }),
+      });
+      if (!res.ok) throw new Error(`Feedback failed: ${res.status}`);
+    } catch (err) {
+      console.error(err);
+      setFeedback(previous); // roll back so the UI does not claim a saved rating
     }
-    setFeedback(type);
   };
 
   return (
@@ -92,7 +107,7 @@ export function ChatMessage({ message }: { message: ChatMessage }) {
 
               {showSources && (
                 <div className="mt-2 space-y-2">
-                  {message.sources.map((source, idx) => (
+                  {message.sources.map((source) => (
                     <div 
                       key={source.id} 
                       className={`text-body-sm p-3 rounded-lg border ${
@@ -125,23 +140,29 @@ export function ChatMessage({ message }: { message: ChatMessage }) {
           )}
 
           {/* Feedback buttons */}
-          {!isUser && !feedback && (
+          {canGiveFeedback && (
             <div className="flex gap-2 mt-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-on-surface-variant hover:text-emerald-600"
+                className={`h-6 w-6 hover:text-emerald-600 ${
+                  feedback === 'thumbs_up' ? 'text-emerald-600' : 'text-on-surface-variant'
+                }`}
                 onClick={() => handleFeedback('thumbs_up')}
-                title="Good response"
+                title="Jawaban membantu"
+                aria-pressed={feedback === 'thumbs_up'}
               >
                 <span className="material-symbols-outlined text-[16px]">thumb_up</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-on-surface-variant hover:text-red-600"
+                className={`h-6 w-6 hover:text-red-600 ${
+                  feedback === 'thumbs_down' ? 'text-red-600' : 'text-on-surface-variant'
+                }`}
                 onClick={() => handleFeedback('thumbs_down')}
-                title="Bad response"
+                title="Jawaban kurang tepat"
+                aria-pressed={feedback === 'thumbs_down'}
               >
                 <span className="material-symbols-outlined text-[16px]">thumb_down</span>
               </Button>

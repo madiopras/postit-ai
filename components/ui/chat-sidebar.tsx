@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from './button';
-import { Card } from './card';
 
 /**
- * Chat session interface
+ * One conversation belonging to the current visitor.
  */
 export interface ChatSession {
   id: string;
-  title: string;
-  sessionId: string | null;
+  title: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,36 +18,34 @@ export interface ChatSession {
  */
 export function ChatSidebar({
   sessions,
-  activeSessionId,
+  activeChatId,
   onNewChat,
   onSelectSession,
-  onClearHistory,
+  onDeleteSession,
   isOpen = true,
   onToggleSidebar,
 }: {
   sessions: ChatSession[];
-  activeSessionId?: string;
+  activeChatId?: string | null;
   onNewChat: () => void;
-  onSelectSession: (sessionId: string) => void;
-  onClearHistory: () => void;
+  onSelectSession: (chatId: string) => void;
+  onDeleteSession: (chatId: string) => void;
   isOpen?: boolean;
   onToggleSidebar?: () => void;
 }) {
-  const [showHistory, setShowHistory] = useState(true);
-
   return (
-    <div className={`
+    <div
+      className={`
       flex flex-col h-full transition-all duration-300
       ${isOpen ? 'w-64' : 'w-0 opacity-0 overflow-hidden'}
-    `}>
+    `}
+    >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-outline-variant">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[20px]">
-                smart_toy
-              </span>
+              <span className="material-symbols-outlined text-white text-[20px]">smart_toy</span>
             </div>
             <h2 className="font-bold text-on-surface">PostIt AI</h2>
           </div>
@@ -79,42 +75,46 @@ export function ChatSidebar({
             {sessions.map((session) => (
               <div
                 key={session.id}
-                onClick={() => onSelectSession(session.sessionId || '')}
+                onClick={() => onSelectSession(session.id)}
                 className={`
-                  p-3 rounded-lg cursor-pointer transition-colors
-                  ${activeSessionId === session.sessionId
-                    ? 'bg-secondary-container text-on-secondary-container'
-                    : 'text-on-surface hover:bg-surface-container-low'}
+                  group flex items-start gap-2 p-3 rounded-lg cursor-pointer transition-colors
+                  ${
+                    activeChatId === session.id
+                      ? 'bg-secondary-container text-on-secondary-container'
+                      : 'text-on-surface hover:bg-surface-container-low'
+                  }
                 `}
               >
-                <div className="font-medium text-sm truncate">
-                  {session.title || 'Chat baru'}
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm truncate">
+                    {session.title || 'Chat baru'}
+                  </div>
+                  <div className="text-xs opacity-60 mt-1">
+                    {new Date(session.updatedAt).toLocaleDateString('id-ID', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
                 </div>
-                <div className="text-xs opacity-60 mt-1">
-                  {new Date(session.updatedAt).toLocaleDateString('id-ID', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
+                <button
+                  onClick={(e) => {
+                    // Otherwise the row's onClick would also open the chat
+                    // that is being deleted.
+                    e.stopPropagation();
+                    onDeleteSession(session.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-error shrink-0"
+                  title="Hapus percakapan"
+                  aria-label={`Hapus percakapan ${session.title ?? ''}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                </button>
               </div>
             ))}
           </>
         )}
-      </div>
-
-      {/* Sidebar Footer */}
-      <div className="p-4 border-t border-outline-variant">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-error"
-          onClick={onClearHistory}
-        >
-          <span className="material-symbols-outlined text-[18px]">history</span>
-          Hapus Riwayat
-        </Button>
       </div>
     </div>
   );
