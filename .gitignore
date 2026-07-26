@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# editor config that holds credentials (MCP server API keys)
+.vscode/mcp.json
+
 # vercel
 .vercel
 

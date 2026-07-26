@@ -1,0 +1,238 @@
+import { db } from '@/lib/db';
+import { documents } from '@/lib/schema';
+import { embed, embedBatch } from './embedding';
+import { processSopToChunks, processFaqToChunk } from './chunking';
+import { eq, and, isNotNull, sql } from 'drizzle-orm';
+
+/**
+ * Bind an embedding as a pgvector value inside a raw `sql` template.
+ *
+ * Drizzle only knows a value is a vector when it is assigned to a `vector`
+ * column. Inside a raw template it passes the JS array straight to postgres-js,
+ * which sends it as a record — Postgres then rejects the query with
+ * "cannot cast type record to vector". pgvector parses the '[1,2,3]' text form,
+ * which is exactly what JSON.stringify produces for an array of numbers.
+ */
+function toVector(embedding: number[]) {
+  return sql`${JSON.stringify(embedding)}::vector`;
+}
+
+/**
+ * Sync FAQ to vector store
+ * Creates or updates document embedding for FAQ
+ */
+export async function syncFaqToFaq(
+  faqId: string,
+  question: string,
+  answer: string,
+  status: 'draft' | 'published' | 'error' = 'draft'
+): Promise<void> {
+  try {
+    // Generate embedding for the FAQ content
+    const chunk = processFaqToChunk(question, answer, faqId);
+    const embedding = await embed(chunk.content);
+
+    // Check if document already exists
+    const existingDocs = await db
+      .select()
+      .from(documents)
+      .where(and(
+        eq(documents.type, 'faq'),
+        eq(documents.sourceId, faqId)
+      ));
+
+    if (existingDocs.length > 0) {
+      // Update existing documents
+      await db
+        .update(documents)
+        .set({
+          title: chunk.title,
+          content: chunk.content,
+          // Assigned to the vector column directly, same as the insert path
+          // below — drizzle serialises it correctly and no cast is needed.
+          embedding,
+          status,
+        })
+        .where(and(
+          eq(documents.type, 'faq'),
+          eq(documents.sourceId, faqId)
+        ));
+    } else {
+      // Insert new document
+      await db.insert(documents).values({
+        type: 'faq',
+        title: chunk.title,
+        content: chunk.content,
+        chunkIndex: 0,
+        sourceId: faqId,
+        embedding,
+        status,
+      });
+    }
+  } catch (error) {
+    console.error('[Vector Sync] FAQ sync error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sync SOP to vector store
+ * Chunks SOP content and creates embeddings for each chunk
+ */
+export async function syncSopToVectors(
+  sopId: string,
+  title: string,
+  content: string,
+  status: 'draft' | 'published' | 'error' = 'draft'
+): Promise<void> {
+  try {
+    // First, delete existing documents for this SOP
+    await db
+      .delete(documents)
+      .where(and(
+        eq(documents.type, 'sop'),
+        eq(documents.sourceId, sopId)
+      ));
+
+    // Process SOP into chunks
+    const chunks = processSopToChunks(title, content, sopId);
+
+    if (chunks.length === 0) {
+      return;
+    }
+
+    // Generate embeddings for all chunks
+    const chunkContents = chunks.map(c => c.content);
+    const embeddings = await embedBatch(chunkContents);
+
+    // Insert all chunks with embeddings
+    const insertData = chunks.map((chunk, index) => ({
+      type: 'sop' as const,
+      title: chunk.title,
+      content: chunk.content,
+      chunkIndex: chunk.chunkIndex,
+      sourceId: sopId,
+      embedding: embeddings[index],
+      status,
+    }));
+
+    await db.insert(documents).values(insertData);
+  } catch (error) {
+    console.error('[Vector Sync] SOP sync error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete vector documents for a FAQ
+ */
+export async function deleteFaqVectors(faqId: string): Promise<void> {
+  await db
+    .delete(documents)
+    .where(and(
+      eq(documents.type, 'faq'),
+      eq(documents.sourceId, faqId)
+    ));
+}
+
+/**
+ * Delete vector documents for a SOP
+ */
+export async function deleteSopVectors(sopId: string): Promise<void> {
+  await db
+    .delete(documents)
+    .where(and(
+      eq(documents.type, 'sop'),
+      eq(documents.sourceId, sopId)
+    ));
+}
+
+/**
+ * Search similar documents using vector similarity
+ */
+export interface SearchResult {
+  id: string;
+  type: 'faq' | 'sop';
+  title: string;
+  content: string;
+  chunkIndex: number;
+  score: number;
+  sourceId?: string;
+}
+
+export async function searchSimilarDocuments(
+  queryEmbedding: number[],
+  limit: number = 5,
+  minScore: number = 0.5
+): Promise<SearchResult[]> {
+  try {
+    // Cosine *distance* (`<=>`): smaller means more similar. Cosine similarity is
+    // `1 - distance`, so a score of 1 is identical and 0 is unrelated.
+    const distance = sql<number>`${documents.embedding} <=> ${toVector(queryEmbedding)}`;
+
+    const results = await db
+      .select({
+        id: documents.id,
+        type: documents.type,
+        title: documents.title,
+        content: documents.content,
+        chunkIndex: documents.chunkIndex,
+        sourceId: documents.sourceId,
+        similarity: sql<number>`1 - (${distance})`,
+      })
+      .from(documents)
+      .where(and(
+        eq(documents.status, 'published'),
+        isNotNull(documents.embedding),
+        // Apply the score threshold in SQL so that LIMIT selects from documents
+        // that already passed it. Filtering after LIMIT would discard the whole
+        // page whenever the top matches fall below minScore.
+        sql`1 - (${distance}) >= ${minScore}`
+      ))
+      // Order by distance ascending: most similar first. This is also the form
+      // pgvector's ivfflat/hnsw indexes can serve.
+      .orderBy(distance)
+      .limit(limit);
+
+    return results.map((r) => ({
+      id: r.id,
+      type: r.type,
+      title: r.title,
+      content: r.content,
+      chunkIndex: r.chunkIndex ?? 0,
+      score: r.similarity,
+      sourceId: r.sourceId || undefined,
+    }));
+  } catch (error) {
+    console.error('[Vector Sync] Search error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get document count by type and status
+ */
+export async function getDocumentStats(): Promise<{
+  faqs: { total: number; published: number; draft: number; error: number };
+  sops: { total: number; published: number; draft: number; error: number };
+}> {
+  const allDocs = await db.select().from(documents);
+  
+  const faqs = allDocs.filter(d => d.type === 'faq');
+  const sops = allDocs.filter(d => d.type === 'sop');
+
+  return {
+    faqs: {
+      total: faqs.length,
+      published: faqs.filter(d => d.status === 'published').length,
+      draft: faqs.filter(d => d.status === 'draft').length,
+      error: faqs.filter(d => d.status === 'error').length,
+    },
+    sops: {
+      total: sops.length,
+      published: sops.filter(d => d.status === 'published').length,
+      draft: sops.filter(d => d.status === 'draft').length,
+      error: sops.filter(d => d.status === 'error').length,
+    },
+  };
+}
