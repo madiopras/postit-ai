@@ -25,6 +25,26 @@ interface ConfigData {
   };
 }
 
+/**
+ * Unwrap the API envelope into the shape this page renders.
+ *
+ * The response is `{ success, message, data: { latency } }` on success and
+ * `{ success: false, error: { code, message } }` on failure. Storing it raw
+ * showed "Connected (undefinedms)" — latency sits under `data` — and would have
+ * rendered "[object Object]" for a failure, since `error` is an object.
+ */
+function toTestResult(json: {
+  success?: boolean;
+  data?: { latency?: number };
+  error?: { message?: string } | string;
+}): TestResult {
+  if (json.success) {
+    return { success: true, latency: json.data?.latency };
+  }
+  const message = typeof json.error === 'string' ? json.error : json.error?.message;
+  return { success: false, error: message ?? 'Gagal terhubung' };
+}
+
 interface TestResult {
   success: boolean;
   message?: string;
@@ -99,8 +119,7 @@ export default function ConfigPage() {
         }),
       });
       
-      const json = await res.json();
-      setEmbeddingTestResult(json);
+      setEmbeddingTestResult(toTestResult(await res.json()));
     } catch {
       setEmbeddingTestResult({ success: false, error: 'Failed to test connection' });
     } finally {
@@ -126,8 +145,7 @@ export default function ConfigPage() {
         }),
       });
       
-      const json = await res.json();
-      setLlmTestResult(json);
+      setLlmTestResult(toTestResult(await res.json()));
     } catch {
       setLlmTestResult({ success: false, error: 'Failed to test connection' });
     } finally {
@@ -305,8 +323,8 @@ export default function ConfigPage() {
                 <p className={`text-xs mt-2 ${
                   embeddingTestResult.success ? 'text-success' : 'text-destructive'
                 }`}>
-                  {embeddingTestResult.success 
-                    ? `✓ Connected (${embeddingTestResult.latency}ms)` 
+                  {embeddingTestResult.success
+                    ? `✓ Terhubung${embeddingTestResult.latency !== undefined ? ` (${embeddingTestResult.latency}ms)` : ''}`
                     : `✗ ${embeddingTestResult.error}`}
                 </p>
               )}
@@ -404,8 +422,8 @@ export default function ConfigPage() {
                 <p className={`text-xs mt-2 ${
                   llmTestResult.success ? 'text-success' : 'text-destructive'
                 }`}>
-                  {llmTestResult.success 
-                    ? `✓ Connected (${llmTestResult.latency}ms)` 
+                  {llmTestResult.success
+                    ? `✓ Terhubung${llmTestResult.latency !== undefined ? ` (${llmTestResult.latency}ms)` : ''}`
                     : `✗ ${llmTestResult.error}`}
                 </p>
               )}
