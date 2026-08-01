@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -32,6 +34,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+.env.*.local
 # ...but the template carries no secrets and is the whole point of onboarding,
 # so it has to be committed. Without this it was silently excluded by .env*.
 !.env.example

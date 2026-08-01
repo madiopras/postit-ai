@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { retrieveSources, ragStreamFromSources, type RagSource } from '@/lib/rag';
+import { retrieveContext, ragStreamFromSources, type RagSource } from '@/lib/rag';
 import { db } from '@/lib/db';
 import { chats, messages } from '@/lib/schema';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { ownsChat, resolveChatOwner, type ChatOwner } from '@/lib/chat-identity';
+import {
+  getAiConfig,
+  DEFAULT_RESPONSE_RULES,
+  DEFAULT_RETRIEVAL_CONFIG,
+} from '@/lib/config';
+import {
+  enforceResponseDictionary,
+  hasResponseDictionary,
+} from '@/lib/response-dictionary';
+import {
+  buildContextualRetrievalQuery,
+  loadModelHistory,
+} from '@/lib/chat-history';
 
 export const runtime = 'nodejs';
 
@@ -17,7 +31,7 @@ const chatRequestSchema = z.object({
     .array(
       z.object({
         role: z.enum(['user', 'assistant']),
-        content: z.string(),
+        content: z.string().max(8_000),
       })
     )
     .min(1, 'At least one message is required'),
@@ -35,6 +49,7 @@ interface Citation {
   content: string;
   score: number;
   chunkIndex?: number;
+  metadata?: Record<string, unknown>;
 }
 
 function toCitation(source: RagSource): Citation {
@@ -45,6 +60,7 @@ function toCitation(source: RagSource): Citation {
     content: source.content,
     score: source.score,
     chunkIndex: source.chunkIndex,
+    metadata: source.metadata,
   };
 }
 
@@ -87,6 +103,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { messages: chatMessages, visitorId, chatId } = parsed.data;
+    const identity = await resolveChatOwner(req, visitorId);
+    if (!identity.ok) return identity.response;
 
     const lastUserMessage = chatMessages.filter((m) => m.role === 'user').pop()?.content?.trim();
     if (!lastUserMessage) {
@@ -116,13 +134,45 @@ export async function POST(req: NextRequest) {
           // re-search, doubling the embedding cost of every message.
           sendEvent('status', { type: 'embedding' });
           sendEvent('status', { type: 'retrieving' });
-          const sources = await retrieveSources(lastUserMessage, {
-            maxSources: 5,
-            minScore: 0.4,
+          const config = await getAiConfig();
+          const modelHistory = await loadModelHistory(chatId, identity.owner);
+          const retrievalQuery = buildContextualRetrievalQuery(
+            lastUserMessage,
+            modelHistory
+          );
+          const { sources, loginRequired } = await retrieveContext(retrievalQuery, {
+            maxSources: config.retrievalTopK ?? DEFAULT_RETRIEVAL_CONFIG.topK,
+            minScore:
+              config.retrievalSimilarityThreshold
+              ?? DEFAULT_RETRIEVAL_CONFIG.similarityThreshold,
+            authenticated: identity.owner.kind === 'user',
+            sourcePriority:
+              config.retrievalSourcePriority ?? DEFAULT_RETRIEVAL_CONFIG.sourcePriority,
+            selectionRule:
+              config.retrievalSelectionRule ?? DEFAULT_RETRIEVAL_CONFIG.selectionRule,
+            maxContextDocuments:
+              config.retrievalMaxContextDocuments
+              ?? DEFAULT_RETRIEVAL_CONFIG.maxContextDocuments,
           });
+          const dictionary = {
+            forbiddenWords: config.responseForbiddenWords,
+            requiredWords: config.responseRequiredWords,
+          };
 
           sendEvent('status', { type: 'sources' });
-          const citations = sources.map(toCitation);
+          const citations = sources.map(toCitation).map((citation) => ({
+            ...citation,
+            title: enforceResponseDictionary(
+              citation.title,
+              lastUserMessage,
+              { forbiddenWords: dictionary.forbiddenWords }
+            ),
+            content: enforceResponseDictionary(
+              citation.content,
+              lastUserMessage,
+              { forbiddenWords: dictionary.forbiddenWords }
+            ),
+          }));
 
           sendEvent('status', { type: 'streaming' });
 
@@ -130,14 +180,45 @@ export async function POST(req: NextRequest) {
           let promptTokens = 0;
           let completionTokens = 0;
 
-          for await (const chunk of ragStreamFromSources(lastUserMessage, sources)) {
-            if (chunk.content) {
-              fullResponse += chunk.content;
-              sendChunk({ content: chunk.content });
+          if (loginRequired) {
+            fullResponse =
+              'Informasi tersebut tersedia dalam SOP yang memerlukan login. Silakan login untuk melanjutkan.';
+            sendEvent('login_required', {
+              message: fullResponse,
+              loginUrl: '/login?redirect=/',
+            });
+            sendChunk({ content: fullResponse });
+          } else if (sources.length === 0) {
+            fullResponse =
+              config.responseFallbackMessage || DEFAULT_RESPONSE_RULES.fallbackMessage;
+            sendChunk({ content: fullResponse });
+          } else {
+            const shouldBuffer = hasResponseDictionary(dictionary);
+            for await (const chunk of ragStreamFromSources(
+              lastUserMessage,
+              sources,
+              modelHistory
+            )) {
+              if (chunk.content) {
+                fullResponse += chunk.content;
+                if (!shouldBuffer) sendChunk({ content: chunk.content });
+              }
+              if (chunk.usage) {
+                promptTokens = chunk.usage.prompt_tokens;
+                completionTokens = chunk.usage.completion_tokens;
+              }
             }
-            if (chunk.usage) {
-              promptTokens = chunk.usage.prompt_tokens;
-              completionTokens = chunk.usage.completion_tokens;
+            if (shouldBuffer) {
+              fullResponse = enforceResponseDictionary(
+                fullResponse,
+                lastUserMessage,
+                dictionary
+              );
+              if (!fullResponse) {
+                fullResponse =
+                  config.responseFallbackMessage || DEFAULT_RESPONSE_RULES.fallbackMessage;
+              }
+              sendChunk({ content: fullResponse });
             }
           }
 
@@ -146,7 +227,7 @@ export async function POST(req: NextRequest) {
           let assistantMessageId: string | null = null;
 
           try {
-            const chat = await resolveChat(chatId, visitorId, lastUserMessage);
+            const chat = await resolveChat(chatId, identity.owner, lastUserMessage);
             persistedChatId = chat.id;
 
             await db.insert(messages).values({
@@ -182,6 +263,8 @@ export async function POST(req: NextRequest) {
             chatId: persistedChatId,
             messageId: assistantMessageId,
             sources: citations,
+            loginRequired,
+            loginUrl: loginRequired ? '/login?redirect=/' : null,
             usage: {
               prompt_tokens: promptTokens,
               completion_tokens: completionTokens,
@@ -227,7 +310,7 @@ export async function POST(req: NextRequest) {
  */
 async function resolveChat(
   chatId: string | undefined,
-  visitorId: string,
+  owner: ChatOwner,
   firstMessage: string
 ): Promise<{ id: string }> {
   if (chatId) {
@@ -235,7 +318,7 @@ async function resolveChat(
       where: eq(chats.id, chatId),
     });
 
-    if (existing && existing.visitorId === visitorId) {
+    if (existing && ownsChat(existing, owner)) {
       return existing;
     }
   }
@@ -243,7 +326,8 @@ async function resolveChat(
   const [created] = await db
     .insert(chats)
     .values({
-      visitorId,
+      visitorId: owner.kind === 'visitor' ? owner.visitorId : null,
+      userId: owner.kind === 'user' ? owner.userId : null,
       title: firstMessage.slice(0, 60),
     })
     .returning();

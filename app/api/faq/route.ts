@@ -4,7 +4,8 @@ import { faqs } from '@/lib/schema';
 import { eq, like, and, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { syncFaqRecord } from '@/lib/vector-sync';
-import { requireAuth } from '@/lib/auth';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
+import { recordAuditEvent } from '@/lib/audit';
 
 // Validation schema (the update schema lives in app/api/faq/[id]/route.ts)
 const createFaqSchema = z.object({
@@ -19,7 +20,7 @@ const createFaqSchema = z.object({
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const url = new URL(req.url);
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const body = await req.json();
@@ -105,6 +106,14 @@ export async function POST(req: NextRequest) {
 
     const status = await syncFaqRecord(faq.id, faq.question, faq.answer);
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'faq.create',
+      entityType: 'faq',
+      entityId: faq.id,
+      metadata: { status, category: faq.category },
+    });
     return NextResponse.json({
       success: true,
       data: { ...faq, status },
@@ -131,4 +140,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Upload, RotateCcw, Download, Paperclip, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SOP {
@@ -17,8 +18,31 @@ interface SOP {
   content: string;
   category: string | null;
   status: 'draft' | 'published' | 'error';
+  publishedVersionId: string | null;
+  requiresLogin: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface SOPVersion {
+  id: string;
+  versionNumber: number;
+  indexingStatus: 'draft' | 'ready' | 'error';
+  createdAt: string;
+  publishedAt: string | null;
+}
+
+interface SOPAttachment {
+  id: string;
+  filename: string;
+  mediaType: string;
+  size: number;
+  checksum: string;
+  extractionStatus: 'pending' | 'ready' | 'error';
+  extractionError: string | null;
+  extractedCharacterCount: number | null;
+  extractedAt: string | null;
+  createdAt: string;
 }
 
 export default function SOPFormPage() {
@@ -32,11 +56,17 @@ export default function SOPFormPage() {
     title: '',
     content: '',
     category: '',
+    requiresLogin: false,
   });
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [chunks, setChunks] = useState<string[]>([]);
   const [showChunkPreview, setShowChunkPreview] = useState(false);
+  const [versions, setVersions] = useState<SOPVersion[]>([]);
+  const [publishingVersionId, setPublishingVersionId] = useState<string | null>(null);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<SOPAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   // Fetch SOP if editing. `loading` already starts false for a new SOP, so
   // there is nothing to set synchronously here — every write happens in a
@@ -46,9 +76,11 @@ export default function SOPFormPage() {
 
     let cancelled = false;
 
-    fetch(`/api/sop/${sopId}`)
-      .then((response) => response.json())
-      .then((data) => {
+    Promise.all([
+      fetch(`/api/sop/${sopId}`).then((response) => response.json()),
+      fetch(`/api/sop/${sopId}/versions`).then((response) => response.json()),
+    ])
+      .then(([data, versionData]) => {
         if (cancelled) return;
 
         if (!data.success) {
@@ -58,10 +90,15 @@ export default function SOPFormPage() {
         }
 
         setSop(data.data);
+        if (versionData.success) {
+          setVersions(versionData.data);
+          setActiveVersionId(versionData.data[0]?.id ?? null);
+        }
         setFormData({
           title: data.data.title,
           content: data.data.content,
           category: data.data.category || '',
+          requiresLogin: data.data.requiresLogin,
         });
         setLoading(false);
       })
@@ -76,6 +113,22 @@ export default function SOPFormPage() {
       cancelled = true;
     };
   }, [sopId, isNew, router]);
+
+  useEffect(() => {
+    if (isNew || !activeVersionId) return;
+    let cancelled = false;
+    fetch(`/api/sop/${sopId}/versions/${activeVersionId}/attachments`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled && data.success) setAttachments(data.data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Failed to load attachments');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeVersionId, isNew, sopId]);
 
   const generateChunkPreview = (content: string) => {
     const chunkSize = 3200; // ~800 tokens in chars
@@ -118,8 +171,15 @@ export default function SOPFormPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast.success(isNew ? 'SOP created successfully' : 'SOP updated successfully');
-        router.push('/dashboard/sop');
+        toast.success(
+          isNew
+            ? 'SOP created successfully'
+            : data.data.draftCreated
+              ? 'Draft version created successfully'
+              : 'SOP settings updated successfully'
+        );
+        if (isNew) router.push('/dashboard/sop');
+        else window.location.reload();
       } else {
         toast.error(data.error?.message || 'Failed to save SOP');
       }
@@ -129,6 +189,100 @@ export default function SOPFormPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePublish = async (version: SOPVersion) => {
+    if (!sop) return;
+    const isRollback = version.publishedAt !== null;
+    setPublishingVersionId(version.id);
+    try {
+      const action = isRollback ? 'rollback' : 'publish';
+      const response = await fetch(
+        `/api/sop/${sop.id}/versions/${version.id}/${action}`,
+        { method: 'POST' }
+      );
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error?.message || 'Failed to publish version');
+      toast.success(isRollback ? 'SOP rolled back successfully' : 'SOP version published successfully');
+      window.location.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to publish version');
+    } finally {
+      setPublishingVersionId(null);
+    }
+  };
+
+  const createAttachmentDraft = async () => {
+    const response = await fetch(`/api/sop/${sopId}/versions`, { method: 'POST' });
+    const data = await response.json();
+    if (!data.success) {
+      toast.error(data.error?.message || 'Failed to create attachment draft');
+      return;
+    }
+    toast.success('Draft version created with the current attachments');
+    window.location.reload();
+  };
+
+  const handleAttachmentUpload = async (file: File | undefined) => {
+    if (!file || !activeVersionId) return;
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const response = await fetch(
+        `/api/sop/${sopId}/versions/${activeVersionId}/attachments`,
+        { method: 'POST', body }
+      );
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error?.message || 'Failed to upload attachment');
+      setAttachments((current) => [...current, data.data]);
+      if (data.data.extractionStatus === 'ready') {
+        toast.success('Attachment uploaded and extracted successfully');
+      } else {
+        toast.warning(data.data.extractionError || 'Attachment uploaded but extraction failed');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to upload attachment');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAttachmentExtraction = async (attachment: SOPAttachment) => {
+    if (!activeVersionId) return;
+    setUploading(true);
+    try {
+      const response = await fetch(
+        `/api/sop/${sopId}/versions/${activeVersionId}/attachments/${attachment.id}`,
+        { method: 'POST' }
+      );
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error?.message || 'Extraction failed');
+      setAttachments((current) =>
+        current.map((item) => item.id === attachment.id ? data.data : item)
+      );
+      toast.success('Attachment extracted successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Extraction failed');
+      window.location.reload();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAttachmentDelete = async (attachment: SOPAttachment) => {
+    if (!activeVersionId || !confirm(`Delete ${attachment.filename}?`)) return;
+    const response = await fetch(
+      `/api/sop/${sopId}/versions/${activeVersionId}/attachments/${attachment.id}`,
+      { method: 'DELETE' }
+    );
+    const data = await response.json();
+    if (!data.success) {
+      toast.error(data.error?.message || 'Failed to delete attachment');
+      return;
+    }
+    setAttachments((current) => current.filter((item) => item.id !== attachment.id));
+    toast.success('Attachment deleted successfully');
   };
 
   if (loading) {
@@ -217,6 +371,24 @@ export default function SOPFormPage() {
                   </p>
                 </div>
 
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <label htmlFor="requires-login" className="text-sm font-medium">
+                      Login required
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Anonymous chat users cannot retrieve this SOP.
+                    </p>
+                  </div>
+                  <Switch
+                    id="requires-login"
+                    checked={formData.requiresLogin}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, requiresLogin: checked })
+                    }
+                  />
+                </div>
+
                 {/* Actions */}
                 <div className="flex gap-2 pt-4">
                   <Button
@@ -275,6 +447,172 @@ export default function SOPFormPage() {
               </CardContent>
             </Card>
           )}
+
+          {!isNew && sop && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Version History</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {versions.map((version) => {
+                  const isPublished = version.id === sop.publishedVersionId;
+                  const isRollback = version.publishedAt !== null;
+                  return (
+                    <div key={version.id} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Version {version.versionNumber}</span>
+                        <Badge variant={isPublished ? 'default' : 'outline'}>
+                          {isPublished ? 'Published' : version.indexingStatus}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(version.createdAt).toLocaleString()}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={activeVersionId === version.id ? 'secondary' : 'ghost'}
+                        className="w-full"
+                        onClick={() => setActiveVersionId(version.id)}
+                      >
+                        <Paperclip className="mr-2 h-3 w-3" />
+                        View attachments
+                      </Button>
+                      {!isPublished && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          disabled={publishingVersionId !== null}
+                          onClick={() => handlePublish(version)}
+                        >
+                          {publishingVersionId === version.id ? (
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          ) : isRollback ? (
+                            <RotateCcw className="mr-2 h-3 w-3" />
+                          ) : (
+                            <Upload className="mr-2 h-3 w-3" />
+                          )}
+                          {isRollback ? 'Rollback to this version' : 'Publish'}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          {!isNew && sop && activeVersionId && (() => {
+            const activeVersion = versions.find((version) => version.id === activeVersionId);
+            const isMutable = activeVersion
+              && !activeVersion.publishedAt
+              && activeVersion.id !== sop.publishedVersionId;
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Attachments · Version {activeVersion?.versionNumber}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {attachments.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No attachments in this version.</p>
+                  )}
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="rounded-lg border p-3">
+                      <p className="truncate text-sm font-medium" title={attachment.filename}>
+                        {attachment.filename}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(attachment.size / 1024).toFixed(1)} KB
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge
+                          variant={attachment.extractionStatus === 'ready' ? 'default' : 'outline'}
+                        >
+                          {attachment.extractionStatus === 'ready'
+                            ? 'Ready'
+                            : attachment.extractionStatus}
+                        </Badge>
+                        {attachment.extractedCharacterCount !== null && (
+                          <span className="text-xs text-muted-foreground">
+                            {attachment.extractedCharacterCount.toLocaleString()} characters
+                          </span>
+                        )}
+                      </div>
+                      {attachment.extractionError && (
+                        <p className="mt-1 text-xs text-destructive">
+                          {attachment.extractionError}
+                        </p>
+                      )}
+                      <div className="mt-2 flex gap-2">
+                        <a
+                          className="inline-flex h-7 items-center rounded-lg border px-2.5 text-[0.8rem] font-medium hover:bg-muted"
+                          href={`/api/sop/${sopId}/versions/${activeVersionId}/attachments/${attachment.id}`}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          Download
+                        </a>
+                        {isMutable && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={uploading}
+                            onClick={() => handleAttachmentExtraction(attachment)}
+                          >
+                            <RefreshCw className="mr-1 h-3 w-3" />
+                            Re-extract
+                          </Button>
+                        )}
+                        {isMutable && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleAttachmentDelete(attachment)}
+                          >
+                            <Trash2 className="mr-1 h-3 w-3" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {isMutable ? (
+                    <label className="block">
+                      <span className="sr-only">Upload attachment</span>
+                      <Input
+                        type="file"
+                        disabled={uploading}
+                        accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
+                        onChange={(event) => {
+                          void handleAttachmentUpload(event.target.files?.[0]);
+                          event.target.value = '';
+                        }}
+                      />
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Text PDF, DOCX, XLSX, PPTX, TXT, or CSV · maximum 10 MB
+                      </span>
+                    </label>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Published versions are immutable. Create a draft before changing attachments.
+                      </p>
+                      {activeVersionId === versions[0]?.id && (
+                        <Button type="button" size="sm" variant="outline" onClick={createAttachmentDraft}>
+                          Create attachment draft
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Info Card */}
           <Card>

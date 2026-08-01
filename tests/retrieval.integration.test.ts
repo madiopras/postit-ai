@@ -40,9 +40,18 @@ describe.skipIf(!DATABASE_URL)('searchSimilarDocuments ordering (pgvector)', () 
     await sql.unsafe(`DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE`);
     await sql.unsafe(`CREATE SCHEMA ${SCHEMA}`);
     await sql.unsafe(`
+      CREATE TABLE ${SCHEMA}.sops (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        requires_login boolean NOT NULL DEFAULT false
+      )
+    `);
+    await sql.unsafe(`
       CREATE TABLE ${SCHEMA}.documents (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         title text NOT NULL,
+        content text NOT NULL DEFAULT '',
+        type text NOT NULL DEFAULT 'faq',
+        source_id uuid,
         status text NOT NULL,
         embedding vector(${DIMS})
       )
@@ -64,6 +73,21 @@ describe.skipIf(!DATABASE_URL)('searchSimilarDocuments ordering (pgvector)', () 
         [row.title, row.status, toVectorLiteral(vectorFor(row.axis))]
       );
     }
+
+    const [publicSop] = await sql.unsafe(
+      `INSERT INTO ${SCHEMA}.sops (requires_login) VALUES (false) RETURNING id`
+    );
+    const [privateSop] = await sql.unsafe(
+      `INSERT INTO ${SCHEMA}.sops (requires_login) VALUES (true) RETURNING id`
+    );
+    await sql.unsafe(
+      `INSERT INTO ${SCHEMA}.documents
+         (title, content, type, source_id, status, embedding)
+       VALUES
+         ('SOP publik', 'konten publik', 'sop', $1, 'published', $3::vector),
+         ('SOP privat', 'RAHASIA', 'sop', $2, 'published', $3::vector)`,
+      [publicSop.id, privateSop.id, toVectorLiteral(vectorFor(4))]
+    );
   });
 
   afterAll(async () => {
@@ -124,5 +148,44 @@ describe.skipIf(!DATABASE_URL)('searchSimilarDocuments ordering (pgvector)', () 
 
   it('respects the limit', async () => {
     expect(await search(2, 0)).toHaveLength(2);
+  });
+
+  it('filters login-required SOP content before the anonymous LIMIT', async () => {
+    const query = toVectorLiteral(vectorFor(4));
+    const rows = await sql.unsafe(
+      `SELECT d.title, d.content
+         FROM ${SCHEMA}.documents d
+         LEFT JOIN ${SCHEMA}.sops s
+           ON d.type = 'sop' AND d.source_id = s.id
+        WHERE d.status = 'published'
+          AND d.embedding IS NOT NULL
+          AND (d.type = 'faq' OR (d.type = 'sop' AND s.requires_login = false))
+        ORDER BY d.embedding <=> $1::vector
+        LIMIT 2`,
+      [query]
+    );
+
+    expect(rows.map((row: { title: string }) => row.title)).toContain('SOP publik');
+    expect(rows.map((row: { content: string }) => row.content)).not.toContain('RAHASIA');
+  });
+
+  it('detects a protected match without selecting its content', async () => {
+    const query = toVectorLiteral(vectorFor(4));
+    const rows = await sql.unsafe(
+      `SELECT d.id
+         FROM ${SCHEMA}.documents d
+         INNER JOIN ${SCHEMA}.sops s
+           ON d.type = 'sop' AND d.source_id = s.id
+        WHERE d.status = 'published'
+          AND d.embedding IS NOT NULL
+          AND s.requires_login = true
+        ORDER BY d.embedding <=> $1::vector
+        LIMIT 1`,
+      [query]
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).not.toHaveProperty('content');
+    expect(rows[0]).not.toHaveProperty('title');
   });
 });

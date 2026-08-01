@@ -20,16 +20,40 @@ import {
   FileText, 
   Folder,
   Settings,
-  Bot
+  Bot,
+  UserCog,
+  Users,
+  ShieldCheck
 } from "lucide-react"
 import { ADMIN_AVATAR } from "@/lib/avatars"
+import type { UserRole } from "@/lib/schema"
+
+interface CurrentUserResponse {
+  success: true
+  data: {
+    username: string
+    displayName: string | null
+    role: "super_admin" | "admin"
+  }
+}
+
+function isCurrentUserResponse(value: unknown): value is CurrentUserResponse {
+  if (!value || typeof value !== "object") return false
+  const candidate = value as {
+    success?: unknown
+    data?: { username?: unknown; displayName?: unknown; role?: unknown }
+  }
+
+  return (
+    candidate.success === true &&
+    typeof candidate.data?.username === "string" &&
+    (candidate.data.displayName === null ||
+      typeof candidate.data.displayName === "string") &&
+    (candidate.data.role === "super_admin" || candidate.data.role === "admin")
+  )
+}
 
 const data = {
-  user: {
-    name: "Admin",
-    email: "admin@postit.ai",
-    avatar: ADMIN_AVATAR.src,
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -52,18 +76,66 @@ const data = {
       url: "/dashboard/documents",
       icon: <Folder />,
     },
+    {
+      title: "User Management",
+      url: "/dashboard/users",
+      icon: <Users />,
+    },
   ],
   navSecondary: [
     {
-      title: "Settings",
+      title: "AI Configuration",
       url: "/dashboard/config",
       icon: <Settings />,
     },
+    {
+      title: "Audit Logs",
+      url: "/dashboard/audit-logs",
+      icon: <ShieldCheck />,
+    },
   ],
+  superAdminNav: {
+    title: "Admin Management",
+    url: "/dashboard/admins",
+    icon: <UserCog />,
+  },
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
+  const [user, setUser] = React.useState<{
+    name: string
+    username: string
+    role: UserRole
+  } | null>(null)
+
+  React.useEffect(() => {
+    let cancelled = false
+
+    fetch("/api/auth/me")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to load current user")
+        return response.json() as Promise<unknown>
+      })
+      .then((body) => {
+        if (cancelled) return
+        if (!isCurrentUserResponse(body)) {
+          throw new Error("Invalid current user response")
+        }
+        setUser({
+          name: body.data.displayName || body.data.username,
+          username: body.data.username,
+          role: body.data.role,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) router.replace("/login")
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -88,11 +160,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain
+          items={
+            user?.role === "super_admin"
+              ? [...data.navMain, data.superAdminNav]
+              : data.navMain
+          }
+        />
+        {user?.role === "super_admin" && (
+          <NavSecondary items={data.navSecondary} className="mt-auto" />
+        )}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} onLogout={handleLogout} />
+        {user && (
+          <NavUser
+            user={{
+              ...user,
+              role: user.role === "super_admin" ? "Super Admin" : "Admin",
+              avatar: ADMIN_AVATAR.src,
+            }}
+            onLogout={handleLogout}
+          />
+        )}
       </SidebarFooter>
     </Sidebar>
   )

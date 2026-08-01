@@ -1,0 +1,2 @@
+ALTER TABLE "app_config" ADD COLUMN "response_forbidden_words" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "app_config" ADD COLUMN "response_required_words" jsonb DEFAULT '[]'::jsonb NOT NULL;

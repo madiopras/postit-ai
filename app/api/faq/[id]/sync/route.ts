@@ -3,8 +3,9 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { faqs } from '@/lib/schema';
 import { syncFaqRecord } from '@/lib/vector-sync';
-import { requireAuth } from '@/lib/auth';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
 import { isUuid } from '@/lib/api';
+import { recordAuditEvent } from '@/lib/audit';
 
 /**
  * POST /api/faq/[id]/sync
@@ -17,7 +18,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
@@ -43,6 +44,14 @@ export async function POST(
       );
     }
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'faq.sync',
+      entityType: 'faq',
+      entityId: faq.id,
+      metadata: { status },
+    });
     return NextResponse.json({
       success: true,
       message: 'FAQ synced successfully',

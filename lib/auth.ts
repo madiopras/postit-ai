@@ -1,6 +1,14 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { NextResponse, type NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import {
+  users,
+  USER_ROLES,
+  type UserRole,
+  type UserStatus,
+} from '@/lib/schema';
 
 let cachedSecret: Uint8Array | null = null;
 
@@ -28,7 +36,9 @@ function getSecret(): Uint8Array {
 export interface AuthPayload extends JWTPayload {
   userId: string;
   username: string;
-  role: string;
+  role: UserRole;
+  status: UserStatus;
+  displayName?: string;
 }
 
 // ─── Hash & Compare ────────────────────────────────────
@@ -61,7 +71,29 @@ export async function verifyToken(
 
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as unknown as AuthPayload;
+    if (
+      typeof payload.userId !== 'string' ||
+      typeof payload.username !== 'string' ||
+      typeof payload.role !== 'string' ||
+      !USER_ROLES.includes(payload.role as UserRole)
+    ) {
+      return null;
+    }
+
+    return {
+      ...payload,
+      userId: payload.userId,
+      username: payload.username,
+      role: payload.role as UserRole,
+      // Older tokens predate account status. The database lookup performed for
+      // every authenticated request below is authoritative.
+      status: payload.status === 'inactive' || payload.status === 'blocked'
+        ? payload.status
+        : 'active',
+      displayName: typeof payload.displayName === 'string'
+        ? payload.displayName
+        : undefined,
+    };
   } catch {
     return null;
   }
@@ -81,6 +113,64 @@ export const COOKIE_OPTIONS = {
 export type AuthResult =
   | { ok: true; session: AuthPayload }
   | { ok: false; response: NextResponse };
+
+export type OptionalAuthResult =
+  | { ok: true; session: AuthPayload | null }
+  | { ok: false; response: NextResponse };
+
+/** Roles that may use the operational administration dashboard. */
+export const DASHBOARD_ROLES = ['super_admin', 'admin'] as const satisfies readonly UserRole[];
+
+/** AI configuration is deliberately restricted to the highest privilege. */
+export const SUPER_ADMIN_ONLY = ['super_admin'] as const satisfies readonly UserRole[];
+
+/**
+ * Revalidate a signed token against the current user row.
+ *
+ * JWTs live for seven days, but role and account-status changes must take
+ * effect immediately. The database is therefore authoritative on every
+ * authenticated request; claims only identify which account to load.
+ */
+export async function authenticateToken(token: string): Promise<AuthResult> {
+  const claims = await verifyToken(token);
+  if (!claims) {
+    return { ok: false, response: unauthorized('Invalid session') };
+  }
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, claims.userId),
+  });
+
+  if (!user) {
+    return { ok: false, response: unauthorized('Invalid session') };
+  }
+
+  if (user.status === 'blocked') {
+    return {
+      ok: false,
+      response: forbidden('ACCOUNT_BLOCKED', 'Account is blocked'),
+    };
+  }
+
+  if (user.status === 'inactive') {
+    return {
+      ok: false,
+      response: forbidden('ACCOUNT_INACTIVE', 'Account is inactive'),
+    };
+  }
+
+  return {
+    ok: true,
+    session: {
+      ...claims,
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      status: user.status,
+      displayName: user.displayName ?? undefined,
+    },
+  };
+}
 
 /**
  * Guard an admin route handler.
@@ -102,17 +192,50 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
     return { ok: false, response: unauthorized('Login required') };
   }
 
-  const session = await verifyToken(token);
-  if (!session) {
-    return { ok: false, response: unauthorized('Invalid session') };
+  return authenticateToken(token);
+}
+
+/**
+ * Resolve a session on a public route without making login mandatory.
+ *
+ * Missing cookies are anonymous. A supplied but invalid, inactive, or blocked
+ * session is rejected rather than silently downgraded, so account enforcement
+ * cannot be bypassed by retaining a stale cookie.
+ */
+export async function optionalAuth(req: NextRequest): Promise<OptionalAuthResult> {
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  if (!token) return { ok: true, session: null };
+  return authenticateToken(token);
+}
+
+/** Require authentication plus one of the explicitly allowed roles. */
+export async function requireRole(
+  req: NextRequest,
+  allowedRoles: readonly UserRole[]
+): Promise<AuthResult> {
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth;
+
+  if (!allowedRoles.includes(auth.session.role)) {
+    return {
+      ok: false,
+      response: forbidden('FORBIDDEN', 'You do not have permission to perform this action'),
+    };
   }
 
-  return { ok: true, session };
+  return auth;
 }
 
 function unauthorized(message: string): NextResponse {
   return NextResponse.json(
     { success: false, error: { code: 'UNAUTHORIZED', message } },
     { status: 401 }
+  );
+}
+
+function forbidden(code: string, message: string): NextResponse {
+  return NextResponse.json(
+    { success: false, error: { code, message } },
+    { status: 403 }
   );
 }

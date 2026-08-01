@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sops, documents } from '@/lib/schema';
+import { sops, sopVersions, documents } from '@/lib/schema';
 import { eq, like, and, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { syncSopRecord } from '@/lib/vector-sync';
-import { requireAuth } from '@/lib/auth';
+import { publishSopVersion } from '@/lib/sop-versioning';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
+import { recordAuditEvent } from '@/lib/audit';
 
 // Validation schema (the update schema lives in app/api/sop/[id]/route.ts)
 const createSopSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   content: z.string().min(1, 'Content is required').max(50000, 'Content too long'),
   category: z.string().max(100).optional(),
+  requiresLogin: z.boolean().default(false),
 });
 
 /**
@@ -19,7 +21,7 @@ const createSopSchema = z.object({
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const url = new URL(req.url);
@@ -91,23 +93,53 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const body = await req.json();
     const validatedData = createSopSchema.parse(body);
 
-    // Commit the row first, then chunk and embed — see syncSopRecord.
-    const [sop] = await db
-      .insert(sops)
-      .values({ ...validatedData, status: 'draft' })
-      .returning();
+    const { sop, version } = await db.transaction(async (tx) => {
+      const [createdSop] = await tx
+        .insert(sops)
+        .values({ ...validatedData, status: 'draft' })
+        .returning();
+      const [createdVersion] = await tx
+        .insert(sopVersions)
+        .values({
+          sopId: createdSop.id,
+          versionNumber: 1,
+          title: createdSop.title,
+          content: createdSop.content,
+          createdBy: auth.session.userId,
+        })
+        .returning();
+      return { sop: createdSop, version: createdVersion };
+    });
 
-    const status = await syncSopRecord(sop.id, sop.title, sop.content);
+    const status = await publishSopVersion(sop.id, version.id);
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'sop.create',
+      entityType: 'sop',
+      entityId: sop.id,
+      metadata: {
+        versionId: version.id,
+        status,
+        category: sop.category,
+        requiresLogin: sop.requiresLogin,
+      },
+    });
     return NextResponse.json({
       success: true,
-      data: { ...sop, status },
+      data: {
+        ...sop,
+        status,
+        publishedVersionId: status === 'published' ? version.id : null,
+        latestVersion: { ...version, indexingStatus: status === 'published' ? 'ready' : 'error' },
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -138,7 +170,7 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const url = new URL(req.url);
@@ -173,6 +205,13 @@ export async function DELETE(req: NextRequest) {
       await tx.delete(sops).where(eq(sops.id, id));
     });
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'sop.delete',
+      entityType: 'sop',
+      entityId: id,
+    });
     return NextResponse.json({
       success: true,
       message: 'SOP deleted successfully',

@@ -20,6 +20,7 @@ export interface SourceCitation {
   content: string;
   score: number;
   chunkIndex?: number;
+  metadata?: Record<string, unknown>;
 }
 
 /**

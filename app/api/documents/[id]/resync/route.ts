@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { documents, faqs, sops } from '@/lib/schema';
-import { syncFaqRecord, syncSopRecord } from '@/lib/vector-sync';
-import { requireAuth } from '@/lib/auth';
+import { syncFaqRecord } from '@/lib/vector-sync';
+import { publishSopVersion } from '@/lib/sop-versioning';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
 import { isUuid } from '@/lib/api';
+import { recordAuditEvent } from '@/lib/audit';
 
 /**
  * POST /api/documents/[id]/resync
@@ -22,7 +24,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
@@ -58,7 +60,16 @@ export async function POST(
     } else {
       const sop = await db.query.sops.findFirst({ where: eq(sops.id, doc.sourceId) });
       if (!sop) return sourceMissing('SOP', id);
-      status = await syncSopRecord(sop.id, sop.title, sop.content);
+      if (!sop.publishedVersionId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: { code: 'NO_PUBLISHED_VERSION', message: 'SOP has no published version to resync' },
+          },
+          { status: 409 }
+        );
+      }
+      status = await publishSopVersion(sop.id, sop.publishedVersionId);
     }
 
     if (status === 'error') {
@@ -74,6 +85,14 @@ export async function POST(
       );
     }
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'document.resync',
+      entityType: 'document',
+      entityId: id,
+      metadata: { sourceId: doc.sourceId, type: doc.type, status },
+    });
     return NextResponse.json({
       success: true,
       message: 'Document resynced successfully',

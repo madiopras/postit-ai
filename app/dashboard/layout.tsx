@@ -32,7 +32,10 @@ export default function DashboardLayout({
       if (path === "faq") label = "FAQ Management";
       if (path === "sop") label = "SOP Management";
       if (path === "config") label = "Configuration";
+      if (path === "audit-logs") label = "Audit Logs";
       if (path === "documents") label = "Documents";
+      if (path === "admins") label = "Admin Management";
+      if (path === "users") label = "User Management";
 
       breadcrumbs.push({ label, href });
     });

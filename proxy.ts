@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken, COOKIE_NAME } from '@/lib/auth';
+import { authenticateToken, COOKIE_NAME } from '@/lib/auth';
 
 /**
  * Paths reachable without a session.
@@ -14,6 +14,7 @@ import { verifyToken, COOKIE_NAME } from '@/lib/auth';
 const PUBLIC_PATHS = new Set([
   '/', // public chat — no login by design (prd.md §2)
   '/login',
+  '/api/health',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/chat', // public chat backend
@@ -58,12 +59,14 @@ export async function proxy(request: NextRequest) {
 
   const isApiRoute = pathname.startsWith('/api/');
   const token = request.cookies.get(COOKIE_NAME)?.value;
-  const session = token ? await verifyToken(token) : null;
+  const auth = token ? await authenticateToken(token) : null;
+  const session = auth?.ok ? auth.session : null;
 
   if (!session) {
     // API clients get a JSON 401; redirecting them to an HTML login page would
     // surface as an unparseable 200 response.
     if (isApiRoute) {
+      if (auth && !auth.ok) return auth.response;
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Login required' } },
         { status: 401 }
@@ -72,7 +75,27 @@ export async function proxy(request: NextRequest) {
 
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    if (token) {
+      response.cookies.delete(COOKIE_NAME);
+    }
+    return response;
+  }
+
+  const isSuperAdminPage =
+    pathname === '/dashboard/config' ||
+    pathname.startsWith('/dashboard/config/') ||
+    pathname === '/dashboard/audit-logs' ||
+    pathname.startsWith('/dashboard/audit-logs/') ||
+    pathname === '/dashboard/admins' ||
+    pathname.startsWith('/dashboard/admins/');
+
+  if (isSuperAdminPage && session.role !== 'super_admin') {
+    return NextResponse.redirect(new URL(session.role === 'user' ? '/' : '/dashboard', request.url));
+  }
+
+  if (pathname.startsWith('/dashboard') && session.role === 'user') {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   requestHeaders.set('x-user-id', session.userId);

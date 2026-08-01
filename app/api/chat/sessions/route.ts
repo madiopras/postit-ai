@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq, desc } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { chats } from '@/lib/schema';
+import { resolveChatOwner } from '@/lib/chat-identity';
 
 export const runtime = 'nodejs';
 
@@ -14,17 +15,15 @@ export const runtime = 'nodejs';
  */
 export async function GET(req: NextRequest) {
   try {
-    const visitorId = req.nextUrl.searchParams.get('visitorId');
-
-    if (!visitorId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'visitorId parameter required' },
-        },
-        { status: 400 }
-      );
-    }
+    const identity = await resolveChatOwner(
+      req,
+      req.nextUrl.searchParams.get('visitorId')
+    );
+    if (!identity.ok) return identity.response;
+    const ownership =
+      identity.owner.kind === 'user'
+        ? eq(chats.userId, identity.owner.userId)
+        : eq(chats.visitorId, identity.owner.visitorId);
 
     const sessions = await db
       .select({
@@ -34,7 +33,7 @@ export async function GET(req: NextRequest) {
         updatedAt: chats.updatedAt,
       })
       .from(chats)
-      .where(eq(chats.visitorId, visitorId))
+      .where(ownership)
       .orderBy(desc(chats.updatedAt))
       .limit(50);
 

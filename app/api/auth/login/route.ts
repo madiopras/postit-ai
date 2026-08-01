@@ -11,7 +11,9 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Username and password required' }, { status: 400 });
     }
 
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const user = await db.query.users.findFirst({
+      where: eq(users.username, username),
+    });
     if (!user) {
       return Response.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -21,10 +23,26 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    if (user.status === 'blocked') {
+      return Response.json(
+        { error: 'Account is blocked', code: 'ACCOUNT_BLOCKED' },
+        { status: 403 }
+      );
+    }
+
+    if (user.status === 'inactive') {
+      return Response.json(
+        { error: 'Account is inactive', code: 'ACCOUNT_INACTIVE' },
+        { status: 403 }
+      );
+    }
+
     const token = await signToken({
       userId: user.id,
       username: user.username,
-      role: user.role || 'admin',
+      role: user.role,
+      status: user.status,
+      displayName: user.displayName ?? undefined,
     });
 
     const headers = new Headers();
@@ -39,6 +57,7 @@ export async function POST(req: Request) {
         username: user.username,
         displayName: user.displayName,
         role: user.role,
+        status: user.status,
       },
     }, { headers });
   } catch (err) {

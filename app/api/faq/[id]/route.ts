@@ -4,7 +4,8 @@ import { faqs, documents } from '@/lib/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { syncFaqRecord } from '@/lib/vector-sync';
-import { requireAuth } from '@/lib/auth';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
+import { recordAuditEvent } from '@/lib/audit';
 import { isUuid } from '@/lib/api';
 
 // Validation schema for update
@@ -24,7 +25,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
@@ -63,7 +64,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
@@ -100,6 +101,14 @@ export async function PUT(
       );
     }
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'faq.update',
+      entityType: 'faq',
+      entityId: id,
+      metadata: { changedFields: Object.keys(validatedData), status },
+    });
     return NextResponse.json({
       success: true,
       data: { ...updatedFaq, status },
@@ -136,7 +145,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
@@ -164,6 +173,13 @@ export async function DELETE(
       await tx.delete(faqs).where(eq(faqs.id, id));
     });
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'faq.delete',
+      entityType: 'faq',
+      entityId: id,
+    });
     return NextResponse.json({
       success: true,
       message: 'FAQ deleted successfully',

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Menu, Plus } from 'lucide-react';
+import { Bot, LogIn, Menu, Plus } from 'lucide-react';
 import { ChatMessage, type SourceCitation } from '@/components/ui/chat-message';
 import { ChatInput } from '@/components/ui/chat-input';
 import { ChatSidebar, type ChatSession } from '@/components/ui/chat-sidebar';
@@ -15,6 +15,7 @@ interface Message {
   content: string;
   sources?: SourceCitation[];
   feedback?: 'thumbs_up' | 'thumbs_down' | null;
+  loginRequired?: boolean;
 }
 
 /** Plain fetch, no state — so effects can call it without setting state directly. */
@@ -129,7 +130,18 @@ export default function Chat() {
           updateAssistant({
             id: (payload.messageId as string) ?? undefined,
             sources: (payload.sources as SourceCitation[]) ?? [],
+            loginRequired: payload.loginRequired === true,
           });
+          continue;
+        }
+
+        if (frame.event === 'login_required') {
+          const message =
+            typeof payload.message === 'string'
+              ? payload.message
+              : 'Silakan login untuk mengakses SOP ini.';
+          answer = message;
+          updateAssistant({ content: message, loginRequired: true });
           continue;
         }
 
@@ -181,6 +193,7 @@ export default function Chat() {
           content: m.content,
           sources: m.sources ?? [],
           feedback: m.feedback ?? null,
+          loginRequired: m.loginRequired === true,
         }))
       );
       setChatId(selectedChatId);
@@ -325,6 +338,18 @@ export default function Chat() {
           {error && (
             <div className="mx-auto max-w-md w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
               <p className="text-xs text-destructive">{error}</p>
+            </div>
+          )}
+
+          {messages[messages.length - 1]?.loginRequired && (
+            <div className="flex justify-start pl-11">
+              <a
+                href="/login?redirect=/"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              >
+                <LogIn className="size-4" />
+                Login untuk membuka SOP
+              </a>
             </div>
           )}
         </main>

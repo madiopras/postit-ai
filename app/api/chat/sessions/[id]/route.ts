@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, asc } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { chats, messages } from '@/lib/schema';
+import { chats, documents, messages, sops } from '@/lib/schema';
 import { isUuid } from '@/lib/api';
+import {
+  citedDocumentIds,
+  ownsChat,
+  redactRestrictedMessages,
+  resolveChatOwner,
+  type ChatOwner,
+} from '@/lib/chat-identity';
 
 export const runtime = 'nodejs';
 
@@ -12,28 +19,19 @@ const notFound = () =>
     { status: 404 }
   );
 
-const missingVisitor = () =>
-  NextResponse.json(
-    {
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'visitorId parameter required' },
-    },
-    { status: 400 }
-  );
-
 /**
  * Load a conversation, but only for the visitor that owns it.
  *
  * A mismatched visitor gets the same 404 as a missing chat, so the endpoint
  * cannot be used to probe which conversation ids exist.
  */
-async function findOwnedChat(chatId: string, visitorId: string) {
+async function findOwnedChat(chatId: string, owner: ChatOwner) {
   // Guard before querying: every id column is `uuid`, and Postgres raises a
   // parse error on anything else, which would surface as a 500.
   if (!isUuid(chatId)) return null;
 
   const chat = await db.query.chats.findFirst({ where: eq(chats.id, chatId) });
-  return chat && chat.visitorId === visitorId ? chat : null;
+  return chat && ownsChat(chat, owner) ? chat : null;
 }
 
 /**
@@ -46,13 +44,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const visitorId = req.nextUrl.searchParams.get('visitorId');
-    if (!visitorId) return missingVisitor();
+    const identity = await resolveChatOwner(
+      req,
+      req.nextUrl.searchParams.get('visitorId')
+    );
+    if (!identity.ok) return identity.response;
 
-    const chat = await findOwnedChat(id, visitorId);
+    const chat = await findOwnedChat(id, identity.owner);
     if (!chat) return notFound();
 
-    const history = await db
+    let history = await db
       .select({
         id: messages.id,
         role: messages.role,
@@ -64,6 +65,30 @@ export async function GET(
       .from(messages)
       .where(eq(messages.chatId, id))
       .orderBy(asc(messages.createdAt));
+
+    if (identity.owner.kind === 'visitor') {
+      const citedIds = history.flatMap((message) =>
+        citedDocumentIds(message.sources)
+      );
+      if (citedIds.length > 0) {
+        const restricted = await db
+          .select({ id: documents.id })
+          .from(documents)
+          .innerJoin(
+            sops,
+            and(eq(documents.type, 'sop'), eq(documents.sourceId, sops.id))
+          )
+          .where(
+            and(
+              inArray(documents.id, citedIds),
+              eq(sops.requiresLogin, true)
+            )
+          );
+        const restrictedIds = new Set(restricted.map((row) => row.id));
+
+        history = redactRestrictedMessages(history, restrictedIds);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -78,6 +103,7 @@ export async function GET(
   }
 }
 
+
 /**
  * DELETE /api/chat/sessions/[id]?visitorId=...
  * Messages are removed by the ON DELETE CASCADE on messages.chat_id.
@@ -88,10 +114,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const visitorId = req.nextUrl.searchParams.get('visitorId');
-    if (!visitorId) return missingVisitor();
+    const identity = await resolveChatOwner(
+      req,
+      req.nextUrl.searchParams.get('visitorId')
+    );
+    if (!identity.ok) return identity.response;
 
-    const chat = await findOwnedChat(id, visitorId);
+    const chat = await findOwnedChat(id, identity.owner);
     if (!chat) return notFound();
 
     await db.delete(chats).where(eq(chats.id, id));

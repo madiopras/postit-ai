@@ -1,6 +1,11 @@
 import { embed } from './embedding';
 import { streamChatCompletion, type ChatMessage, type StreamingChunk } from './llm';
-import { searchSimilarDocuments, type SearchResult } from './vector-sync';
+import {
+  hasRelevantRestrictedSop,
+  searchSimilarDocuments,
+  type SearchResult,
+} from './vector-sync';
+import { DEFAULT_AI_BEHAVIOUR, getAiConfig, type AiConfig } from './config';
 
 
 /**
@@ -18,6 +23,10 @@ export interface RagOptions {
   maxSources?: number;      // Max sources to retrieve (default: 5)
   minScore?: number;        // Minimum similarity score (default: 0.5)
   temperature?: number;     // LLM temperature (default: 0.7)
+  authenticated?: boolean;  // Whether protected SOPs may be retrieved
+  sourcePriority?: 'balanced' | 'faq_first' | 'sop_first';
+  selectionRule?: 'highest_score' | 'diverse_sources';
+  maxContextDocuments?: number;
 }
 
 export interface RagSource {
@@ -27,6 +36,7 @@ export interface RagSource {
   type: 'faq' | 'sop';
   score: number;
   chunkIndex?: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RagResponse {
@@ -42,12 +52,51 @@ export interface RagResponse {
 /**
  * Build system prompt with retrieved context
  */
-function buildSystemPrompt(sources: RagSource[]): string {
+export function buildSystemPrompt(
+  sources: RagSource[],
+  behaviour: Pick<
+    AiConfig,
+    | 'aiPersona'
+    | 'aiTone'
+    | 'aiDetailLevel'
+    | 'aiLanguage'
+    | 'aiUseEmoji'
+    | 'responseKnowledgeOnly'
+    | 'responseNoHallucination'
+    | 'responseForbiddenWords'
+    | 'responseRequiredWords'
+  > = {}
+): string {
   const faqSources = sources.filter(s => s.type === 'faq');
   const sopSources = sources.filter(s => s.type === 'sop');
 
-  let context = `You are a helpful assistant for PostIt AI.
-Answer questions based on the following knowledge base.
+  const persona = behaviour.aiPersona || DEFAULT_AI_BEHAVIOUR.persona;
+  const tone = behaviour.aiTone || DEFAULT_AI_BEHAVIOUR.tone;
+  const detailLevel = behaviour.aiDetailLevel || DEFAULT_AI_BEHAVIOUR.detailLevel;
+  const language = behaviour.aiLanguage || DEFAULT_AI_BEHAVIOUR.language;
+  const useEmoji = behaviour.aiUseEmoji ?? DEFAULT_AI_BEHAVIOUR.useEmoji;
+  const knowledgeOnly = behaviour.responseKnowledgeOnly ?? true;
+  const noHallucination = behaviour.responseNoHallucination ?? true;
+  const forbiddenWords = behaviour.responseForbiddenWords ?? [];
+  const requiredWords = behaviour.responseRequiredWords ?? [];
+  const toneInstruction = {
+    formal: 'Use a formal tone.',
+    professional: 'Use a professional tone.',
+    friendly: 'Use a friendly and approachable tone.',
+  }[tone];
+  const detailInstruction = {
+    concise: 'Keep the answer concise and focused.',
+    medium: 'Provide a balanced amount of detail.',
+    detailed: 'Provide a detailed answer while staying relevant.',
+  }[detailLevel];
+  const languageInstruction = {
+    same_as_user: "Respond in the same language as the user's question.",
+    id: 'Respond in Indonesian.',
+    en: 'Respond in English.',
+  }[language];
+
+  let context = `${persona}
+The following knowledge base contains the only retrieved documents available for this request.
 
 `;
 
@@ -71,11 +120,26 @@ Answer questions based on the following knowledge base.
   }
 
   context += `Instructions:
-- Answer the user's question using the information above
-- If the answer is not in the knowledge base, say so honestly
+- ${knowledgeOnly
+    ? 'Answer only from the supplied knowledge base context.'
+    : 'Prioritize the supplied knowledge base context when answering.'}
+- ${noHallucination
+    ? 'Do not invent, infer, or add claims that are unsupported by the supplied context.'
+    : 'Clearly distinguish supplied knowledge from any general guidance.'}
 - Always cite your sources by mentioning [FAQ X] or [SOP X]
-- Be concise and helpful
-- Respond in the same language as the user's question`;
+- Never reveal or infer documents that were not supplied in this prompt.
+- Follow document access restrictions; never disclose protected SOP content to an unauthenticated user.
+- ${toneInstruction}
+- ${detailInstruction}
+- ${languageInstruction}
+- ${useEmoji ? 'Use emoji naturally when appropriate.' : 'Do not use emoji.'}`;
+
+  if (forbiddenWords.length > 0) {
+    context += `\n- Never output any of these forbidden phrases: ${JSON.stringify(forbiddenWords)}.`;
+  }
+  if (requiredWords.length > 0) {
+    context += `\n- Required phrase rules: ${JSON.stringify(requiredWords)}. An empty condition means always; otherwise use the phrase when the user's question contains the condition.`;
+  }
 
   return context;
 }
@@ -92,12 +156,86 @@ export async function retrieveSources(
   userMessage: string,
   options: RagOptions = {}
 ): Promise<RagSource[]> {
-  const { maxSources = 5, minScore = 0.5 } = options;
+  return (await retrieveContext(userMessage, options)).sources;
+}
 
+export async function retrieveContext(
+  userMessage: string,
+  options: RagOptions = {}
+): Promise<{ sources: RagSource[]; loginRequired: boolean }> {
+  const {
+    maxSources = 5,
+    minScore = 0.5,
+    authenticated = false,
+    sourcePriority = 'balanced',
+    selectionRule = 'highest_score',
+    maxContextDocuments = maxSources,
+  } = options;
   const queryEmbedding = await embed(userMessage);
-  const searchResults = await searchSimilarDocuments(queryEmbedding, maxSources, minScore);
+  const [searchResults, hasRestrictedMatch] = await Promise.all([
+    searchSimilarDocuments(
+      queryEmbedding,
+      maxSources,
+      minScore,
+      { authenticated }
+    ),
+    authenticated
+      ? Promise.resolve(false)
+      : hasRelevantRestrictedSop(queryEmbedding, minScore),
+  ]);
 
-  return searchResults.map(toRagSource);
+  const sources = selectRetrievalSources(searchResults, {
+    sourcePriority,
+    selectionRule,
+    limit: Math.min(maxSources, maxContextDocuments),
+  }).map(toRagSource);
+  return {
+    sources,
+    // Accessible context takes precedence. A login CTA is only needed when a
+    // protected SOP is relevant and there is nothing safe to answer from.
+    loginRequired: !authenticated && sources.length === 0 && hasRestrictedMatch,
+  };
+}
+
+export function selectRetrievalSources(
+  results: SearchResult[],
+  options: {
+    sourcePriority: 'balanced' | 'faq_first' | 'sop_first';
+    selectionRule: 'highest_score' | 'diverse_sources';
+    limit: number;
+  }
+): SearchResult[] {
+  const byScore = [...results].sort((a, b) => b.score - a.score);
+  if (options.selectionRule === 'highest_score') {
+    if (options.sourcePriority === 'balanced') return byScore.slice(0, options.limit);
+    const preferred = options.sourcePriority === 'faq_first' ? 'faq' : 'sop';
+    return byScore
+      .sort((a, b) => {
+        const typeDifference =
+          Number(b.type === preferred) - Number(a.type === preferred);
+        return typeDifference || b.score - a.score;
+      })
+      .slice(0, options.limit);
+  }
+
+  const queues = {
+    faq: byScore.filter((result) => result.type === 'faq'),
+    sop: byScore.filter((result) => result.type === 'sop'),
+  };
+  let nextType: 'faq' | 'sop';
+  if (options.sourcePriority === 'faq_first') nextType = 'faq';
+  else if (options.sourcePriority === 'sop_first') nextType = 'sop';
+  else nextType = byScore[0]?.type ?? 'faq';
+
+  const selected: SearchResult[] = [];
+  while (selected.length < options.limit && (queues.faq.length || queues.sop.length)) {
+    const alternate = nextType === 'faq' ? 'sop' : 'faq';
+    const item = queues[nextType].shift() ?? queues[alternate].shift();
+    if (!item) break;
+    selected.push(item);
+    nextType = item.type === 'faq' ? 'sop' : 'faq';
+  }
+  return selected;
 }
 
 /** Map a vector-store hit to the shape the prompt builder and clients use. */
@@ -109,6 +247,7 @@ export function toRagSource(result: SearchResult): RagSource {
     type: result.type,
     score: result.score,
     chunkIndex: result.chunkIndex,
+    metadata: result.metadata,
   };
 }
 
@@ -122,10 +261,13 @@ export function toRagSource(result: SearchResult): RagSource {
 export async function* ragStreamFromSources(
   userMessage: string,
   sources: RagSource[],
+  history: ChatMessage[] = [],
   onChunk?: (chunk: StreamingChunk) => void
 ): AsyncGenerator<StreamingChunk> {
+  const config = await getAiConfig();
   const messages: ChatMessage[] = [
-    { role: 'system', content: buildSystemPrompt(sources) },
+    { role: 'system', content: buildSystemPrompt(sources, config) },
+    ...history,
     { role: 'user', content: userMessage },
   ];
 
@@ -157,11 +299,9 @@ export async function* ragStream(
       }
     }
 
-    yield* ragStreamFromSources(userMessage, sources, onChunk);
+    yield* ragStreamFromSources(userMessage, sources, [], onChunk);
   } catch (error) {
     console.error('[RAG] Error:', error);
     throw error;
   }
 }
-
-

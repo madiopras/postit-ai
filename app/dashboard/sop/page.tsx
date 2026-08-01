@@ -28,6 +28,7 @@ interface SOP {
   title: string;
   category: string | null;
   status: "draft" | "published" | "error";
+  requiresLogin: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -152,6 +153,7 @@ export default function SOPPage() {
                   <TableHead>Title</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Access</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -179,6 +181,11 @@ export default function SOPPage() {
                         }
                       >
                         {sop.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={sop.requiresLogin ? "secondary" : "outline"}>
+                        {sop.requiresLogin ? "Login required" : "Public"}
                       </Badge>
                     </TableCell>
                     <TableCell>

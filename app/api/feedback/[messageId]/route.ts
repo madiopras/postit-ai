@@ -4,13 +4,14 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { chats, messages } from '@/lib/schema';
 import { isUuid } from '@/lib/api';
+import { ownsChat, resolveChatOwner } from '@/lib/chat-identity';
 
 export const runtime = 'nodejs';
 
 const feedbackSchema = z.object({
   // null clears a previously given rating.
   feedback: z.enum(['thumbs_up', 'thumbs_down']).nullable(),
-  visitorId: z.string().min(1).max(100),
+  visitorId: z.string().min(1).max(100).optional(),
 });
 
 /**
@@ -47,6 +48,8 @@ export async function PATCH(
     }
 
     const { feedback, visitorId } = parsed.data;
+    const identity = await resolveChatOwner(req, visitorId);
+    if (!identity.ok) return identity.response;
 
     const message = await db.query.messages.findFirst({
       where: eq(messages.id, messageId),
@@ -59,7 +62,7 @@ export async function PATCH(
       where: eq(chats.id, message.chatId),
     });
 
-    if (!chat || chat.visitorId !== visitorId) return messageNotFound();
+    if (!chat || !ownsChat(chat, identity.owner)) return messageNotFound();
 
     await db.update(messages).set({ feedback }).where(eq(messages.id, messageId));
 

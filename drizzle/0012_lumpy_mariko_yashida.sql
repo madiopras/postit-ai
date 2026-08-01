@@ -1,0 +1,3 @@
+ALTER TABLE "app_config" ADD COLUMN "response_knowledge_only" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "app_config" ADD COLUMN "response_no_hallucination" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "app_config" ADD COLUMN "response_fallback_message" text DEFAULT 'Informasi belum tersedia dalam Knowledge Base. Silakan hubungi administrator atau pihak terkait.' NOT NULL;

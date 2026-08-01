@@ -3,7 +3,8 @@ import { db } from '@/lib/db';
 import { faqs } from '@/lib/schema';
 import { z } from 'zod';
 import { syncFaqRecord } from '@/lib/vector-sync';
-import { requireAuth } from '@/lib/auth';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
+import { recordAuditEvent } from '@/lib/audit';
 
 // CSV import schema
 const csvImportSchema = z.object({
@@ -22,7 +23,7 @@ const csvImportSchema = z.object({
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const allFaqs = await db.query.faqs.findMany();
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const body = await req.json();
@@ -120,6 +121,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    await recordAuditEvent({
+      actor: auth.session,
+      request: req,
+      action: 'faq.import',
+      entityType: 'faq',
+      metadata: {
+        total: results.total,
+        created: results.created,
+        failed: results.failed,
+      },
+    });
     return NextResponse.json({
       success: true,
       data: results,
