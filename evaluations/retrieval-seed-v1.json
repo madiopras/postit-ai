@@ -1,0 +1,130 @@
+{
+  "name": "PostIt AI seed knowledge retrieval",
+  "version": 1,
+  "thresholds": {
+    "outcomeAccuracy": 0.9,
+    "sourceHitRate": 0.85,
+    "sourceTypeAccuracy": 0.95,
+    "modeAccuracy": 0.8
+  },
+  "cases": [
+    {
+      "id": "faq-reset-password",
+      "category": "faq_direct",
+      "question": "Bagaimana cara reset password?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "faq", "titleIncludes": "reset password" }
+    },
+    {
+      "id": "faq-operational-hours",
+      "category": "faq_direct",
+      "question": "Kapan customer service buka?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "faq", "titleIncludes": "jam operasional" }
+    },
+    {
+      "id": "faq-shipping-cost",
+      "category": "faq_direct",
+      "question": "Berapa ongkos kirim pesanan?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "faq", "titleIncludes": "biaya pengiriman" }
+    },
+    {
+      "id": "faq-payment-method",
+      "category": "faq_direct",
+      "question": "Pembayaran bisa menggunakan apa saja?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "faq", "titleIncludes": "metode pembayaran" }
+    },
+    {
+      "id": "faq-warranty",
+      "category": "semantic_variant",
+      "question": "Apakah barang memiliki jaminan kerusakan selama satu tahun?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "faq", "titleIncludes": "garansi produk" }
+    },
+    {
+      "id": "sop-onboarding",
+      "category": "sop_direct",
+      "question": "Apa tahapan onboarding karyawan baru?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "onboarding karyawan" }
+    },
+    {
+      "id": "sop-refund",
+      "category": "sop_direct",
+      "question": "Jelaskan prosedur refund customer",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "prosedur refund" }
+    },
+    {
+      "id": "sop-complaint",
+      "category": "sop_direct",
+      "question": "Bagaimana proses penanganan komplain pelanggan?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "penanganan komplain" }
+    },
+    {
+      "id": "sop-backup",
+      "category": "sop_direct",
+      "question": "Kapan backup database harian dijalankan?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "backup database" }
+    },
+    {
+      "id": "sop-deployment",
+      "category": "semantic_variant",
+      "question": "Apa langkah merilis aplikasi ke lingkungan production melalui ArgoCD?",
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "deployment production" }
+    },
+    {
+      "id": "follow-up-refund-duration",
+      "category": "follow_up",
+      "question": "Lalu berapa lama?",
+      "history": [
+        { "role": "user", "content": "Bagaimana prosedur refund?" },
+        { "role": "assistant", "content": "Refund diverifikasi CS kemudian diproses Finance." }
+      ],
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "prosedur refund" }
+    },
+    {
+      "id": "follow-up-backup-retention",
+      "category": "follow_up",
+      "question": "Disimpan berapa lama?",
+      "history": [
+        { "role": "user", "content": "Kapan backup database dijalankan?" },
+        { "role": "assistant", "content": "Backup database berjalan setiap hari." }
+      ],
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "backup database" }
+    },
+    {
+      "id": "topic-switch-sop-to-faq",
+      "category": "topic_switch",
+      "question": "Sekarang bagaimana cara reset password?",
+      "history": [
+        { "role": "user", "content": "Bagaimana prosedur refund?" },
+        { "role": "assistant", "content": "Finance memproses refund dalam tiga hari kerja." }
+      ],
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "faq", "titleIncludes": "reset password" }
+    },
+    {
+      "id": "topic-switch-faq-to-sop",
+      "category": "topic_switch",
+      "question": "Sekarang jelaskan prosedur deployment production",
+      "history": [
+        { "role": "user", "content": "Bagaimana cara reset password?" },
+        { "role": "assistant", "content": "Gunakan tautan Forgot Password pada halaman login." }
+      ],
+      "expectedMode": "standalone",
+      "expected": { "kind": "sources", "sourceType": "sop", "titleIncludes": "deployment production" }
+    },
+    {
+      "id": "outside-knowledge",
+      "category": "out_of_knowledge",
+      "question": "Siapa pemenang pertandingan sepak bola internasional tadi malam?",
+      "expected": { "kind": "no_match" }
+    }
+  ]
+}

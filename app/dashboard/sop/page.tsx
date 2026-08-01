@@ -1,24 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  TableError,
+} from "@/components/dashboard/dashboard-ui";
 import { Plus, Search, FileText, Edit, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -28,6 +27,7 @@ interface SOP {
   title: string;
   category: string | null;
   status: "draft" | "published" | "error";
+  requiresLogin: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,22 +37,25 @@ export default function SOPPage() {
   const [sops, setSops] = useState<SOP[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   /** Plain fetch with no state writes, so the effect below can call it. */
   const loadSOPs = useCallback(async (): Promise<SOP[]> => {
     const res = await fetch("/api/sop");
-    if (!res.ok) throw new Error("Failed to fetch SOPs");
+    if (!res.ok) throw new Error("Gagal memuat SOP");
     const result = await res.json();
-    if (!result.success) throw new Error(result.error?.message || "Failed to fetch SOPs");
+    if (!result.success) throw new Error(result.error?.message || "Gagal memuat SOP");
     return result.data;
   }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       setSops(await loadSOPs());
-    } catch {
-      toast.error("Failed to load SOPs");
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Gagal memuat SOP");
+      toast.error("Gagal memuat SOP");
     } finally {
       setLoading(false);
     }
@@ -66,11 +69,13 @@ export default function SOPPage() {
       .then((data) => {
         if (cancelled) return;
         setSops(data);
+        setLoadError("");
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
-        toast.error("Failed to load SOPs");
+        toast.error("Gagal memuat SOP");
+        setLoadError(error instanceof Error ? error.message : "Gagal memuat SOP");
         setLoading(false);
       });
 
@@ -80,19 +85,19 @@ export default function SOPPage() {
   }, [loadSOPs]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this SOP?")) return;
+    if (!confirm("Hapus SOP ini? Tindakan ini tidak dapat dibatalkan.")) return;
 
     try {
       const res = await fetch(`/api/sop/${id}`, {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Failed to delete");
+      if (!res.ok) throw new Error("Gagal menghapus SOP");
 
-      toast.success("SOP deleted successfully");
+      toast.success("SOP berhasil dihapus");
       refresh();
     } catch {
-      toast.error("Failed to delete SOP");
+      toast.error("Gagal menghapus SOP");
     }
   };
 
@@ -103,25 +108,25 @@ export default function SOPPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">SOP Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Kelola SOP</h1>
           <p className="text-muted-foreground">
-            Manage Standard Operating Procedures
+            Kelola prosedur operasional yang menjadi rujukan jawaban AI.
           </p>
         </div>
         <Button onClick={() => router.push("/dashboard/sop/new")}>
           <Plus className="mr-2 h-4 w-4" />
-          New SOP
+          SOP baru
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All SOPs</CardTitle>
+          <CardTitle>Daftar SOP</CardTitle>
           <CardDescription>
-            A list of all SOPs including their title, category, and status.
+            Tinjau judul, kategori, status publikasi, dan akses setiap SOP.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,7 +134,7 @@ export default function SOPPage() {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search SOPs..."
+                placeholder="Cari judul atau kategori SOP..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8"
@@ -139,21 +144,24 @@ export default function SOPPage() {
 
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Loading SOPs...
+              Memuat SOP…
             </div>
+          ) : loadError ? (
+            <TableError message={loadError} onRetry={refresh} />
           ) : filteredSOPs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {search ? "No SOPs found" : "No SOPs yet. Create your first one!"}
+              {search ? "Tidak ada SOP yang cocok." : "Belum ada SOP. Buat SOP pertama Anda."}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>Judul</TableHead>
+                  <TableHead>Kategori</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Akses</TableHead>
+                  <TableHead>Diperbarui</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -178,7 +186,12 @@ export default function SOPPage() {
                           sop.status === "published" ? "default" : "secondary"
                         }
                       >
-                        {sop.status}
+                        {sop.status === "published" ? "Terbit" : sop.status === "draft" ? "Draf" : "Error"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={sop.requiresLogin ? "secondary" : "outline"}>
+                        {sop.requiresLogin ? "Wajib login" : "Publik"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -192,6 +205,7 @@ export default function SOPPage() {
                           onClick={() => router.push(`/dashboard/sop/${sop.id}`)}
                         >
                           <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit {sop.title}</span>
                         </Button>
                         <Button
                           variant="ghost"
@@ -199,6 +213,7 @@ export default function SOPPage() {
                           onClick={() => handleDelete(sop.id)}
                         >
                           <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Hapus {sop.title}</span>
                         </Button>
                       </div>
                     </TableCell>

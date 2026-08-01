@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { documents } from '@/lib/schema';
-import { requireAuth } from '@/lib/auth';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -17,7 +17,7 @@ const MAX_PAGE_SIZE = 100;
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     const params = req.nextUrl.searchParams;

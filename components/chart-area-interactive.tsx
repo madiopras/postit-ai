@@ -1,27 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
+  Button,
   Card,
   CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+  Skeleton,
+} from '@/components/dashboard/dashboard-ui';
 import type { TrendPoint } from '@/lib/stats';
 
 /**
@@ -38,17 +39,6 @@ import type { TrendPoint } from '@/lib/stats';
  * --chart-N tokens, which are greyscale (chroma 0); and the demo this replaced
  * gave both series var(--primary), i.e. the same color twice.
  */
-const chartConfig = {
-  messages: {
-    label: 'Pesan',
-    theme: { light: '#2a78d6', dark: '#3987e5' },
-  },
-  chats: {
-    label: 'Percakapan',
-    theme: { light: '#eb6834', dark: '#d95926' },
-  },
-} satisfies ChartConfig;
-
 export function ChartAreaInteractive({ trend }: { trend: TrendPoint[] | null }) {
   const isMobile = useIsMobile();
   const [range, setRange] = React.useState<'7' | '30'>('30');
@@ -78,32 +68,48 @@ export function ChartAreaInteractive({ trend }: { trend: TrendPoint[] | null }) 
           {totals.messages} pesan dari {totals.chats} percakapan dalam {range} hari terakhir
         </CardDescription>
         <CardAction>
-          {/* Base UI's ToggleGroup is multi-value by design: it takes and
-              returns an array even when only one item may be selected. */}
-          <ToggleGroup
-            value={[range]}
-            onValueChange={(value) => {
-              const next = value[0];
-              if (next === '7' || next === '30') setRange(next);
-            }}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="7" aria-label="Tampilkan 7 hari terakhir">
+          <div className="flex rounded-ui-md border border-border-primary bg-bg-primary p-0.5" aria-label="Rentang aktivitas">
+            <Button
+              variant={range === '7' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="min-h-8 border-0 px-2.5 shadow-none"
+              onClick={() => setRange('7')}
+              aria-pressed={range === '7'}
+            >
               7 hari
-            </ToggleGroupItem>
-            <ToggleGroupItem value="30" aria-label="Tampilkan 30 hari terakhir">
+            </Button>
+            <Button
+              variant={range === '30' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="min-h-8 border-0 px-2.5 shadow-none"
+              onClick={() => setRange('30')}
+              aria-pressed={range === '30'}
+            >
               30 hari
-            </ToggleGroupItem>
-          </ToggleGroup>
+            </Button>
+          </div>
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6">
         {!trend ? (
           <Skeleton className="h-62.5 w-full" />
+        ) : data.length === 0 ? (
+          <div className="flex h-62.5 items-center justify-center rounded-ui-lg border border-dashed border-border-primary text-sm text-fg-tertiary">
+            Belum ada aktivitas chat pada rentang ini.
+          </div>
         ) : (
-          <ChartContainer config={chartConfig} className="aspect-auto h-62.5 w-full">
-            <LineChart data={data} margin={{ left: 4, right: 12, top: 4 }}>
+          <div
+            className="h-62.5 w-full"
+            role="img"
+            aria-label={`Grafik ${totals.messages} pesan dan ${totals.chats} percakapan dalam ${range} hari terakhir`}
+          >
+            <ResponsiveContainer
+              width="100%"
+              height={250}
+              minWidth={0}
+              initialDimension={{ width: 800, height: 250 }}
+            >
+              <LineChart data={data} margin={{ left: 4, right: 12, top: 4, bottom: 0 }}>
               {/* Recessive grid: horizontal only, so it reads as a reference
                   surface rather than competing with the lines. */}
               <CartesianGrid vertical={false} strokeOpacity={0.5} />
@@ -116,41 +122,46 @@ export function ChartAreaInteractive({ trend }: { trend: TrendPoint[] | null }) 
                 tickFormatter={formatDay}
               />
               <YAxis tickLine={false} axisLine={false} width={32} allowDecimals={false} />
-              <ChartTooltip
+              <Tooltip
                 cursor={{ strokeDasharray: '4 4' }}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) =>
-                      new Date(value as string).toLocaleDateString('id-ID', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'long',
-                      })
-                    }
-                  />
+                labelFormatter={(value) =>
+                  new Date(value as string).toLocaleDateString('id-ID', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'long',
+                  })
                 }
+                contentStyle={{
+                  background: 'var(--ui-bg-primary)',
+                  border: '1px solid var(--ui-border-secondary)',
+                  borderRadius: 'var(--ui-radius-md)',
+                  color: 'var(--ui-fg-primary)',
+                }}
               />
               {/* Two series, so a legend is always present — identity is never
                   carried by color alone. */}
-              <ChartLegend content={<ChartLegendContent />} />
+              <Legend formatter={(value) => (value === 'messages' ? 'Pesan' : 'Percakapan')} />
               <Line
                 dataKey="messages"
                 type="monotone"
-                stroke="var(--color-messages)"
+                stroke="var(--ui-chart-1)"
                 strokeWidth={2}
                 dot={false}
+                isAnimationActive={false}
                 activeDot={{ r: 4 }}
               />
               <Line
                 dataKey="chats"
                 type="monotone"
-                stroke="var(--color-chats)"
+                stroke="var(--ui-chart-2)"
                 strokeWidth={2}
                 dot={false}
+                isAnimationActive={false}
                 activeDot={{ r: 4 }}
               />
-            </LineChart>
-          </ChartContainer>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </CardContent>
     </Card>

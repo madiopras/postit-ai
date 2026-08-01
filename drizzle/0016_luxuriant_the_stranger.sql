@@ -1,0 +1,1 @@
+CREATE INDEX "idx_documents_search" ON "documents" USING gin (to_tsvector('simple', coalesce("title", '') || ' ' || coalesce("content", '')));

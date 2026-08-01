@@ -1,6 +1,8 @@
 import { db } from '../lib/db';
-import { faqs, sops } from '../lib/schema';
-import { syncFaqToFaq, syncSopToVectors } from '../lib/vector-sync';
+import { faqs, sops, sopVersions, users } from '../lib/schema';
+import { syncFaqToFaq } from '../lib/vector-sync';
+import { publishSopVersion } from '../lib/sop-versioning';
+import { eq } from 'drizzle-orm';
 
 /**
  * Seed sample FAQ and SOP content.
@@ -103,13 +105,34 @@ async function main() {
   }
 
   console.log(`🌱 Seeding ${SOP_SEED.length} SOP...`);
-  for (const entry of SOP_SEED) {
-    const [sop] = await db
-      .insert(sops)
-      .values({ ...entry, status: 'published' })
-      .returning();
+  const seedOwner = await db.query.users.findFirst({
+    where: eq(users.role, 'super_admin'),
+  });
+  if (!seedOwner) {
+    throw new Error('A super_admin account is required before seeding SOP versions');
+  }
 
-    await syncSopToVectors(sop.id, sop.title, sop.content, 'published');
+  for (const entry of SOP_SEED) {
+    const { sop, version } = await db.transaction(async (tx) => {
+      const [createdSop] = await tx
+        .insert(sops)
+        .values({ ...entry, status: 'draft' })
+        .returning();
+      const [createdVersion] = await tx
+        .insert(sopVersions)
+        .values({
+          sopId: createdSop.id,
+          versionNumber: 1,
+          title: createdSop.title,
+          content: createdSop.content,
+          createdBy: seedOwner.id,
+        })
+        .returning();
+      return { sop: createdSop, version: createdVersion };
+    });
+
+    const status = await publishSopVersion(sop.id, version.id);
+    if (status === 'error') throw new Error(`Failed to publish seeded SOP: ${sop.title}`);
     console.log(`   ✓ ${sop.title}`);
   }
 

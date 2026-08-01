@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDashboardStats } from '@/lib/stats';
-import { requireAuth } from '@/lib/auth';
+import { DASHBOARD_ROLES, requireRole } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, DASHBOARD_ROLES);
     if (!auth.ok) return auth.response;
 
     return NextResponse.json({ success: true, data: await getDashboardStats() });

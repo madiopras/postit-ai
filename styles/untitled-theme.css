@@ -1,0 +1,279 @@
+/*
+ * Canonical PostIt AI token layer, derived from Untitled UI foundations.
+ *
+ * Source values and semantic decisions are defined in
+ * docs/enhancement/go2/design.md. Phase 7 removed the legacy shadcn/Base UI
+ * token layer, so all application surfaces now resolve through this file.
+ */
+
+@theme inline {
+  --font-ui: var(--font-inter);
+  --font-sans: var(--font-inter);
+  --font-headline: var(--font-inter);
+  --font-heading: var(--font-inter);
+
+  --color-brand-25: var(--ui-brand-25);
+  --color-brand-50: var(--ui-brand-50);
+  --color-brand-100: var(--ui-brand-100);
+  --color-brand-200: var(--ui-brand-200);
+  --color-brand-300: var(--ui-brand-300);
+  --color-brand-400: var(--ui-brand-400);
+  --color-brand-500: var(--ui-brand-500);
+  --color-brand-600: var(--ui-brand-600);
+  --color-brand-700: var(--ui-brand-700);
+  --color-brand-800: var(--ui-brand-800);
+  --color-brand-900: var(--ui-brand-900);
+  --color-brand-950: var(--ui-brand-950);
+
+  --color-gray-25: var(--ui-gray-25);
+  --color-gray-50: var(--ui-gray-50);
+  --color-gray-100: var(--ui-gray-100);
+  --color-gray-200: var(--ui-gray-200);
+  --color-gray-300: var(--ui-gray-300);
+  --color-gray-400: var(--ui-gray-400);
+  --color-gray-500: var(--ui-gray-500);
+  --color-gray-600: var(--ui-gray-600);
+  --color-gray-700: var(--ui-gray-700);
+  --color-gray-800: var(--ui-gray-800);
+  --color-gray-900: var(--ui-gray-900);
+  --color-gray-950: var(--ui-gray-950);
+
+  --color-bg-primary: var(--ui-bg-primary);
+  --color-bg-secondary: var(--ui-bg-secondary);
+  --color-bg-tertiary: var(--ui-bg-tertiary);
+  --color-bg-active: var(--ui-bg-active);
+  --color-bg-disabled: var(--ui-bg-disabled);
+  --color-bg-overlay: var(--ui-bg-overlay);
+
+  --color-fg-primary: var(--ui-fg-primary);
+  --color-fg-secondary: var(--ui-fg-secondary);
+  --color-fg-tertiary: var(--ui-fg-tertiary);
+  --color-fg-quaternary: var(--ui-fg-quaternary);
+  --color-fg-disabled: var(--ui-fg-disabled);
+  --color-fg-on-brand: var(--ui-fg-on-brand);
+  --color-fg-on-error: var(--ui-fg-on-error);
+
+  --color-border-primary: var(--ui-border-primary);
+  --color-border-secondary: var(--ui-border-secondary);
+  --color-border-brand: var(--ui-border-brand);
+
+  --color-brand-solid: var(--ui-brand-solid);
+  --color-brand-solid-hover: var(--ui-brand-solid-hover);
+  --color-brand-subtle: var(--ui-brand-subtle);
+  --color-brand-text: var(--ui-brand-text);
+  --color-focus-ring: var(--ui-focus-ring);
+
+  --color-error-solid: var(--ui-error-solid);
+  --color-error-solid-hover: var(--ui-error-solid-hover);
+  --color-error-bg: var(--ui-error-bg);
+  --color-error-fg: var(--ui-error-fg);
+  --color-error-border: var(--ui-error-border);
+  --color-success-bg: var(--ui-success-bg);
+  --color-success-fg: var(--ui-success-fg);
+  --color-warning-bg: var(--ui-warning-bg);
+  --color-warning-fg: var(--ui-warning-fg);
+  --color-info-bg: var(--ui-info-bg);
+  --color-info-fg: var(--ui-info-fg);
+
+  /* Compatibility utility names used by existing feature composition. */
+  --color-background: var(--ui-bg-primary);
+  --color-foreground: var(--ui-fg-primary);
+  --color-card: var(--ui-bg-primary);
+  --color-card-foreground: var(--ui-fg-primary);
+  --color-popover: var(--ui-bg-primary);
+  --color-popover-foreground: var(--ui-fg-primary);
+  --color-primary: var(--ui-brand-solid);
+  --color-primary-foreground: var(--ui-fg-on-brand);
+  --color-secondary: var(--ui-bg-tertiary);
+  --color-secondary-foreground: var(--ui-fg-secondary);
+  --color-muted: var(--ui-bg-secondary);
+  --color-muted-foreground: var(--ui-fg-tertiary);
+  --color-accent: var(--ui-bg-active);
+  --color-accent-foreground: var(--ui-fg-primary);
+  --color-destructive: var(--ui-error-solid);
+  --color-destructive-foreground: var(--ui-fg-on-error);
+  --color-success: var(--ui-success-fg);
+  --color-warning: var(--ui-warning-fg);
+  --color-border: var(--ui-border-secondary);
+  --color-input: var(--ui-border-primary);
+  --color-ring: var(--ui-border-brand);
+
+  --color-sidebar: var(--ui-bg-primary);
+  --color-sidebar-foreground: var(--ui-fg-primary);
+  --color-sidebar-primary: var(--ui-brand-solid);
+  --color-sidebar-primary-foreground: var(--ui-fg-on-brand);
+  --color-sidebar-accent: var(--ui-bg-active);
+  --color-sidebar-accent-foreground: var(--ui-fg-primary);
+  --color-sidebar-border: var(--ui-border-secondary);
+  --color-sidebar-ring: var(--ui-border-brand);
+
+  --color-chart-1: var(--ui-chart-1);
+  --color-chart-2: var(--ui-chart-2);
+  --color-chart-3: var(--ui-chart-3);
+  --color-chart-4: var(--ui-chart-4);
+  --color-chart-5: var(--ui-chart-5);
+
+  --radius-ui-sm: var(--ui-radius-sm);
+  --radius-ui-md: var(--ui-radius-md);
+  --radius-ui-lg: var(--ui-radius-lg);
+  --radius-ui-xl: var(--ui-radius-xl);
+  --radius-sm: var(--ui-radius-sm);
+  --radius-md: var(--ui-radius-md);
+  --radius-lg: var(--ui-radius-lg);
+  --radius-xl: var(--ui-radius-xl);
+  --radius-2xl: calc(var(--ui-radius-xl) + 0.25rem);
+  --radius-3xl: calc(var(--ui-radius-xl) + 0.5rem);
+  --radius-4xl: calc(var(--ui-radius-xl) + 0.75rem);
+
+  --shadow-ui-xs: var(--ui-shadow-xs);
+  --shadow-ui-sm: var(--ui-shadow-sm);
+  --shadow-ui-lg: var(--ui-shadow-lg);
+}
+
+:root {
+  color-scheme: light;
+
+  --ui-brand-25: #f5f8ff;
+  --ui-brand-50: #eef4ff;
+  --ui-brand-100: #e0eaff;
+  --ui-brand-200: #c7d7fe;
+  --ui-brand-300: #a4bcfd;
+  --ui-brand-400: #8098f9;
+  --ui-brand-500: #6172f3;
+  --ui-brand-600: #444ce7;
+  --ui-brand-700: #3538cd;
+  --ui-brand-800: #2d31a6;
+  --ui-brand-900: #2d3282;
+  --ui-brand-950: #1f235b;
+
+  --ui-gray-25: #fcfcfd;
+  --ui-gray-50: #f9fafb;
+  --ui-gray-100: #f2f4f7;
+  --ui-gray-200: #eaecf0;
+  --ui-gray-300: #d0d5dd;
+  --ui-gray-400: #98a2b3;
+  --ui-gray-500: #667085;
+  --ui-gray-600: #475467;
+  --ui-gray-700: #344054;
+  --ui-gray-800: #1d2939;
+  --ui-gray-900: #101828;
+  --ui-gray-950: #0c111d;
+
+  --ui-bg-primary: #ffffff;
+  --ui-bg-secondary: #f9fafb;
+  --ui-bg-tertiary: #f2f4f7;
+  --ui-bg-active: #f2f4f7;
+  --ui-bg-disabled: #f2f4f7;
+  --ui-bg-overlay: rgb(16 24 40 / 70%);
+  --ui-fg-primary: #101828;
+  --ui-fg-secondary: #344054;
+  --ui-fg-tertiary: #475467;
+  --ui-fg-quaternary: #667085;
+  --ui-fg-disabled: #98a2b3;
+  --ui-fg-on-brand: #ffffff;
+  --ui-fg-on-error: #ffffff;
+  --ui-border-primary: #d0d5dd;
+  --ui-border-secondary: #eaecf0;
+  --ui-border-brand: #6172f3;
+  --ui-brand-solid: #444ce7;
+  --ui-brand-solid-hover: #3538cd;
+  --ui-brand-subtle: #eef4ff;
+  --ui-brand-text: #3538cd;
+  --ui-focus-ring: rgb(97 114 243 / 24%);
+
+  --ui-error-solid: #d92d20;
+  --ui-error-solid-hover: #b42318;
+  --ui-error-bg: #fef3f2;
+  --ui-error-fg: #b42318;
+  --ui-error-border: #fecdca;
+  --ui-success-bg: #ecfdf3;
+  --ui-success-fg: #067647;
+  --ui-warning-bg: #fffaeb;
+  --ui-warning-fg: #b54708;
+  --ui-info-bg: #eef4ff;
+  --ui-info-fg: #3538cd;
+  --ui-chart-1: #2a78d6;
+  --ui-chart-2: #eb6834;
+  --ui-chart-3: #1baf7a;
+  --ui-chart-4: #eda100;
+  --ui-chart-5: #e87ba4;
+
+  --ui-radius-sm: 0.375rem;
+  --ui-radius-md: 0.5rem;
+  --ui-radius-lg: 0.625rem;
+  --ui-radius-xl: 0.75rem;
+  --ui-shadow-xs: 0 1px 2px rgb(16 24 40 / 5%);
+  --ui-shadow-sm: 0 1px 3px rgb(16 24 40 / 10%), 0 1px 2px rgb(16 24 40 / 6%);
+  --ui-shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 8%), 0 4px 6px -2px rgb(16 24 40 / 3%);
+
+}
+
+.dark,
+.ui-surface[data-ui-theme="dark"] {
+  color-scheme: dark;
+
+  --ui-bg-primary: #0c111d;
+  --ui-bg-secondary: #161b26;
+  --ui-bg-tertiary: #1f242f;
+  --ui-bg-active: #1d2939;
+  --ui-bg-disabled: #1f242f;
+  --ui-bg-overlay: rgb(0 0 0 / 76%);
+  --ui-fg-primary: #f9fafb;
+  --ui-fg-secondary: #eaecf0;
+  --ui-fg-tertiary: #d0d5dd;
+  --ui-fg-quaternary: #98a2b3;
+  --ui-fg-disabled: #667085;
+  --ui-fg-on-brand: #0c111d;
+  --ui-fg-on-error: #0c111d;
+  --ui-border-primary: #344054;
+  --ui-border-secondary: #1d2939;
+  --ui-border-brand: #8098f9;
+  --ui-brand-solid: #8098f9;
+  --ui-brand-solid-hover: #a4bcfd;
+  --ui-brand-subtle: #1f235b;
+  --ui-brand-text: #a4bcfd;
+  --ui-focus-ring: rgb(128 152 249 / 32%);
+
+  --ui-error-solid: #f97066;
+  --ui-error-solid-hover: #fda29b;
+  --ui-error-bg: rgb(240 68 56 / 14%);
+  --ui-error-fg: #fda29b;
+  --ui-error-border: rgb(249 112 102 / 45%);
+  --ui-success-bg: rgb(18 183 106 / 14%);
+  --ui-success-fg: #6ce9a6;
+  --ui-warning-bg: rgb(247 144 9 / 14%);
+  --ui-warning-fg: #fec84b;
+  --ui-info-bg: rgb(97 114 243 / 16%);
+  --ui-info-fg: #a4bcfd;
+  --ui-chart-1: #3987e5;
+  --ui-chart-2: #d95926;
+  --ui-chart-3: #199e70;
+  --ui-chart-4: #c98500;
+  --ui-chart-5: #d55181;
+
+  --ui-shadow-xs: 0 1px 2px rgb(0 0 0 / 30%);
+  --ui-shadow-sm: 0 2px 6px rgb(0 0 0 / 32%);
+  --ui-shadow-lg: 0 16px 32px rgb(0 0 0 / 45%);
+}
+
+.ui-surface {
+  color: var(--ui-fg-primary);
+  color-scheme: light;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark .ui-surface,
+.ui-surface[data-ui-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

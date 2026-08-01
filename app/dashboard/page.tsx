@@ -5,8 +5,7 @@ import { AlertTriangleIcon } from 'lucide-react';
 
 import { ChartAreaInteractive } from '@/components/chart-area-interactive';
 import { SectionCards } from '@/components/section-cards';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/dashboard/dashboard-ui';
 import type { DashboardStats } from '@/lib/stats';
 import Link from 'next/link';
 
@@ -21,25 +20,32 @@ import Link from 'next/link';
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadVersion, setReloadVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
     fetch('/api/stats')
-      .then((res) => res.json())
+      .then(async (res) => {
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error?.message ?? 'Gagal memuat statistik');
+        return body;
+      })
       .then((body) => {
         if (cancelled) return;
         if (body.success) setStats(body.data);
         else setError(body.error?.message ?? 'Gagal memuat statistik');
       })
-      .catch(() => {
-        if (!cancelled) setError('Gagal memuat statistik');
+      .catch((caught) => {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : 'Gagal memuat statistik');
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadVersion]);
 
   const needsAttention =
     stats &&
@@ -49,8 +55,8 @@ export default function DashboardPage() {
       stats.sops.error > 0);
 
   return (
-    <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
-      <div className="px-4 lg:px-6">
+    <div className="@container/main flex flex-1 flex-col gap-6">
+      <div>
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Ringkasan knowledge base dan aktivitas chatbot.
@@ -58,11 +64,22 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="px-4 lg:px-6">
-          <Card className="border-destructive/40">
-            <CardContent className="flex items-center gap-2 py-4 text-sm text-destructive">
+        <div>
+          <Card role="alert" className="border-error-border bg-error-bg">
+            <CardContent className="flex flex-col gap-3 py-4 text-sm text-error-fg sm:flex-row sm:items-center">
               <AlertTriangleIcon className="size-4" />
               {error}
+              <Button
+                variant="outline"
+                size="sm"
+                className="sm:ml-auto"
+                onClick={() => {
+                  setError(null);
+                  setReloadVersion((value) => value + 1);
+                }}
+              >
+                Coba lagi
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -71,11 +88,11 @@ export default function DashboardPage() {
       <SectionCards stats={stats} />
 
       {needsAttention && (
-        <div className="px-4 lg:px-6">
-          <Card className="border-destructive/40">
+        <div>
+          <Card className="border-error-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangleIcon className="size-4 text-destructive" />
+                <AlertTriangleIcon className="size-4 text-error-fg" />
                 Perlu perhatian
               </CardTitle>
               <CardDescription>
@@ -94,18 +111,18 @@ export default function DashboardPage() {
                 {stats.faqs.error > 0 && <li>{stats.faqs.error} FAQ gagal di-embed</li>}
                 {stats.sops.error > 0 && <li>{stats.sops.error} SOP gagal di-embed</li>}
               </ul>
-              {/* This project's Button has no `asChild`, so the link wraps it. */}
-              <Link href="/dashboard/documents?status=error" className="ml-auto">
-                <Button size="sm" variant="outline">
-                  Buka Documents
-                </Button>
+              <Link
+                href="/dashboard/documents?status=error"
+                className="ml-auto inline-flex min-h-9 items-center rounded-ui-md border border-border-primary bg-bg-primary px-3 py-2 text-sm font-semibold text-fg-secondary shadow-ui-xs outline-none hover:bg-bg-secondary focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+              >
+                Buka dokumen
               </Link>
             </CardContent>
           </Card>
         </div>
       )}
 
-      <div className="px-4 lg:px-6">
+      <div>
         <ChartAreaInteractive trend={stats?.trend ?? null} />
       </div>
     </div>

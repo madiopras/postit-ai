@@ -30,7 +30,8 @@ async function seedAdmin() {
         username: USERNAME,
         password: hashedPassword,
         displayName: 'Admin User',
-        role: 'admin',
+        role: 'super_admin',
+        status: 'active',
       })
       .returning();
 

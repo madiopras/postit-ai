@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAiConfig, testConnection } from '@/lib/config';
-import { requireAuth } from '@/lib/auth';
+import { requireRole, SUPER_ADMIN_ONLY } from '@/lib/auth';
 
 const testSchema = z.object({
   type: z.enum(['embedding', 'llm']),
@@ -17,7 +17,7 @@ const testSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req);
+    const auth = await requireRole(req, SUPER_ADMIN_ONLY);
     if (!auth.ok) return auth.response;
 
     const parsed = testSchema.safeParse(await req.json());

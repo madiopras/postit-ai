@@ -5,26 +5,29 @@ import { useSearchParams } from 'next/navigation';
 import { AlertTriangleIcon, Loader2, RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
+  Skeleton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+  TableError,
+} from '@/components/dashboard/dashboard-ui';
 
 interface DocumentRow {
   id: string;
@@ -55,6 +58,7 @@ function DocumentsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [resyncing, setResyncing] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState('');
 
   const [search, setSearch] = useState('');
   const [type, setType] = useState<string>(ALL);
@@ -63,6 +67,7 @@ function DocumentsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
       if (search) params.set('search', search);
@@ -76,9 +81,12 @@ function DocumentsPage() {
         setRows(body.data);
         setTotal(body.meta.total);
       } else {
-        toast.error(body.error?.message ?? 'Gagal memuat dokumen');
+        const message = body.error?.message ?? 'Gagal memuat dokumen';
+        setLoadError(message);
+        toast.error(message);
       }
-    } catch {
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Gagal memuat dokumen');
       toast.error('Gagal memuat dokumen');
     } finally {
       setLoading(false);
@@ -117,7 +125,7 @@ function DocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Dokumen</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Isi vector store — satu baris per chunk yang dipakai RAG untuk menjawab.
         </p>
@@ -140,6 +148,7 @@ function DocumentsPage() {
           </div>
 
           <Select
+            aria-label="Filter tipe dokumen"
             value={type}
             onValueChange={(v) => {
               // Base UI allows a null value (cleared selection); fall back to "all".
@@ -158,6 +167,7 @@ function DocumentsPage() {
           </Select>
 
           <Select
+            aria-label="Filter status dokumen"
             value={status}
             onValueChange={(v) => {
               setStatus(v ?? ALL);
@@ -169,9 +179,9 @@ function DocumentsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Semua status</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="error">Error</SelectItem>
+              <SelectItem value="published">Terbit</SelectItem>
+              <SelectItem value="draft">Draf</SelectItem>
+              <SelectItem value="error">Bermasalah</SelectItem>
             </SelectContent>
           </Select>
         </CardContent>
@@ -180,7 +190,7 @@ function DocumentsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {total} chunk{total !== 1 ? 's' : ''}
+            {total} chunk
           </CardTitle>
           <CardDescription>
             {problems > 0
@@ -195,6 +205,8 @@ function DocumentsPage() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
+          ) : loadError ? (
+            <TableError message={loadError} onRetry={load} />
           ) : rows.length === 0 ? (
             <p className="text-muted-foreground py-12 text-center text-sm">
               Tidak ada dokumen yang cocok dengan filter.
@@ -303,12 +315,12 @@ function DocumentsPage() {
 }
 
 function StatusBadge({ status }: { status: DocumentRow['status'] }) {
-  if (status === 'published') return <Badge variant="secondary">Published</Badge>;
-  if (status === 'draft') return <Badge variant="outline">Draft</Badge>;
+  if (status === 'published') return <Badge variant="secondary">Terbit</Badge>;
+  if (status === 'draft') return <Badge variant="outline">Draf</Badge>;
   return (
     <Badge variant="outline" className="border-destructive/40 text-destructive gap-1">
       <AlertTriangleIcon className="size-3" />
-      Error
+      Bermasalah
     </Badge>
   );
 }

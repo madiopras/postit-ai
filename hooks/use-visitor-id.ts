@@ -4,6 +4,14 @@ import { useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'postit_visitor_id';
 
+export function getStoredVisitorId(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolved once per page load and reused, so `getSnapshot` stays stable —
  * returning a fresh value on each call would loop React forever.

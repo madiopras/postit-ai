@@ -2,8 +2,8 @@
 
 import { MoonIcon, SunIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { THEME_STORAGE_KEY } from '@/lib/theme';
+import { Button } from '@/components/untitled/base/buttons/button';
+import { toggleTheme } from '@/lib/theme';
 
 /**
  * Light/dark switch.
@@ -14,24 +14,14 @@ import { THEME_STORAGE_KEY } from '@/lib/theme';
  * client already knew the theme while the server had rendered a placeholder.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const toggle = () => {
-    const isDark = document.documentElement.classList.toggle('dark');
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
-    } catch {
-      // Storage blocked (private mode) — the theme still applies for this page.
-    }
-  };
-
   return (
     <Button
-      variant="ghost"
-      size="icon"
-      className={className}
-      onClick={toggle}
+      variant="tertiary"
+      size="sm"
+      className={`size-9 min-h-9 px-2 ${className ?? ''}`}
+      onPress={toggleTheme}
       // Static label: deriving it from the theme would reintroduce the mismatch.
       aria-label="Ganti tema terang/gelap"
-      title="Ganti tema"
     >
       <MoonIcon className="size-4 dark:hidden" />
       <SunIcon className="size-4 hidden dark:block" />

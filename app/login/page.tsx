@@ -1,146 +1,194 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { AlertCircle, Bot, Loader2, Lock, LogIn, User } from 'lucide-react';
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
+import { AlertCircle, ArrowLeft, Bot, Lock, LogIn, User } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ChatThemeToggle } from '@/components/chat/chat-theme-toggle';
+import {
+  Button,
+  ButtonLink,
+} from '@/components/untitled/base/buttons/button';
+import { Input } from '@/components/untitled/base/input/input';
+import { getStoredVisitorId } from '@/hooks/use-visitor-id';
+import {
+  AuthClientError,
+  consumeHistoryMergeWarning,
+  loginAccount,
+  mergeVisitorHistory,
+  safeRedirectPath,
+  storeHistoryMergeWarning,
+} from '@/lib/auth-client';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
-
+  const redirect = safeRedirectPath(searchParams.get('redirect'));
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => usernameRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (loading) return;
     setError('');
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
+      await loginAccount(username.trim(), password);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Login failed');
-        return;
+      const visitorId = getStoredVisitorId();
+      if (visitorId) {
+        try {
+          await mergeVisitorHistory(visitorId);
+          consumeHistoryMergeWarning();
+        } catch {
+          storeHistoryMergeWarning();
+        }
       }
 
-      router.push(redirect);
+      router.replace(redirect);
       router.refresh();
-    } catch {
-      setError('Network error. Please try again.');
+    } catch (caught) {
+      setError(loginErrorMessage(caught));
+      requestAnimationFrame(() => errorRef.current?.focus());
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo area */}
-        <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 rounded-xl bg-primary flex items-center justify-center mb-4 shadow-sm">
-            <Bot className="size-10 text-primary-foreground" />
+    <main className="ui-surface relative flex min-h-screen min-h-dvh items-center justify-center bg-bg-secondary px-4 py-10 text-fg-primary">
+      <ChatThemeToggle className="absolute right-4 top-4 size-10 min-h-10 p-0" />
+
+      <div className="w-full max-w-[400px]">
+        <div className="mb-7 text-center">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-ui-xl bg-brand-solid text-fg-on-brand shadow-ui-sm">
+            <Bot className="size-7" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">SimpleAI</h1>
-          <p className="text-sm text-muted-foreground mt-2">Sign in to your account</p>
+          <p className="text-base font-semibold text-fg-primary">PostIt AI</p>
+          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-fg-primary">
+            Masuk ke akun Anda
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-fg-tertiary">
+            Akses SOP internal dan lanjutkan riwayat percakapan akun Anda.
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="bg-muted rounded-xl shadow-sm border border-border p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-foreground mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <User className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  required
-                  autoFocus
-                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
-                />
-              </div>
-            </div>
+        <div className="rounded-ui-xl border border-border-secondary bg-bg-primary p-6 shadow-ui-lg sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              label="Username"
+              placeholder="Masukkan username"
+              value={username}
+              onChange={setUsername}
+              leadingIcon={<User />}
+              autoComplete="username"
+              inputRef={usernameRef}
+              isRequired
+              isDisabled={loading}
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
-                />
-              </div>
-            </div>
+            <Input
+              label="Kata sandi"
+              placeholder="Masukkan kata sandi"
+              type="password"
+              value={password}
+              onChange={setPassword}
+              leadingIcon={<Lock />}
+              autoComplete="current-password"
+              isRequired
+              isDisabled={loading}
+            />
 
             {error && (
-              <div className="bg-destructive/10 border border-destructive text-destructive text-sm rounded-lg px-4 py-3 flex items-start gap-3">
-                <AlertCircle className="size-5 flex-shrink-0" />
+              <div
+                ref={errorRef}
+                tabIndex={-1}
+                role="alert"
+                className="flex items-start gap-2.5 rounded-ui-md border border-error-border bg-error-bg px-3.5 py-3 text-sm text-error-fg outline-none focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+              >
+                <AlertCircle className="mt-0.5 size-4.5 shrink-0" aria-hidden="true" />
                 <span>{error}</span>
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-primary hover:bg-primary text-primary-foreground font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+              isLoading={loading}
+              iconLeading={<LogIn />}
+              className="w-full"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="size-5 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="size-5" />
-                  Sign In
-                </>
-              )}
-            </button>
+              {loading ? 'Menyiapkan akun...' : 'Masuk'}
+            </Button>
           </form>
         </div>
 
-        <p className="text-center text-xs font-medium text-muted-foreground mt-6">
-          SimpleAI Dashboard — Authorized access only
-        </p>
+        <div className="mt-6 text-center">
+          <ButtonLink
+            href="/"
+            variant="link"
+            size="sm"
+            iconLeading={<ArrowLeft />}
+          >
+            Kembali ke chat publik
+          </ButtonLink>
+          <p className="mt-4 text-xs text-fg-quaternary">
+            Akses akun hanya untuk pengguna yang telah terdaftar.
+          </p>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-xl bg-primary flex items-center justify-center shadow-sm animate-pulse">
-            <Bot className="size-10 text-primary-foreground" />
-          </div>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<LoginPageLoading />}>
       <LoginForm />
     </Suspense>
   );
+}
+
+function LoginPageLoading() {
+  return (
+    <main
+      className="ui-surface flex min-h-screen min-h-dvh items-center justify-center bg-bg-secondary"
+      aria-label="Memuat halaman login"
+    >
+      <div className="flex flex-col items-center gap-4" role="status">
+        <div className="flex size-14 animate-pulse items-center justify-center rounded-ui-xl bg-brand-solid text-fg-on-brand">
+          <Bot className="size-7" aria-hidden="true" />
+        </div>
+        <span className="text-sm text-fg-tertiary">Memuat halaman login...</span>
+      </div>
+    </main>
+  );
+}
+
+function loginErrorMessage(error: unknown): string {
+  if (!(error instanceof AuthClientError)) {
+    return 'Jaringan bermasalah. Periksa koneksi lalu coba lagi.';
+  }
+  if (error.code === 'ACCOUNT_BLOCKED') {
+    return 'Akun Anda diblokir. Hubungi administrator.';
+  }
+  if (error.code === 'ACCOUNT_INACTIVE') {
+    return 'Akun Anda tidak aktif. Hubungi administrator.';
+  }
+  if (error.status === 401) return 'Username atau kata sandi salah.';
+  return 'Login gagal. Silakan coba lagi.';
 }
