@@ -4,10 +4,15 @@ import type { User } from '@/lib/schema';
 
 const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
+  update: vi.fn(),
+  updateSet: vi.fn(),
+  updateWhere: vi.fn(),
+  updateReturning: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({
   db: {
+    update: mocks.update,
     query: {
       users: {
         findFirst: mocks.findFirst,
@@ -26,6 +31,7 @@ import {
 } from '@/lib/auth';
 import { POST as login } from '@/app/api/auth/login/route';
 import { GET as getCurrentUser } from '@/app/api/auth/me/route';
+import { POST as mergeChatHistory } from '@/app/api/chat/history/merge/route';
 import { GET as getConfig } from '@/app/api/config/route';
 import { GET as getStats } from '@/app/api/stats/route';
 import { GET as getAuditLogs } from '@/app/api/audit-logs/route';
@@ -77,6 +83,13 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mocks.findFirst.mockReset();
+  mocks.update.mockReset();
+  mocks.updateSet.mockReset();
+  mocks.updateWhere.mockReset();
+  mocks.updateReturning.mockReset();
+  mocks.update.mockReturnValue({ set: mocks.updateSet });
+  mocks.updateSet.mockReturnValue({ where: mocks.updateWhere });
+  mocks.updateWhere.mockReturnValue({ returning: mocks.updateReturning });
 });
 
 describe('database-backed authentication', () => {
@@ -262,6 +275,76 @@ describe('current user endpoint', () => {
         role: 'super_admin',
         status: 'active',
       },
+    });
+  });
+});
+
+describe('visitor history merge', () => {
+  const visitorId = '20000000-0000-4000-8000-000000000002';
+
+  it('requires a valid account session', async () => {
+    const response = await mergeChatHistory(
+      new NextRequest('http://localhost/api/chat/history/merge', {
+        method: 'POST',
+        body: JSON.stringify({ visitorId }),
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-UUID visitor identity before updating ownership', async () => {
+    mocks.findFirst.mockResolvedValue(account());
+    const response = await mergeChatHistory(
+      new NextRequest('http://localhost/api/chat/history/merge', {
+        method: 'POST',
+        headers: { cookie: `${COOKIE_NAME}=${await token()}` },
+        body: JSON.stringify({ visitorId: 'visitor-a' }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it('moves anonymous chats to the authenticated user and reports the count', async () => {
+    mocks.findFirst.mockResolvedValue(account());
+    mocks.updateReturning.mockResolvedValue([{ id: 'chat-1' }, { id: 'chat-2' }]);
+
+    const response = await mergeChatHistory(
+      new NextRequest('http://localhost/api/chat/history/merge', {
+        method: 'POST',
+        headers: { cookie: `${COOKIE_NAME}=${await token()}` },
+        body: JSON.stringify({ visitorId }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith({
+      userId: USER_ID,
+      visitorId: null,
+    });
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: { migratedCount: 2 },
+    });
+  });
+
+  it('is idempotent when no anonymous chat remains', async () => {
+    mocks.findFirst.mockResolvedValue(account());
+    mocks.updateReturning.mockResolvedValue([]);
+
+    const response = await mergeChatHistory(
+      new NextRequest('http://localhost/api/chat/history/merge', {
+        method: 'POST',
+        headers: { cookie: `${COOKIE_NAME}=${await token()}` },
+        body: JSON.stringify({ visitorId }),
+      })
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      data: { migratedCount: 0 },
     });
   });
 });

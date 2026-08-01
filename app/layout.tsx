@@ -1,21 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Lexend, Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const lexend = Lexend({
-  variable: "--font-lexend",
   subsets: ["latin"],
   display: "swap",
 });
@@ -36,7 +27,7 @@ export default function RootLayout({
     <html
       lang="id"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", inter.variable, lexend.variable, "font-sans", geist.variable)}
+      className={cn("h-full antialiased font-sans", inter.variable)}
     >
       <head>
         {/* Server-rendered so it runs before first paint — no flash of the wrong
@@ -45,7 +36,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full bg-background text-foreground">
-        <TooltipProvider>{children}</TooltipProvider>
+        {children}
         <Toaster position="top-right" richColors />
       </body>
     </html>

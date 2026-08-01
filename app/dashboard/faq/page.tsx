@@ -4,30 +4,26 @@ import { useCallback, useEffect, useState } from 'react';
 import { BarChart3, CheckCircle2, Download, FileText, Loader2, MoreVertical, Pencil, Plus, RefreshCw, Search, SquarePen, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Input } from '@/components/ui/input';
-
-import { Badge } from '@/components/ui/badge';
 import { 
+  Badge,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  TableError,
   Table, 
   TableBody, 
   TableCell, 
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+} from '@/components/dashboard/dashboard-ui';
 import { toast } from 'sonner';
 
 interface FAQ {
@@ -53,6 +49,7 @@ export default function FAQManagementPage() {
   const [total, setTotal] = useState(0);
   const [pageSize] = useState(10);
   const [categories, setCategories] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState('');
 
   /** Pure fetches — no state writes, so effects can await them safely. */
   const loadFaqs = useCallback(async () => {
@@ -66,7 +63,7 @@ export default function FAQManagementPage() {
 
     const response = await fetch(`/api/faq?${params}`);
     const data = await response.json();
-    if (!data.success) throw new Error(data.error?.message ?? 'Failed to fetch FAQs');
+    if (!data.success) throw new Error(data.error?.message ?? 'Gagal memuat FAQ');
     return { rows: data.data as FAQ[], total: (data.meta?.total as number) || 0 };
   }, [search, category, status, page, pageSize]);
 
@@ -82,12 +79,14 @@ export default function FAQManagementPage() {
   /** Imperative refresh after a mutation. */
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const { rows, total: count } = await loadFaqs();
       setFaqs(rows);
       setTotal(count);
-    } catch {
-      toast.error('Failed to fetch FAQs');
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Gagal memuat FAQ');
+      toast.error('Gagal memuat FAQ');
     } finally {
       setLoading(false);
     }
@@ -104,12 +103,14 @@ export default function FAQManagementPage() {
         setFaqs(faqResult.rows);
         setTotal(faqResult.total);
         setCategories(cats);
+        setLoadError('');
         setLoading(false);
       })
       .catch((error) => {
         if (cancelled) return;
         console.error('Error fetching FAQs:', error);
-        toast.error('Failed to fetch FAQs');
+        setLoadError(error instanceof Error ? error.message : 'Gagal memuat FAQ');
+        toast.error('Gagal memuat FAQ');
         setLoading(false);
       });
 
@@ -119,7 +120,7 @@ export default function FAQManagementPage() {
   }, [loadFaqs, loadCategories]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this FAQ?')) {
+    if (!confirm('Hapus FAQ ini? Tindakan ini tidak dapat dibatalkan.')) {
       return;
     }
 
@@ -131,14 +132,14 @@ export default function FAQManagementPage() {
       const data = await response.json();
       
       if (data.success) {
-        toast.success('FAQ deleted successfully');
+        toast.success('FAQ berhasil dihapus');
         refresh();
       } else {
-        toast.error(data.error?.message || 'Failed to delete FAQ');
+        toast.error(data.error?.message || 'Gagal menghapus FAQ');
       }
     } catch (error) {
       console.error('Error deleting FAQ:', error);
-      toast.error('Failed to delete FAQ');
+      toast.error('Gagal menghapus FAQ');
     }
   };
 
@@ -151,14 +152,14 @@ export default function FAQManagementPage() {
       const data = await response.json();
       
       if (data.success) {
-        toast.success('FAQ synced successfully');
+        toast.success('FAQ berhasil disinkronkan');
         refresh();
       } else {
-        toast.error(data.error?.message || 'Failed to sync FAQ');
+        toast.error(data.error?.message || 'Gagal menyinkronkan FAQ');
       }
     } catch (error) {
       console.error('Error syncing FAQ:', error);
-      toast.error('Failed to sync FAQ');
+      toast.error('Gagal menyinkronkan FAQ');
     }
   };
 
@@ -166,7 +167,7 @@ export default function FAQManagementPage() {
     try {
       const response = await fetch('/api/faq/import-export');
       if (!response.ok) {
-        toast.error('Failed to export FAQs');
+        toast.error('Gagal mengekspor FAQ');
         return;
       }
       
@@ -180,10 +181,10 @@ export default function FAQManagementPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success('FAQs exported successfully');
+      toast.success('FAQ berhasil diekspor');
     } catch (error) {
       console.error('Error exporting FAQs:', error);
-      toast.error('Failed to export FAQs');
+      toast.error('Gagal mengekspor FAQ');
     }
   };
 
@@ -193,7 +194,7 @@ export default function FAQManagementPage() {
       const lines = text.split('\n').filter(line => line.trim());
       
       if (lines.length < 2) {
-        toast.error('CSV file must have headers and at least one row');
+        toast.error('CSV harus memiliki header dan minimal satu baris data');
         return;
       }
 
@@ -212,7 +213,7 @@ export default function FAQManagementPage() {
       }
 
       if (data.length === 0) {
-        toast.error('No valid FAQs found in CSV');
+        toast.error('Tidak ada FAQ valid di dalam CSV');
         return;
       }
 
@@ -225,28 +226,28 @@ export default function FAQManagementPage() {
       const result = await response.json();
       
       if (result.success) {
-        toast.success(`Imported ${result.data.created} FAQs successfully`);
+        toast.success(`${result.data.created} FAQ berhasil diimpor`);
         if (result.data.failed > 0) {
-          toast.error(`Failed to import ${result.data.failed} FAQs`);
+          toast.error(`${result.data.failed} FAQ gagal diimpor`);
         }
         refresh();
       } else {
-        toast.error(result.error?.message || 'Failed to import FAQs');
+        toast.error(result.error?.message || 'Gagal mengimpor FAQ');
       }
     } catch (error) {
       console.error('Error importing FAQs:', error);
-      toast.error('Failed to import FAQs');
+      toast.error('Gagal mengimpor FAQ');
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Published</Badge>;
+        return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Terbit</Badge>;
       case 'draft':
-        return <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary">Draft</Badge>;
+        return <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary">Draf</Badge>;
       case 'error':
-        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">Error</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">Bermasalah</Badge>;
       default:
         return <Badge className="bg-muted text-muted-foreground hover:bg-muted">{status}</Badge>;
     }
@@ -259,7 +260,7 @@ export default function FAQManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">FAQ Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Kelola FAQ</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Kelola, atur, dan pantau knowledge base AI Anda.
           </p>
@@ -281,21 +282,21 @@ export default function FAQManagementPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
             <Upload className="size-5" />
-            Import CSV
+            Impor CSV
           </button>
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
             <Download className="size-5" />
-            Export CSV
+            Ekspor CSV
           </button>
           <button
             onClick={() => router.push('/dashboard/faq/new')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary transition-colors"
           >
             <Plus className="size-5" />
-            New FAQ
+            FAQ baru
           </button>
         </div>
       </div>
@@ -308,7 +309,7 @@ export default function FAQManagementPage() {
               <FileText className="size-6 text-primary-foreground" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Total FAQs</p>
+              <p className="text-xs font-medium text-muted-foreground">Total FAQ</p>
               <p className="text-xl font-semibold tracking-tight text-foreground">{total}</p>
             </div>
           </div>
@@ -320,7 +321,7 @@ export default function FAQManagementPage() {
               <CheckCircle2 className="size-6 text-primary" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Published</p>
+              <p className="text-xs font-medium text-muted-foreground">Terbit</p>
               <p className="text-xl font-semibold tracking-tight text-foreground">{faqs.filter(f => f.status === 'published').length}</p>
             </div>
           </div>
@@ -332,7 +333,7 @@ export default function FAQManagementPage() {
               <SquarePen className="size-6 text-secondary-foreground" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Draft Items</p>
+              <p className="text-xs font-medium text-muted-foreground">Draf</p>
               <p className="text-xl font-semibold tracking-tight text-foreground">{faqs.filter(f => f.status === 'draft').length}</p>
             </div>
           </div>
@@ -344,7 +345,7 @@ export default function FAQManagementPage() {
               <BarChart3 className="size-6 text-accent-foreground" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Avg. Accuracy</p>
+              <p className="text-xs font-medium text-muted-foreground">Rata-rata akurasi</p>
               <p className="text-xl font-semibold tracking-tight text-foreground">
                 {faqs.length > 0 ? `${Math.round(faqs.reduce((sum, f) => sum + f.accuracy, 0) / faqs.length)}%` : '0%'}
               </p>
@@ -359,7 +360,7 @@ export default function FAQManagementPage() {
           <div className="relative flex-1">
             <Search className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search questions and answers..."
+              placeholder="Cari pertanyaan dan jawaban..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -369,15 +370,15 @@ export default function FAQManagementPage() {
             />
           </div>
           
-          <Select value={category || ''} onValueChange={(value) => {
+          <Select aria-label="Filter kategori" value={category || ''} onValueChange={(value) => {
             setCategory(value || '');
             setPage(1);
           }}>
             <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
-              <SelectValue placeholder="All Categories" />
+              <SelectValue placeholder="Semua kategori" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="">Semua kategori</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -386,18 +387,18 @@ export default function FAQManagementPage() {
             </SelectContent>
           </Select>
           
-          <Select value={status || ''} onValueChange={(value) => {
+          <Select aria-label="Filter status" value={status || ''} onValueChange={(value) => {
             setStatus(value || '');
             setPage(1);
           }}>
             <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
-              <SelectValue placeholder="All Status" />
+              <SelectValue placeholder="Semua status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="error">Error</SelectItem>
+              <SelectItem value="">Semua status</SelectItem>
+              <SelectItem value="published">Terbit</SelectItem>
+              <SelectItem value="draft">Draf</SelectItem>
+              <SelectItem value="error">Bermasalah</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -406,12 +407,18 @@ export default function FAQManagementPage() {
       {/* FAQ Table */}
       <div className="bg-muted rounded-xl border border-border overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">FAQ List</h2>
+          <h2 className="text-lg font-semibold text-foreground">Daftar FAQ</h2>
         </div>
         <div className="p-6">
           {loading ? (
             <div className="flex justify-center items-center h-32">
               <Loader2 className="size-10 animate-spin text-muted-foreground" />
+            </div>
+          ) : loadError ? (
+            <TableError message={loadError} onRetry={refresh} />
+          ) : faqs.length === 0 ? (
+            <div className="py-12 text-center text-sm text-fg-tertiary">
+              Tidak ada FAQ yang cocok. Ubah filter atau buat FAQ baru.
             </div>
           ) : (
             <>
@@ -419,13 +426,13 @@ export default function FAQManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-accent border-b border-border hover:bg-accent">
-                      <TableHead className="text-sm font-medium text-muted-foreground">Question</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Category</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Pertanyaan</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Kategori</TableHead>
                       <TableHead className="text-sm font-medium text-muted-foreground">Status</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Usage</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Accuracy</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Last Updated</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground text-right">Actions</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Pemakaian</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Akurasi</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground">Diperbarui</TableHead>
+                      <TableHead className="text-sm font-medium text-muted-foreground text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -464,7 +471,7 @@ export default function FAQManagementPage() {
                                 invalid HTML and broke hydration. Style the
                                 trigger directly instead. */}
                             <DropdownMenuTrigger
-                              className="p-2 rounded-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100 hover:bg-accent transition-all"
+                              className="p-2 rounded-lg hover:bg-accent transition-all"
                               aria-label={`Aksi untuk ${faq.question}`}
                             >
                               <MoreVertical className="size-5 text-foreground" />
@@ -476,11 +483,11 @@ export default function FAQManagementPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleSync(faq.id)} className="text-sm">
                                 <RefreshCw className="size-5 mr-2" />
-                                Sync
+                                Sinkronkan
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDelete(faq.id)} className="text-sm text-destructive">
                                 <Trash2 className="size-5 mr-2" />
-                                Delete
+                                Hapus
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -495,7 +502,7 @@ export default function FAQManagementPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-muted-foreground">
-                    Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} entries
+                    Menampilkan {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} dari {total} entri
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
@@ -503,7 +510,7 @@ export default function FAQManagementPage() {
                       disabled={page === 1}
                       className="px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Previous
+                      Sebelumnya
                     </button>
                     <div className="flex items-center gap-1">
                       {[...Array(Math.min(5, totalPages))].map((_, i) => {
@@ -528,7 +535,7 @@ export default function FAQManagementPage() {
                       disabled={page === totalPages}
                       className="px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Next
+                      Berikutnya
                     </button>
                   </div>
                 </div>

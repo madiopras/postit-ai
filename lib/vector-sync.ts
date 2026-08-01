@@ -17,6 +17,25 @@ function toVector(embedding: number[]) {
   return sql`${JSON.stringify(embedding)}::vector`;
 }
 
+const LEXICAL_STOP_WORDS = new Set([
+  'apa', 'apakah', 'bagaimana', 'berapa', 'dan', 'dari', 'di', 'ini', 'itu',
+  'kapan', 'ke', 'lalu', 'mana', 'mengapa', 'saya', 'sekarang', 'siapa',
+  'tolong', 'untuk', 'yang',
+]);
+
+/**
+ * Keep exact domain terms for PostgreSQL full-text search while discarding
+ * conversational words that otherwise make unrelated FAQ questions look alike.
+ */
+export function buildLexicalSearchQuery(query: string): string {
+  const terms = query
+    .toLocaleLowerCase('id-ID')
+    .match(/[\p{L}\p{N}]+/gu)
+    ?.filter((term) => term.length > 1 && !LEXICAL_STOP_WORDS.has(term))
+    ?? [];
+  return [...new Set(terms)].slice(0, 12).join(' ');
+}
+
 /**
  * Sync FAQ to vector store
  * Creates or updates document embedding for FAQ
@@ -127,67 +146,106 @@ export async function searchSimilarDocuments(
   queryEmbedding: number[],
   limit: number = 5,
   minScore: number = 0.5,
-  access: { authenticated: boolean } = { authenticated: true }
+  access: { authenticated: boolean; queryText?: string } = { authenticated: true }
 ): Promise<SearchResult[]> {
   try {
-    // Cosine *distance* (`<=>`): smaller means more similar. Cosine similarity is
-    // `1 - distance`, so a score of 1 is identical and 0 is unrelated.
-    const distance = sql<number>`${documents.embedding} <=> ${toVector(queryEmbedding)}`;
+    const vector = toVector(queryEmbedding);
+    const lexicalQuery = buildLexicalSearchQuery(access.queryText ?? '');
+    const lexicalTsQuery = lexicalQuery.split(' ').join(' | ');
+    const candidateLimit = Math.max(limit * 4, 20);
+    const accessSql = access.authenticated
+      ? sql`true`
+      : sql`(d.type = 'faq' OR (d.type = 'sop' AND s.requires_login = false))`;
 
-    const publishedAndRelevant = and(
-      eq(documents.status, 'published'),
-      isNotNull(documents.embedding),
-      or(
-        eq(documents.type, 'faq'),
-        and(
-          eq(documents.type, 'sop'),
-          eq(documents.sopVersionId, sops.publishedVersionId)
-        )
-      ),
-      sql`1 - (${distance}) >= ${minScore}`
-    );
-    const accessFilter = access.authenticated
-      ? publishedAndRelevant
-      : and(
-          publishedAndRelevant,
-          or(
-            eq(documents.type, 'faq'),
-            and(eq(documents.type, 'sop'), eq(sops.requiresLogin, false))
+    // Reciprocal Rank Fusion combines semantic and exact-term ranks without
+    // pretending that cosine similarity and ts_rank share the same scale.
+    // The access and publication boundary lives in `accessible`, before either
+    // candidate set can rank or return protected content.
+    const rows = await db.execute(sql`
+      WITH accessible AS (
+        SELECT
+          d.id,
+          d.type,
+          d.title,
+          d.content,
+          d.chunk_index,
+          d.source_id,
+          d.metadata,
+          1 - (d.embedding <=> ${vector}) AS vector_score,
+          ts_rank_cd(
+            to_tsvector('simple', coalesce(d.title, '') || ' ' || coalesce(d.content, '')),
+            to_tsquery('simple', ${lexicalTsQuery})
+          ) AS text_score
+        FROM documents d
+        LEFT JOIN sops s
+          ON d.type = 'sop' AND d.source_id = s.id
+        WHERE d.status = 'published'
+          AND d.embedding IS NOT NULL
+          AND (
+            d.type = 'faq'
+            OR (
+              d.type = 'sop'
+              AND d.sop_version_id = s.published_version_id
+            )
           )
-        );
-
-    const results = await db
-      .select({
-        id: documents.id,
-        type: documents.type,
-        title: documents.title,
-        content: documents.content,
-        chunkIndex: documents.chunkIndex,
-        sourceId: documents.sourceId,
-        metadata: documents.metadata,
-        similarity: sql<number>`1 - (${distance})`,
-      })
-      .from(documents)
-      .leftJoin(
-        sops,
-        and(eq(documents.type, 'sop'), eq(documents.sourceId, sops.id))
+          AND ${accessSql}
+      ),
+      vector_candidates AS (
+        SELECT id, row_number() OVER (ORDER BY vector_score DESC) AS vector_rank
+        FROM accessible
+        WHERE vector_score >= ${minScore}
+        ORDER BY vector_score DESC
+        LIMIT ${candidateLimit}
+      ),
+      text_candidates AS (
+        SELECT id, row_number() OVER (ORDER BY text_score DESC) AS text_rank
+        FROM accessible
+        WHERE ${lexicalQuery.length > 0} AND text_score > 0
+        ORDER BY text_score DESC
+        LIMIT ${candidateLimit}
+      ),
+      fused AS (
+        SELECT
+          coalesce(v.id, t.id) AS id,
+          coalesce(1.0 / (60 + v.vector_rank), 0)
+            + coalesce(1.0 / (60 + t.text_rank), 0) AS fusion_score
+        FROM vector_candidates v
+        FULL OUTER JOIN text_candidates t ON t.id = v.id
       )
-      // Apply the score threshold and access policy before LIMIT. Restricted
-      // SOP content therefore never leaves this query for anonymous callers.
-      .where(accessFilter)
-      // Order by distance ascending: most similar first. This is also the form
-      // pgvector's ivfflat/hnsw indexes can serve.
-      .orderBy(distance)
-      .limit(limit);
+      SELECT
+        a.id,
+        a.type,
+        a.title,
+        a.content,
+        a.chunk_index,
+        a.source_id,
+        a.metadata,
+        a.vector_score AS score
+      FROM fused f
+      INNER JOIN accessible a ON a.id = f.id
+      ORDER BY f.fusion_score DESC, a.vector_score DESC
+      LIMIT ${limit}
+    `);
+
+    const results = rows as unknown as Array<{
+      id: string;
+      type: 'faq' | 'sop';
+      title: string;
+      content: string;
+      chunk_index: number | null;
+      source_id: string | null;
+      metadata: Record<string, unknown> | null;
+      score: number | string;
+    }>;
 
     return results.map((r) => ({
       id: r.id,
       type: r.type,
       title: r.title,
       content: r.content,
-      chunkIndex: r.chunkIndex ?? 0,
-      score: r.similarity,
-      sourceId: r.sourceId || undefined,
+      chunkIndex: r.chunk_index ?? 0,
+      score: Number(r.score),
+      sourceId: r.source_id || undefined,
       metadata: r.metadata ?? undefined,
     }));
   } catch (error) {
@@ -203,9 +261,16 @@ export async function searchSimilarDocuments(
  */
 export async function hasRelevantRestrictedSop(
   queryEmbedding: number[],
-  minScore: number = 0.5
+  minScore: number = 0.5,
+  queryText: string = ''
 ): Promise<boolean> {
   const distance = sql<number>`${documents.embedding} <=> ${toVector(queryEmbedding)}`;
+  const lexicalQuery = buildLexicalSearchQuery(queryText);
+  const lexicalTsQuery = lexicalQuery.split(' ').join(' | ');
+  const documentText = sql`to_tsvector(
+    'simple',
+    coalesce(${documents.title}, '') || ' ' || coalesce(${documents.content}, '')
+  )`;
   const result = await db
     .select({ id: documents.id })
     .from(documents)
@@ -219,7 +284,13 @@ export async function hasRelevantRestrictedSop(
         eq(sops.requiresLogin, true),
         eq(documents.sopVersionId, sops.publishedVersionId),
         isNotNull(documents.embedding),
-        sql`1 - (${distance}) >= ${minScore}`
+        or(
+          sql`1 - (${distance}) >= ${minScore}`,
+          and(
+            sql`${lexicalQuery.length > 0}`,
+            sql`${documentText} @@ to_tsquery('simple', ${lexicalTsQuery})`
+          )
+        )
       )
     )
     .orderBy(distance)

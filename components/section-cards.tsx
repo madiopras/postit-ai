@@ -1,9 +1,16 @@
 'use client';
 
 import { AlertTriangleIcon, BookOpenIcon, LayersIcon, MessageSquareIcon, ThumbsUpIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Badge,
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Skeleton,
+} from '@/components/dashboard/dashboard-ui';
 import type { DashboardStats } from '@/lib/stats';
 
 /**
@@ -17,7 +24,7 @@ import type { DashboardStats } from '@/lib/stats';
 export function SectionCards({ stats }: { stats: DashboardStats | null }) {
   if (!stats) {
     return (
-      <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
           <Card key={i} className="@container/card">
             <CardHeader>
@@ -43,7 +50,7 @@ export function SectionCards({ stats }: { stats: DashboardStats | null }) {
       : null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       <StatCard
         label="Knowledge base"
         value={knowledgePublished}
@@ -119,7 +126,7 @@ function StatCard({
         {badge && (
           <CardAction>
             {/* Status is never carried by color alone — icon + label travel with it. */}
-            <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive">
+            <Badge variant="destructive" className="gap-1">
               <AlertTriangleIcon className="size-3" />
               {badge.text}
             </Badge>

@@ -2,12 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Switch,
+  Textarea,
+} from '@/components/dashboard/dashboard-ui';
 
 import { ArrowLeft, Save, Loader2, Upload, RotateCcw, Download, Paperclip, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -84,7 +93,7 @@ export default function SOPFormPage() {
         if (cancelled) return;
 
         if (!data.success) {
-          toast.error('Failed to load SOP');
+          toast.error('Gagal memuat SOP');
           router.push('/dashboard/sop');
           return;
         }
@@ -105,7 +114,7 @@ export default function SOPFormPage() {
       .catch((error) => {
         if (cancelled) return;
         console.error('Error fetching SOP:', error);
-        toast.error('Failed to load SOP');
+        toast.error('Gagal memuat SOP');
         router.push('/dashboard/sop');
       });
 
@@ -123,7 +132,7 @@ export default function SOPFormPage() {
         if (!cancelled && data.success) setAttachments(data.data);
       })
       .catch(() => {
-        if (!cancelled) toast.error('Failed to load attachments');
+        if (!cancelled) toast.error('Gagal memuat lampiran');
       });
     return () => {
       cancelled = true;
@@ -147,12 +156,12 @@ export default function SOPFormPage() {
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      toast.error('Title is required');
+      toast.error('Judul wajib diisi');
       return;
     }
 
     if (!formData.content.trim()) {
-      toast.error('Content is required');
+      toast.error('Konten wajib diisi');
       return;
     }
 
@@ -173,19 +182,19 @@ export default function SOPFormPage() {
       if (data.success) {
         toast.success(
           isNew
-            ? 'SOP created successfully'
+            ? 'SOP berhasil dibuat'
             : data.data.draftCreated
-              ? 'Draft version created successfully'
-              : 'SOP settings updated successfully'
+              ? 'Versi draf berhasil dibuat'
+              : 'Pengaturan SOP berhasil diperbarui'
         );
         if (isNew) router.push('/dashboard/sop');
         else window.location.reload();
       } else {
-        toast.error(data.error?.message || 'Failed to save SOP');
+        toast.error(data.error?.message || 'Gagal menyimpan SOP');
       }
     } catch (error) {
       console.error('Error saving SOP:', error);
-      toast.error('Failed to save SOP');
+      toast.error('Gagal menyimpan SOP');
     } finally {
       setSaving(false);
     }
@@ -202,11 +211,11 @@ export default function SOPFormPage() {
         { method: 'POST' }
       );
       const data = await response.json();
-      if (!data.success) throw new Error(data.error?.message || 'Failed to publish version');
-      toast.success(isRollback ? 'SOP rolled back successfully' : 'SOP version published successfully');
+      if (!data.success) throw new Error(data.error?.message || 'Gagal menerbitkan versi');
+      toast.success(isRollback ? 'Versi SOP berhasil dipulihkan' : 'Versi SOP berhasil diterbitkan');
       window.location.reload();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to publish version');
+      toast.error(error instanceof Error ? error.message : 'Gagal menerbitkan versi');
     } finally {
       setPublishingVersionId(null);
     }
@@ -216,10 +225,10 @@ export default function SOPFormPage() {
     const response = await fetch(`/api/sop/${sopId}/versions`, { method: 'POST' });
     const data = await response.json();
     if (!data.success) {
-      toast.error(data.error?.message || 'Failed to create attachment draft');
+      toast.error(data.error?.message || 'Gagal membuat draf lampiran');
       return;
     }
-    toast.success('Draft version created with the current attachments');
+    toast.success('Versi draf dibuat dengan lampiran saat ini');
     window.location.reload();
   };
 
@@ -234,15 +243,15 @@ export default function SOPFormPage() {
         { method: 'POST', body }
       );
       const data = await response.json();
-      if (!data.success) throw new Error(data.error?.message || 'Failed to upload attachment');
+      if (!data.success) throw new Error(data.error?.message || 'Gagal mengunggah lampiran');
       setAttachments((current) => [...current, data.data]);
       if (data.data.extractionStatus === 'ready') {
-        toast.success('Attachment uploaded and extracted successfully');
+        toast.success('Lampiran berhasil diunggah dan diekstrak');
       } else {
-        toast.warning(data.data.extractionError || 'Attachment uploaded but extraction failed');
+        toast.warning(data.data.extractionError || 'Lampiran terunggah, tetapi ekstraksi gagal');
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to upload attachment');
+      toast.error(error instanceof Error ? error.message : 'Gagal mengunggah lampiran');
     } finally {
       setUploading(false);
     }
@@ -261,9 +270,9 @@ export default function SOPFormPage() {
       setAttachments((current) =>
         current.map((item) => item.id === attachment.id ? data.data : item)
       );
-      toast.success('Attachment extracted successfully');
+      toast.success('Lampiran berhasil diekstrak');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Extraction failed');
+      toast.error(error instanceof Error ? error.message : 'Ekstraksi gagal');
       window.location.reload();
     } finally {
       setUploading(false);
@@ -271,18 +280,18 @@ export default function SOPFormPage() {
   };
 
   const handleAttachmentDelete = async (attachment: SOPAttachment) => {
-    if (!activeVersionId || !confirm(`Delete ${attachment.filename}?`)) return;
+    if (!activeVersionId || !confirm(`Hapus lampiran ${attachment.filename}?`)) return;
     const response = await fetch(
       `/api/sop/${sopId}/versions/${activeVersionId}/attachments/${attachment.id}`,
       { method: 'DELETE' }
     );
     const data = await response.json();
     if (!data.success) {
-      toast.error(data.error?.message || 'Failed to delete attachment');
+      toast.error(data.error?.message || 'Gagal menghapus lampiran');
       return;
     }
     setAttachments((current) => current.filter((item) => item.id !== attachment.id));
-    toast.success('Attachment deleted successfully');
+    toast.success('Lampiran berhasil dihapus');
   };
 
   if (loading) {
@@ -306,12 +315,12 @@ export default function SOPFormPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {isNew ? 'Create SOP' : 'Edit SOP'}
+            {isNew ? 'Buat SOP' : 'Edit SOP'}
           </h1>
           <p className="text-muted-foreground mt-1">
             {isNew 
-              ? 'Add a new Standard Operating Procedure'
-              : `Editing SOP • Created ${sop ? new Date(sop.createdAt).toLocaleDateString() : ''}`}
+              ? 'Tambahkan prosedur operasional baru'
+              : `Mengedit SOP • Dibuat ${sop ? new Date(sop.createdAt).toLocaleDateString('id-ID') : ''}`}
           </p>
         </div>
       </div>
@@ -321,15 +330,15 @@ export default function SOPFormPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>SOP Details</CardTitle>
+              <CardTitle>Detail SOP</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Title */}
                 <div>
-                  <label className="text-sm font-medium">Title</label>
+                  <label className="text-sm font-medium">Judul</label>
                   <Input
-                    placeholder="Enter SOP title"
+                    placeholder="Masukkan judul SOP"
                     value={formData.title}
                     onChange={(e) =>
                       setFormData({ ...formData, title: e.target.value })
@@ -343,9 +352,9 @@ export default function SOPFormPage() {
 
                 {/* Category */}
                 <div>
-                  <label className="text-sm font-medium">Category</label>
+                  <label className="text-sm font-medium">Kategori</label>
                   <Input
-                    placeholder="e.g., Sales, Support, Operations"
+                    placeholder="mis. Penjualan, Dukungan, Operasional"
                     value={formData.category}
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
@@ -356,9 +365,9 @@ export default function SOPFormPage() {
 
                 {/* Content */}
                 <div>
-                  <label className="text-sm font-medium">Content</label>
+                  <label className="text-sm font-medium">Konten</label>
                   <Textarea
-                    placeholder="Enter SOP content (markdown supported)"
+                    placeholder="Masukkan konten SOP (mendukung Markdown)"
                     value={formData.content}
                     onChange={(e) =>
                       setFormData({ ...formData, content: e.target.value })
@@ -367,17 +376,17 @@ export default function SOPFormPage() {
                     rows={12}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formData.content.length}/50000 characters
+                    {formData.content.length}/50000 karakter
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div>
                     <label htmlFor="requires-login" className="text-sm font-medium">
-                      Login required
+                      Wajib login
                     </label>
                     <p className="text-xs text-muted-foreground">
-                      Anonymous chat users cannot retrieve this SOP.
+                      Visitor anonim tidak dapat mengambil isi SOP ini.
                     </p>
                   </div>
                   <Switch
@@ -396,18 +405,18 @@ export default function SOPFormPage() {
                     variant="outline"
                     onClick={() => generateChunkPreview(formData.content)}
                   >
-                    Preview Chunks
+                    Pratinjau chunk
                   </Button>
                   <Button type="submit" disabled={saving}>
                     {saving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
+                        Menyimpan…
                       </>
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        Save SOP
+                        Simpan SOP
                       </>
                     )}
                   </Button>
@@ -427,20 +436,20 @@ export default function SOPFormPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Status</p>
+                  <p className="text-sm text-muted-foreground">Status saat ini</p>
                   {sop.status === 'published' && (
                     <Badge className="bg-success/10 text-success hover:bg-success/10">
-                      Published
+                      Terbit
                     </Badge>
                   )}
                   {sop.status === 'draft' && (
                     <Badge className="bg-warning/10 text-warning hover:bg-warning/10">
-                      Draft
+                      Draf
                     </Badge>
                   )}
                   {sop.status === 'error' && (
                     <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">
-                      Error
+                      Bermasalah
                     </Badge>
                   )}
                 </div>
@@ -451,7 +460,7 @@ export default function SOPFormPage() {
           {!isNew && sop && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Version History</CardTitle>
+                <CardTitle className="text-base">Riwayat versi</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {versions.map((version) => {
@@ -460,9 +469,9 @@ export default function SOPFormPage() {
                   return (
                     <div key={version.id} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Version {version.versionNumber}</span>
+                        <span className="text-sm font-medium">Versi {version.versionNumber}</span>
                         <Badge variant={isPublished ? 'default' : 'outline'}>
-                          {isPublished ? 'Published' : version.indexingStatus}
+                          {isPublished ? 'Terbit' : version.indexingStatus}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -476,7 +485,7 @@ export default function SOPFormPage() {
                         onClick={() => setActiveVersionId(version.id)}
                       >
                         <Paperclip className="mr-2 h-3 w-3" />
-                        View attachments
+                        Lihat lampiran
                       </Button>
                       {!isPublished && (
                         <Button
@@ -494,7 +503,7 @@ export default function SOPFormPage() {
                           ) : (
                             <Upload className="mr-2 h-3 w-3" />
                           )}
-                          {isRollback ? 'Rollback to this version' : 'Publish'}
+                          {isRollback ? 'Pulihkan versi ini' : 'Terbitkan'}
                         </Button>
                       )}
                     </div>
@@ -513,12 +522,12 @@ export default function SOPFormPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    Attachments · Version {activeVersion?.versionNumber}
+                    Lampiran · Versi {activeVersion?.versionNumber}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {attachments.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No attachments in this version.</p>
+                    <p className="text-sm text-muted-foreground">Belum ada lampiran pada versi ini.</p>
                   )}
                   {attachments.map((attachment) => (
                     <div key={attachment.id} className="rounded-lg border p-3">
@@ -533,12 +542,12 @@ export default function SOPFormPage() {
                           variant={attachment.extractionStatus === 'ready' ? 'default' : 'outline'}
                         >
                           {attachment.extractionStatus === 'ready'
-                            ? 'Ready'
+                            ? 'Siap'
                             : attachment.extractionStatus}
                         </Badge>
                         {attachment.extractedCharacterCount !== null && (
                           <span className="text-xs text-muted-foreground">
-                            {attachment.extractedCharacterCount.toLocaleString()} characters
+                            {attachment.extractedCharacterCount.toLocaleString('id-ID')} karakter
                           </span>
                         )}
                       </div>
@@ -553,7 +562,7 @@ export default function SOPFormPage() {
                           href={`/api/sop/${sopId}/versions/${activeVersionId}/attachments/${attachment.id}`}
                         >
                           <Download className="mr-1 h-3 w-3" />
-                          Download
+                          Unduh
                         </a>
                         {isMutable && (
                           <Button
@@ -564,7 +573,7 @@ export default function SOPFormPage() {
                             onClick={() => handleAttachmentExtraction(attachment)}
                           >
                             <RefreshCw className="mr-1 h-3 w-3" />
-                            Re-extract
+                            Ekstrak ulang
                           </Button>
                         )}
                         {isMutable && (
@@ -575,7 +584,7 @@ export default function SOPFormPage() {
                             onClick={() => handleAttachmentDelete(attachment)}
                           >
                             <Trash2 className="mr-1 h-3 w-3" />
-                            Delete
+                            Hapus
                           </Button>
                         )}
                       </div>
@@ -583,7 +592,7 @@ export default function SOPFormPage() {
                   ))}
                   {isMutable ? (
                     <label className="block">
-                      <span className="sr-only">Upload attachment</span>
+                      <span className="sr-only">Unggah lampiran</span>
                       <Input
                         type="file"
                         disabled={uploading}
@@ -594,17 +603,17 @@ export default function SOPFormPage() {
                         }}
                       />
                       <span className="mt-1 block text-xs text-muted-foreground">
-                        Text PDF, DOCX, XLSX, PPTX, TXT, or CSV · maximum 10 MB
+                        PDF teks, DOCX, XLSX, PPTX, TXT, atau CSV · maksimal 10 MB
                       </span>
                     </label>
                   ) : (
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground">
-                        Published versions are immutable. Create a draft before changing attachments.
+                        Versi terbit tidak dapat diubah. Buat draf sebelum mengubah lampiran.
                       </p>
                       {activeVersionId === versions[0]?.id && (
                         <Button type="button" size="sm" variant="outline" onClick={createAttachmentDraft}>
-                          Create attachment draft
+                          Buat draf lampiran
                         </Button>
                       )}
                     </div>
@@ -617,11 +626,11 @@ export default function SOPFormPage() {
           {/* Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Information</CardTitle>
+              <CardTitle className="text-base">Informasi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Content Size</p>
+                <p className="text-muted-foreground">Ukuran konten</p>
                 <p className="font-medium">
                   {Math.round(formData.content.length / 1024)}KB
                 </p>
@@ -629,13 +638,13 @@ export default function SOPFormPage() {
               {!isNew && sop && (
                 <>
                   <div>
-                    <p className="text-muted-foreground">Created</p>
+                    <p className="text-muted-foreground">Dibuat</p>
                     <p className="font-medium">
                       {new Date(sop.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Last Updated</p>
+                    <p className="text-muted-foreground">Diperbarui</p>
                     <p className="font-medium">
                       {new Date(sop.updatedAt).toLocaleDateString()}
                     </p>
@@ -652,15 +661,15 @@ export default function SOPFormPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Chunk Size</p>
+                <p className="text-muted-foreground">Ukuran chunk</p>
                 <p className="font-medium">~800 tokens (3.2KB)</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Overlap</p>
-                <p className="font-medium">400 chars between chunks</p>
+                <p className="font-medium">400 karakter antar-chunk</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Estimated Chunks</p>
+                <p className="text-muted-foreground">Perkiraan chunk</p>
                 <p className="font-medium">
                   {Math.ceil(formData.content.length / 2800)}
                 </p>
@@ -670,37 +679,33 @@ export default function SOPFormPage() {
         </div>
       </div>
 
-      {/* Chunk Preview Modal */}
-      {showChunkPreview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-96 overflow-auto">
-            <CardHeader className="sticky top-0 bg-background">
-              <div className="flex items-center justify-between">
-                <CardTitle>Chunk Preview ({chunks.length} chunks)</CardTitle>
+      <Dialog open={showChunkPreview} onOpenChange={setShowChunkPreview}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="flex-row items-center justify-between">
+                <DialogTitle>Pratinjau chunk ({chunks.length})</DialogTitle>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => setShowChunkPreview(false)}
+                  aria-label="Tutup pratinjau chunk"
                 >
                   ✕
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          </DialogHeader>
+            <div className="mt-5 max-h-80 space-y-4 overflow-y-auto">
               {chunks.map((chunk, i) => (
                 <div key={i} className="pb-4 border-b last:border-0">
                   <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Chunk {i + 1} ({chunk.length} chars)
+                    Chunk {i + 1} ({chunk.length} karakter)
                   </p>
                   <p className="text-sm bg-muted p-3 rounded line-clamp-4">
                     {chunk}...
                   </p>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

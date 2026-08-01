@@ -108,6 +108,16 @@ package OS:
 make test-e2e-docker
 ```
 
+Evaluasi kualitas retrieval terhadap knowledge seed:
+
+```bash
+make eval-retrieval
+```
+
+Runner memerlukan knowledge dari `scripts/seed.ts` yang sudah ter-index. Untuk
+knowledge environment lain, gunakan dataset yang sesuai seperti dijelaskan di
+[`evaluations/README.md`](evaluations/README.md).
+
 E2E memulai development server secara otomatis dan memverifikasi:
 
 - chat dapat dibuka tanpa login;
@@ -170,7 +180,9 @@ otomatis tanpa pengujian migration dan lint.
 ```text
 Pertanyaan pengguna
   -> embedding
-  -> PGVector search + filter status dan hak akses
+  -> filter status, published version, dan hak akses
+  -> PGVector + PostgreSQL full-text search
+  -> reciprocal rank fusion
   -> retrieval ranking/configuration
   -> system prompt + behaviour/rules/dictionary
   -> LLM streaming

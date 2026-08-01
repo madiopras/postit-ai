@@ -9,7 +9,7 @@ test('public chat loads without authentication', async ({ page }) => {
 test('anonymous visitor is redirected away from the dashboard', async ({ page }) => {
   await page.goto('/dashboard');
   await expect(page).toHaveURL(/\/login\?redirect=%2Fdashboard$/);
-  await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Masuk' })).toBeVisible();
 });
 
 test('health endpoint reports readiness without exposing internals', async ({ request }) => {

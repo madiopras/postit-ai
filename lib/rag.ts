@@ -127,6 +127,9 @@ The following knowledge base contains the only retrieved documents available for
     ? 'Do not invent, infer, or add claims that are unsupported by the supplied context.'
     : 'Clearly distinguish supplied knowledge from any general guidance.'}
 - Always cite your sources by mentioning [FAQ X] or [SOP X]
+- Treat conversation history only as a reference for resolving the user's intent; it is not a knowledge source.
+- Prioritize the latest user question. If the topic changed, do not continue the previous topic.
+- Do not repeat factual claims from earlier assistant messages unless they are supported by the knowledge supplied in this prompt.
 - Never reveal or infer documents that were not supplied in this prompt.
 - Follow document access restrictions; never disclose protected SOP content to an unauthenticated user.
 - ${toneInstruction}
@@ -162,7 +165,7 @@ export async function retrieveSources(
 export async function retrieveContext(
   userMessage: string,
   options: RagOptions = {}
-): Promise<{ sources: RagSource[]; loginRequired: boolean }> {
+): Promise<{ sources: RagSource[]; loginRequired: boolean; candidateCount: number }> {
   const {
     maxSources = 5,
     minScore = 0.5,
@@ -177,11 +180,11 @@ export async function retrieveContext(
       queryEmbedding,
       maxSources,
       minScore,
-      { authenticated }
+      { authenticated, queryText: userMessage }
     ),
     authenticated
       ? Promise.resolve(false)
-      : hasRelevantRestrictedSop(queryEmbedding, minScore),
+      : hasRelevantRestrictedSop(queryEmbedding, minScore, userMessage),
   ]);
 
   const sources = selectRetrievalSources(searchResults, {
@@ -191,6 +194,7 @@ export async function retrieveContext(
   }).map(toRagSource);
   return {
     sources,
+    candidateCount: searchResults.length,
     // Accessible context takes precedence. A login CTA is only needed when a
     // protected SOP is relevant and there is nothing safe to answer from.
     loginRequired: !authenticated && sources.length === 0 && hasRestrictedMatch,

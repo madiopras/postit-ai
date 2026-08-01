@@ -2,14 +2,29 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/schema';
 import { comparePassword, signToken, COOKIE_NAME, COOKIE_OPTIONS } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+const loginSchema = z
+  .object({
+    username: z.string().trim().min(1).max(100),
+    password: z.string().min(1).max(1_024),
+  })
+  .strict();
 
 export async function POST(req: Request) {
   try {
-    const { username, password } = await req.json();
-
-    if (!username || !password) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return Response.json({ error: 'Username and password required' }, { status: 400 });
     }
+
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
+      return Response.json({ error: 'Username and password required' }, { status: 400 });
+    }
+    const { username, password } = parsed.data;
 
     const user = await db.query.users.findFirst({
       where: eq(users.username, username),

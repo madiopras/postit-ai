@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, integer, doublePrecision, vector, jsonb, timestamp, index, uniqueIndex, boolean, customType } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {
@@ -137,6 +138,13 @@ export const documents = pgTable('documents', {
   index('idx_documents_sop_attachment').on(table.sopAttachmentId),
   // Retrieval filters on status = 'published'.
   index('idx_documents_status').on(table.status),
+  // Supports the lexical half of hybrid retrieval. The `simple` dictionary is
+  // intentionally language-neutral because the knowledge base can contain
+  // Indonesian, English, product codes, and organization-specific terms.
+  index('idx_documents_search').using(
+    'gin',
+    sql`to_tsvector('simple', coalesce(${table.title}, '') || ' ' || coalesce(${table.content}, ''))`
+  ),
 ]);
 
 // ─── Chats ──────────────────────────────────────────────

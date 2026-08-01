@@ -17,6 +17,7 @@ const PUBLIC_PATHS = new Set([
   '/api/health',
   '/api/auth/login',
   '/api/auth/logout',
+  '/api/auth/me', // optional identity probe; handler still validates the cookie
   '/api/chat', // public chat backend
   '/api/chat/sessions', // a visitor's own conversation list
 ]);
@@ -34,7 +35,15 @@ const PUBLIC_PREFIXES = [
 ];
 
 function isPublic(pathname: string): boolean {
+  // The Phase 1 component smoke surface is intentionally reachable only from
+  // `next dev`. Its page also calls `notFound()` in production, so this does not
+  // widen the deployed public route set.
+  const isDevelopmentSmokeSurface =
+    process.env.NODE_ENV === 'development' &&
+    pathname === '/dev/ui-foundation';
+
   return (
+    isDevelopmentSmokeSurface ||
     PUBLIC_PATHS.has(pathname) ||
     PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   );

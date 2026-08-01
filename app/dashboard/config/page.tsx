@@ -153,10 +153,10 @@ export default function ConfigPage() {
           setSelectionRule(json.data.retrieval.selectionRule);
           setMaxContextDocuments(json.data.retrieval.maxContextDocuments);
         } else {
-          setError(json.error?.message || 'Failed to load config');
+          setError(json.error?.message || 'Gagal memuat konfigurasi');
         }
       } catch (err) {
-        setError('Failed to load config');
+        setError('Gagal memuat konfigurasi');
         console.error(err);
       } finally {
         setLoading(false);
@@ -186,7 +186,7 @@ export default function ConfigPage() {
       
       setEmbeddingTestResult(toTestResult(await res.json()));
     } catch {
-      setEmbeddingTestResult({ success: false, error: 'Failed to test connection' });
+      setEmbeddingTestResult({ success: false, error: 'Gagal menguji koneksi' });
     } finally {
       setTestingEmbedding(false);
     }
@@ -212,7 +212,7 @@ export default function ConfigPage() {
       
       setLlmTestResult(toTestResult(await res.json()));
     } catch {
-      setLlmTestResult({ success: false, error: 'Failed to test connection' });
+      setLlmTestResult({ success: false, error: 'Gagal menguji koneksi' });
     } finally {
       setTestingLlm(false);
     }
@@ -375,22 +375,29 @@ export default function ConfigPage() {
 
   if (error) {
     return (
-      <div className="p-6 bg-destructive/10 text-destructive rounded-xl">
-        <h2 className="font-headline text-lg mb-2">Error Loading Configuration</h2>
+      <div role="alert" className="rounded-ui-xl border border-error-border bg-error-bg p-6 text-error-fg">
+        <h2 className="font-headline text-lg mb-2">Konfigurasi gagal dimuat</h2>
         <p>{error}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-ui-md border border-error-border bg-bg-primary px-3 py-2 text-sm font-semibold text-fg-secondary outline-none focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+        >
+          Coba lagi
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="font-headline text-2xl text-foreground mb-2">
-          AI Configuration
+          Konfigurasi AI
         </h1>
         <p className="text-sm text-muted-foreground">
-          Configure model endpoints and the assistant&apos;s response behaviour.
+          Atur endpoint model dan perilaku jawaban asisten.
         </p>
       </div>
 
@@ -402,8 +409,8 @@ export default function ConfigPage() {
             <div className="flex items-center gap-3">
               <Sparkles className="size-6 text-primary" />
               <div>
-                <h2 className="font-headline text-lg text-foreground">Embedding Model</h2>
-                <p className="text-xs text-muted-foreground">Text embedding configuration</p>
+                <h2 className="font-headline text-lg text-foreground">Model embedding</h2>
+                <p className="text-xs text-muted-foreground">Konfigurasi embedding teks</p>
               </div>
             </div>
             {embeddingTestResult && (
@@ -412,7 +419,7 @@ export default function ConfigPage() {
                   ? 'bg-success/10 text-success' 
                   : 'bg-destructive/10 text-destructive'
               }`}>
-                {embeddingTestResult.success ? 'Connected' : 'Failed'}
+                {embeddingTestResult.success ? 'Terhubung' : 'Gagal'}
               </span>
             )}
           </div>
@@ -432,7 +439,7 @@ export default function ConfigPage() {
 
             {/* Model Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Model Name</label>
+              <label className="text-xs font-medium text-muted-foreground">Nama model</label>
               <input
                 type="text"
                 value={embeddingModel}
@@ -444,7 +451,7 @@ export default function ConfigPage() {
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">API Key</label>
+              <label className="text-xs font-medium text-muted-foreground">Kunci API</label>
               <div className="relative">
                 <input
                   type={showEmbeddingKey ? 'text' : 'password'}
@@ -473,12 +480,12 @@ export default function ConfigPage() {
                 {testingEmbedding ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    Testing...
+                    Menguji…
                   </>
                 ) : (
                   <>
                     <Wifi className="size-[18px]" />
-                    Test Connection
+                    Uji koneksi
                   </>
                 )}
               </button>
@@ -501,8 +508,8 @@ export default function ConfigPage() {
             <div className="flex items-center gap-3">
               <Brain className="size-6 text-primary" />
               <div>
-                <h2 className="font-headline text-lg text-foreground">LLM Model</h2>
-                <p className="text-xs text-muted-foreground">Chat completion configuration</p>
+                <h2 className="font-headline text-lg text-foreground">Model LLM</h2>
+                <p className="text-xs text-muted-foreground">Konfigurasi penyelesaian chat</p>
               </div>
             </div>
             {llmTestResult && (
@@ -511,7 +518,7 @@ export default function ConfigPage() {
                   ? 'bg-success/10 text-success' 
                   : 'bg-destructive/10 text-destructive'
               }`}>
-                {llmTestResult.success ? 'Connected' : 'Failed'}
+                {llmTestResult.success ? 'Terhubung' : 'Gagal'}
               </span>
             )}
           </div>
@@ -531,7 +538,7 @@ export default function ConfigPage() {
 
             {/* Model Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Model Name</label>
+              <label className="text-xs font-medium text-muted-foreground">Nama model</label>
               <input
                 type="text"
                 value={llmModel}
@@ -543,7 +550,7 @@ export default function ConfigPage() {
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">API Key</label>
+              <label className="text-xs font-medium text-muted-foreground">Kunci API</label>
               <div className="relative">
                 <input
                   type={showLlmKey ? 'text' : 'password'}
@@ -572,12 +579,12 @@ export default function ConfigPage() {
                 {testingLlm ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    Testing...
+                    Menguji…
                   </>
                 ) : (
                   <>
                     <Wifi className="size-[18px]" />
-                    Test Connection
+                    Uji koneksi
                   </>
                 )}
               </button>
@@ -599,9 +606,9 @@ export default function ConfigPage() {
         <div className="flex items-center gap-3 mb-6">
           <SlidersHorizontal className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">AI Behaviour</h2>
+            <h2 className="font-headline text-lg text-foreground">Perilaku AI</h2>
             <p className="text-xs text-muted-foreground">
-              These settings are included in every system prompt.
+              Pengaturan ini disertakan dalam setiap system prompt.
             </p>
           </div>
         </div>
@@ -614,7 +621,7 @@ export default function ConfigPage() {
               onChange={(event) => setPersona(event.target.value)}
               maxLength={2000}
               rows={4}
-              placeholder="Describe the assistant's role and identity"
+              placeholder="Jelaskan peran dan identitas asisten"
               className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <span className="text-xs text-muted-foreground text-right">
@@ -624,20 +631,20 @@ export default function ConfigPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Tone</label>
+              <label className="text-xs font-medium text-muted-foreground">Nada</label>
               <select
                 value={tone}
                 onChange={(event) => setTone(event.target.value as ConfigData['behaviour']['tone'])}
                 className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
               >
                 <option value="formal">Formal</option>
-                <option value="professional">Professional</option>
-                <option value="friendly">Friendly</option>
+                <option value="professional">Profesional</option>
+                <option value="friendly">Ramah</option>
               </select>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Detail level</label>
+              <label className="text-xs font-medium text-muted-foreground">Tingkat detail</label>
               <select
                 value={detailLevel}
                 onChange={(event) =>
@@ -645,14 +652,14 @@ export default function ConfigPage() {
                 }
                 className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
               >
-                <option value="concise">Concise</option>
-                <option value="medium">Medium</option>
-                <option value="detailed">Detailed</option>
+                <option value="concise">Ringkas</option>
+                <option value="medium">Sedang</option>
+                <option value="detailed">Terperinci</option>
               </select>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Language</label>
+              <label className="text-xs font-medium text-muted-foreground">Bahasa</label>
               <select
                 value={language}
                 onChange={(event) =>
@@ -660,18 +667,18 @@ export default function ConfigPage() {
                 }
                 className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
               >
-                <option value="same_as_user">Follow user language</option>
-                <option value="id">Indonesian</option>
-                <option value="en">English</option>
+                <option value="same_as_user">Ikuti bahasa pengguna</option>
+                <option value="id">Bahasa Indonesia</option>
+                <option value="en">Bahasa Inggris</option>
               </select>
             </div>
           </div>
 
           <label className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">Use emoji</span>
+              <span className="text-sm font-medium text-foreground">Gunakan emoji</span>
               <p className="text-xs text-muted-foreground">
-                Allow the assistant to use emoji naturally when appropriate.
+                Izinkan asisten memakai emoji saat sesuai.
               </p>
             </div>
             <input
@@ -688,9 +695,9 @@ export default function ConfigPage() {
         <div className="flex items-center gap-3 mb-6">
           <ShieldCheck className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">Response Rules</h2>
+            <h2 className="font-headline text-lg text-foreground">Aturan jawaban</h2>
             <p className="text-xs text-muted-foreground">
-              Control how answers are grounded and how missing information is handled.
+              Atur dasar jawaban dan penanganan informasi yang tidak ditemukan.
             </p>
           </div>
         </div>
@@ -698,9 +705,9 @@ export default function ConfigPage() {
         <div className="space-y-4">
           <label className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">Knowledge Base only</span>
+              <span className="text-sm font-medium text-foreground">Hanya knowledge base</span>
               <p className="text-xs text-muted-foreground">
-                Require answers to use only context retrieved from the Knowledge Base.
+                Wajibkan jawaban hanya memakai konteks dari knowledge base.
               </p>
             </div>
             <input
@@ -713,9 +720,9 @@ export default function ConfigPage() {
 
           <label className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">No hallucination policy</span>
+              <span className="text-sm font-medium text-foreground">Kebijakan tanpa halusinasi</span>
               <p className="text-xs text-muted-foreground">
-                Explicitly prohibit unsupported claims in generated answers.
+                Larang klaim tanpa dukungan sumber pada jawaban.
               </p>
             </div>
             <input
@@ -729,27 +736,27 @@ export default function ConfigPage() {
           <div className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
             <div>
               <span className="text-sm font-medium text-foreground">
-                Enforce document access
+                Terapkan akses dokumen
               </span>
               <p className="text-xs text-muted-foreground">
-                Restricted SOP content is always filtered before context reaches the LLM.
+                Konten SOP terbatas selalu disaring sebelum konteks mencapai LLM.
               </p>
             </div>
             <span className="rounded-full bg-success/10 px-2 py-1 text-xs text-success">
-              Always on
+              Selalu aktif
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Missing-information fallback
+              Pesan saat informasi tidak ditemukan
             </label>
             <textarea
               value={fallbackMessage}
               onChange={(event) => setFallbackMessage(event.target.value)}
               maxLength={2000}
               rows={3}
-              placeholder="Message returned when no accessible Knowledge Base source is found"
+              placeholder="Pesan saat sumber knowledge base yang dapat diakses tidak ditemukan"
               className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <span className="text-xs text-muted-foreground text-right">
@@ -763,9 +770,9 @@ export default function ConfigPage() {
         <div className="flex items-center gap-3 mb-6">
           <BookOpen className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">Response Dictionary</h2>
+            <h2 className="font-headline text-lg text-foreground">Kamus jawaban</h2>
             <p className="text-xs text-muted-foreground">
-              Maintain phrases that must be excluded or included in generated answers.
+              Kelola frasa yang dilarang atau wajib disertakan dalam jawaban.
             </p>
           </div>
         </div>
@@ -773,7 +780,7 @@ export default function ConfigPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Forbidden phrases
+              Frasa terlarang
             </label>
             <textarea
               value={forbiddenWordsText}
@@ -783,13 +790,13 @@ export default function ConfigPage() {
               className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <span className="text-xs text-muted-foreground">
-              One phrase per line. Matching is case-insensitive.
+              Satu frasa per baris. Pencocokan tidak peka huruf besar/kecil.
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Required phrase rules
+              Aturan frasa wajib
             </label>
             <textarea
               value={requiredWordsText}
@@ -799,7 +806,7 @@ export default function ConfigPage() {
               className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <span className="text-xs text-muted-foreground">
-              Use “phrase | condition”. Omit the condition to require the phrase in every answer.
+              Gunakan “frasa | kondisi”. Kosongkan kondisi agar frasa wajib di setiap jawaban.
             </span>
           </div>
         </div>
@@ -810,17 +817,17 @@ export default function ConfigPage() {
           <Search className="size-6 text-primary" />
           <div>
             <h2 className="font-headline text-lg text-foreground">
-              Retrieval Configuration
+              Konfigurasi pencarian
             </h2>
             <p className="text-xs text-muted-foreground">
-              Control candidate retrieval and the context sent to the LLM.
+              Atur kandidat pencarian dan konteks yang dikirim ke LLM.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Top K candidates</label>
+            <label className="text-xs font-medium text-muted-foreground">Kandidat Top K</label>
             <input
               type="number"
               min={1}
@@ -837,7 +844,7 @@ export default function ConfigPage() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Maximum context documents
+              Maksimal dokumen konteks
             </label>
             <input
               type="number"
@@ -851,7 +858,7 @@ export default function ConfigPage() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Similarity threshold: {similarityThreshold.toFixed(2)}
+              Ambang kemiripan: {similarityThreshold.toFixed(2)}
             </label>
             <input
               type="range"
@@ -863,12 +870,12 @@ export default function ConfigPage() {
               className="accent-primary"
             />
             <p className="text-xs text-muted-foreground">
-              Higher values require a closer semantic match.
+              Berlaku untuk jalur semantik; istilah persis tetap dapat ditemukan oleh full-text.
             </p>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Source priority</label>
+            <label className="text-xs font-medium text-muted-foreground">Prioritas sumber</label>
             <select
               value={sourcePriority}
               onChange={(event) =>
@@ -876,14 +883,14 @@ export default function ConfigPage() {
               }
               className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
             >
-              <option value="balanced">Balanced by relevance</option>
-              <option value="faq_first">FAQ first</option>
-              <option value="sop_first">SOP first</option>
+              <option value="balanced">Seimbang berdasarkan relevansi</option>
+              <option value="faq_first">FAQ terlebih dahulu</option>
+              <option value="sop_first">SOP terlebih dahulu</option>
             </select>
           </div>
 
           <div className="flex flex-col gap-1.5 md:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Selection rule</label>
+            <label className="text-xs font-medium text-muted-foreground">Aturan pemilihan</label>
             <select
               value={selectionRule}
               onChange={(event) =>
@@ -891,11 +898,11 @@ export default function ConfigPage() {
               }
               className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
             >
-              <option value="highest_score">Highest score</option>
-              <option value="diverse_sources">Alternate FAQ and SOP</option>
+              <option value="highest_score">Skor tertinggi</option>
+              <option value="diverse_sources">Selang-seling FAQ dan SOP</option>
             </select>
             <p className="text-xs text-muted-foreground">
-              Selection runs only after authentication and document-access filters.
+              Pemilihan dijalankan setelah autentikasi dan filter akses dokumen.
             </p>
           </div>
         </div>
@@ -912,12 +919,12 @@ export default function ConfigPage() {
           {resetting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
-              Resetting...
+              Menghapus…
             </>
           ) : (
             <>
               <RotateCcw className="size-[18px]" />
-              Delete Stored Configuration
+              Hapus konfigurasi tersimpan
             </>
           )}
         </button>
@@ -929,12 +936,12 @@ export default function ConfigPage() {
           {saving ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
-              Saving...
+              Menyimpan…
             </>
           ) : (
             <>
               <Save className="size-[18px]" />
-              Save Configuration
+              Simpan konfigurasi
             </>
           )}
         </button>

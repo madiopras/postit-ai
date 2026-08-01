@@ -1,6 +1,6 @@
 # Goals Frontend — PostIt AI dengan Untitled UI
 
-> Status: analisis ulang dan rencana implementasi, belum diimplementasikan  
+> Status: selesai; Phase 0–7 terimplementasi dan tervalidasi
 > Tanggal revisi: 1 Agustus 2026  
 > Target design system: Untitled UI React v8, komponen open-source saja  
 > Fokus delivery pertama: chat publik, kemudian auth dan dashboard admin
@@ -52,6 +52,21 @@ Referensi resmi:
    SOP restricted.
 9. **Icon tidak langsung dimigrasikan.** Lucide tetap dipakai pada fase awal
    untuk menghindari dependency dan boundary lisensi tambahan.
+10. **Nama final seluruh aplikasi adalah `PostIt AI`.** Seluruh kemunculan
+    `SimpleAI` pada frontend existing harus dimigrasikan agar metadata, chat,
+    login, dan dashboard memakai identitas yang sama.
+11. **Suggestion mengisi textarea dan tidak langsung mengirim.** Setelah dipilih,
+    focus berpindah ke textarea agar pengguna dapat meninjau atau mengubah
+    pertanyaan sebelum mengirim.
+12. **Setiap pengguna yang login memiliki menu profil sederhana dan logout.**
+    Menu menampilkan identitas aman; admin mendapat tambahan link dashboard.
+13. **Riwayat visitor diupayakan digabung ke akun setelah login.** Jika merge
+    tidak aman atau belum dapat diselesaikan pada scope frontend, history
+    visitor tidak boleh dihapus dan dependency backend harus dicatat jelas.
+14. **`Copy answer` masuk versi pertama.** Action tersedia pada jawaban
+    assistant yang sudah selesai.
+15. **`Retry/Regenerate` ditunda.** Fitur baru dapat dirancang setelah semantics
+    persistence, idempotency, usage, dan citation disepakati.
 
 ## 3. Batas Lisensi dan Source Provenance
 
@@ -127,7 +142,8 @@ atau procurement perusahaan.
 8. Halaman chat belum menampilkan identity/login/dashboard action yang jelas.
 9. Coverage E2E frontend masih sangat minimal.
 10. Nama produk belum konsisten: chat/metadata memakai `PostIt AI`, sidebar
-    admin memakai `SimpleAI`.
+    admin memakai `SimpleAI`. Keputusan final adalah `PostIt AI`, sehingga
+    penggunaan `SimpleAI` merupakan migration task, bukan open decision.
 
 ## 5. Analisis Untitled UI
 
@@ -243,6 +259,7 @@ dependency yang tidak digunakan dihapus melalui fase cleanup tersendiri.
 - mengganti SSE dengan AI SDK;
 - attachment chat, voice input, atau model picker pengguna;
 - folder/pin chat yang memerlukan persistence baru;
+- retry atau regenerate jawaban sebelum semantics persistence disepakati;
 - komponen atau asset Untitled UI PRO;
 - menghapus seluruh shadcn/Base UI/Radix sebelum dashboard dimigrasikan;
 - redesign dashboard bersamaan dengan pilot chat.
@@ -317,6 +334,9 @@ Chat Shell
 
 - greeting memakai nama user saat login dan sapaan netral untuk visitor;
 - tersedia 3–4 suggestion FAQ/SOP relevan;
+- memilih suggestion hanya mengisi textarea, tidak langsung mengirim;
+- setelah suggestion dipilih, focus berpindah ke textarea dan pengguna dapat
+  mengedit pertanyaan sebelum mengirim;
 - visitor memahami FAQ publik dan sebagian SOP membutuhkan login;
 - `Enter` mengirim, `Shift+Enter` membuat baris baru;
 - textarea auto-grow hingga batas lalu scroll internal;
@@ -333,6 +353,10 @@ Chat Shell
 - seluruh label citation berbahasa Indonesia;
 - source disclosure memiliki `aria-expanded` dan focus behavior benar;
 - feedback memiliki pending, success, failure, dan visible rollback;
+- setiap jawaban assistant yang selesai memiliki action `Salin jawaban`;
+- copy success memberikan feedback singkat yang dapat dibaca assistive
+  technology;
+- `Retry/Regenerate` tidak ditampilkan pada versi pertama;
 - login-required notice menyatu dengan message terkait;
 - visitor tidak melihat isi atau source SOP restricted.
 
@@ -340,9 +364,15 @@ Chat Shell
 
 - visitor melihat login tanpa kehilangan akses FAQ publik;
 - user melihat display name/username yang aman;
+- seluruh user yang login, termasuk user biasa, memiliki menu profil sederhana;
+- menu profil user biasa memuat nama/display name, username, dan logout tanpa
+  menampilkan link dashboard yang tidak dapat diakses;
 - admin dapat menuju dashboard;
 - logout memiliki pending dan failure handling;
-- behavior history visitor setelah login diputuskan;
+- sistem mencoba menggabungkan history visitor ke akun setelah login tanpa
+  membuat duplikasi atau mengambil history milik visitor lain;
+- bila merge belum dapat dilakukan dengan aman, history visitor tetap disimpan
+  dan UI menjelaskan pergantian konteks secara jujur;
 - authorization tetap server-side, bukan hanya menyembunyikan UI.
 
 ### G7 — Dashboard migration konsisten (P1 setelah pilot)
@@ -476,11 +506,20 @@ Pilot frontend tidak mengubah schema, migration, retrieval, atau model config.
 4. Uji CLI pada temporary working copy untuk mengetahui interaksi dengan
    `components.json`; jangan terapkan langsung ke working tree utama.
 5. Tetapkan brand scale 25–950, neutral, typography, radius, shadow, dan focus.
-6. Finalisasi nama produk, logo, suggestion prompts, dan behavior history login.
+6. Terapkan keputusan nama `PostIt AI`, inventarisasi seluruh penggunaan
+   `SimpleAI`, finalisasi logo, dan finalisasi isi suggestion prompts.
 7. Ambil screenshot baseline desktop/mobile frontend saat ini.
 
 **Exit:** legal boundary, source baseline, component inventory, dan visual
 contract disetujui.
+
+**Status pelaksanaan (1 Agustus 2026):** engineering scope Phase 0 selesai dan
+tercatat dalam [`phase-0-frontend-foundation.md`](./phase-0-frontend-foundation.md).
+Baseline upstream dipin ke commit
+`eaee6a5b9798fa6867b4d896c6cfecf6ce706a73`; provenance dan audit komponen
+tersedia di [`docs/third-party/untitled-ui.md`](../../third-party/untitled-ui.md).
+Logo final, empat production suggestion, dan penanggung jawab acceptance visual
+tetap menjadi input product/process sebelum surface terkait dinyatakan final.
 
 ### Phase 1 — Foundation spike
 
@@ -497,6 +536,12 @@ contract disetujui.
 
 **Exit:** primitive Untitled UI dapat hidup tanpa mengubah dashboard existing.
 
+**Status pelaksanaan (1 Agustus 2026):** selesai. Scoped token bridge,
+dependency minimum, primitive typed, development-only smoke surface, hasil
+pengujian, dan keputusan `RouteProvider` dicatat dalam
+[`phase-1-frontend-foundation.md`](./phase-1-frontend-foundation.md). Chat,
+login, dan dashboard production belum dimigrasikan pada fase ini.
+
 ### Phase 2 — Pisahkan behavior chat dari presentasi
 
 1. Ekstrak typed chat controller dengan output visual tetap sama.
@@ -506,6 +551,13 @@ contract disetujui.
 5. Tambahkan test success, error, abort, dan stale response.
 
 **Exit:** UI chat dapat diganti tanpa menulis ulang kontrak jaringan.
+
+**Status pelaksanaan (1 Agustus 2026):** selesai. Typed network boundary,
+controller, abort/sequence guard, pure session utility, pemisahan presentation,
+dan regression tests dicatat dalam
+[`phase-2-chat-controller.md`](./phase-2-chat-controller.md). Markup dan style
+produksi tetap menggunakan UI existing; migrasi visual Untitled UI baru dimulai
+pada Phase 3.
 
 ### Phase 3 — Chat shell dan history
 
@@ -518,24 +570,53 @@ contract disetujui.
 
 **Exit:** history usable melalui mouse, touch, dan keyboard.
 
+**Status pelaksanaan (1 Agustus 2026):** selesai. Responsive chat shell,
+desktop sidebar, mobile slideout, local search, date grouping, loading/empty/
+error states, retry, semantic session controls, dan confirmation delete tercatat
+dalam [`phase-3-chat-shell-history.md`](./phase-3-chat-shell-history.md).
+Timeline, empty state utama, dan composer existing sengaja dipertahankan untuk
+Phase 4.
+
 ### Phase 4 — Empty state, timeline, dan composer
 
 1. Terapkan greeting dan suggestion FAQ/SOP.
-2. Bangun composer dengan auto-grow, focus, loading, dan safe-area behavior.
-3. Terapkan content width dan message layout baru.
-4. Perbaiki near-bottom streaming dan scroll-to-bottom.
-5. Lokalisasi/restrukturisasi citation, feedback, error, dan login-required.
+2. Pastikan suggestion mengisi textarea dan memindahkan focus tanpa auto-submit.
+3. Bangun composer dengan auto-grow, focus, loading, dan safe-area behavior.
+4. Terapkan content width dan message layout baru.
+5. Tambahkan `Copy answer`; jangan menampilkan `Retry/Regenerate`.
+6. Perbaiki near-bottom streaming dan scroll-to-bottom.
+7. Lokalisasi/restrukturisasi citation, feedback, error, dan login-required.
 
 **Exit:** public chat selesai memakai Untitled UI tanpa regresi fungsional.
+
+**Status pelaksanaan (1 Agustus 2026):** selesai. Empty state dan empat
+suggestion, composer auto-grow dan keyboard-safe, typed completion state,
+timeline Markdown aman, citation terlokalisasi, copy/feedback state,
+login-required notice, near-bottom streaming, serta scroll-to-bottom tercatat
+dalam [`phase-4-public-chat.md`](./phase-4-public-chat.md). Public chat tidak
+lagi memakai komponen chat legacy untuk timeline, empty state, atau composer;
+identity/profile, logout, dan merge history visitor tetap menjadi Phase 5.
 
 ### Phase 5 — Identity dan auth surfaces
 
 1. Integrasikan optional current-user state pada chat.
-2. Tambahkan login/dashboard/logout action sesuai role.
-3. Putuskan atau implementasikan merge history visitor ke user.
+2. Tambahkan menu profil sederhana dan logout untuk seluruh user login; link
+   dashboard hanya untuk role yang berhak.
+3. Implementasikan merge history visitor ke user bila dapat dilakukan aman dan
+   atomik; jika membutuhkan backend di luar scope, pertahankan history visitor
+   dan catat dependency tersebut.
 4. Migrasikan login, error, not-found, dan loading pages.
 
 **Exit:** visitor, user, admin, dan restricted SOP memiliki UX konsisten.
+
+**Status pelaksanaan (1 Agustus 2026):** selesai. Optional current-user state,
+personalized greeting, login action visitor, profile/logout seluruh user,
+dashboard action berbasis role, merge history visitor yang atomik dan
+idempotent, fallback merge yang tidak menghapus history, serta login dan global
+system states Untitled UI tercatat dalam
+[`phase-5-identity-auth.md`](./phase-5-identity-auth.md). Dashboard-scoped
+loading/error tetap mengikuti surface dashboard existing sampai shell tersebut
+dimigrasikan pada Phase 6.
 
 ### Phase 6 — Dashboard migration per modul
 
@@ -548,6 +629,15 @@ contract disetujui.
 
 **Exit:** seluruh frontend aktif memakai design language Untitled UI.
 
+**Status pelaksanaan (1 Agustus 2026):** selesai. Shell/navigation responsive,
+overview cards/chart, FAQ, SOP, Documents, Users, Admins, Configuration, Audit
+Logs, dashboard loading/error, role-aware menu, modal/form/table states, serta
+regression dan visual QA tercatat dalam
+[`phase-6-dashboard-migration.md`](./phase-6-dashboard-migration.md). Route
+frontend aktif tidak lagi mengimpor `components/ui/*`; penghapusan fisik
+component/dependency legacy yang tidak terpakai tetap dilakukan pada Phase 7
+setelah consumer audit final.
+
 ### Phase 7 — Cleanup dan release
 
 1. Cari consumer shadcn/Base UI/Radix yang tersisa.
@@ -557,6 +647,14 @@ contract disetujui.
 5. Review third-party notices dan provenance inventory.
 
 **Exit:** satu design system aktif dan Definition of Done terpenuhi.
+
+**Status pelaksanaan (1 Agustus 2026):** selesai. Consumer graph final
+membuktikan seluruh `components/ui/*`, tiga navigasi lama, konfigurasi shadcn,
+enam dependency legacy, dan lima asset starter tidak lagi dipakai sebelum
+dihapus. Token, font, dan helper disatukan; provenance dan notices diperbarui;
+audit WCAG A/AA, dependency/security, bundle, visual, lint, typecheck, unit,
+seluruh E2E, dan production build dicatat dalam
+[`phase-7-cleanup-release.md`](./phase-7-cleanup-release.md).
 
 ## 13. Risks and Edge Cases
 
@@ -574,7 +672,8 @@ contract disetujui.
 | Manual upstream update | Fork lokal tertinggal | Catat commit dan lakukan reviewed upgrade |
 | Stale session response | Pesan muncul di session salah | Abort/sequence guard |
 | Streaming menarik scroll | Posisi baca hilang | Follow hanya saat near-bottom |
-| Login mengganti owner history | Percakapan tampak hilang | Backend merge atau UX eksplisit |
+| Merge history visitor salah owner/duplikat | Kebocoran data atau percakapan ganda | Verifikasi visitorId dan user session server-side, transaksi/idempotency, test lintas akun |
+| Merge history belum tersedia | Percakapan tampak hilang setelah login | Jangan hapus history visitor; tampilkan perubahan konteks dan catat backend dependency |
 | Markdown panjang | Overflow mobile | Overflow container dan long-content E2E |
 | Icon style berbeda | Visual pilot sedikit berbeda | Konsistenkan size/stroke Lucide, review icon terpisah |
 | Bundle React Aria bertambah | Load performance turun | Import granular dan ukur build/bundle |
@@ -598,7 +697,10 @@ contract disetujui.
 - mocked streaming: loading, chunks, done, dan failure;
 - user scroll ke atas saat streaming;
 - citation, feedback success/failure, dan restricted SOP;
-- login/logout dan admin dashboard link;
+- copy answer success/failure serta tidak adanya Retry/Regenerate;
+- suggestion mengisi textarea tanpa auto-submit;
+- menu profil dan logout untuk user biasa;
+- login/logout, merge history visitor, serta admin dashboard link;
 - light/dark tanpa hydration warning;
 - keyboard-only dan visible focus;
 - long Markdown/table/code tanpa page overflow;
@@ -640,25 +742,26 @@ Migrasi dianggap selesai bila:
 ### Wajib
 
 1. Approval tertulis bahwa scope hanya memakai source MIT public.
-2. Nama produk final: `PostIt AI` atau `SimpleAI`.
-3. Brand color utama; bila belum ada, palette existing menjadi seed brand scale.
-4. Logo/avatar dengan hak pakai jelas, atau approval ikon Lucide sementara.
-5. Empat suggestion prompt FAQ/SOP representatif.
-6. Keputusan apakah history visitor di-merge setelah login.
-7. Data uji: Super Admin, Admin, User aktif, User blocked, FAQ publik, SOP
+2. Brand color utama; bila belum ada, palette existing menjadi seed brand scale.
+3. Logo/avatar dengan hak pakai jelas, atau approval ikon Lucide sementara.
+4. Empat suggestion prompt FAQ/SOP representatif.
+5. Data uji: Super Admin, Admin, User aktif, User blocked, FAQ publik, SOP
    publik, dan SOP restricted.
-8. Penanggung jawab approval visual dan acceptance testing.
+6. Penanggung jawab approval visual dan acceptance testing.
 
-### Default yang direkomendasikan
+### Keputusan produk yang sudah dikonfirmasi
 
-- gunakan nama `PostIt AI` agar sama dengan metadata dan chat;
-- suggestion mengisi composer, tidak langsung mengirim;
-- tambahkan `Copy answer`, tunda `Retry/Regenerate`;
+- nama seluruh aplikasi adalah `PostIt AI`;
+- suggestion mengisi textarea dan tidak langsung mengirim;
+- history visitor diupayakan merge ke akun; fallback tidak boleh menghapus
+  history visitor;
+- seluruh user login memiliki menu profil sederhana dan logout;
+- admin mendapatkan link dashboard sesuai role;
+- `Copy answer` masuk versi pertama;
+- `Retry/Regenerate` ditunda karena memengaruhi persistence;
 - pertahankan Lucide pada pilot;
 - gunakan primary existing sebagai seed brand Untitled;
-- stabilkan chat sebelum dashboard;
-- jangan hapus history visitor; jika merge belum tersedia, jelaskan perubahan
-  identity dan jadikan backend merge task terpisah.
+- stabilkan chat sebelum dashboard.
 
 ## 17. Assumptions dan Open Decisions
 
@@ -671,13 +774,14 @@ Migrasi dianggap selesai bila:
 - Komponen open-source v8 cukup untuk primitive pilot; chat dikomposisikan
   sendiri.
 
-### Open decisions sebelum Phase 4–6
+### Keputusan penutupan Phase 7
 
-1. Nama dan asset brand final.
-2. Merge history visitor setelah login.
-3. Scope `Copy`, `Retry`, dan `Regenerate`.
-4. Apakah icon tetap Lucide atau dimigrasikan setelah review lisensi.
-5. Urutan modul dashboard setelah chat dan login.
-
-Open decisions ini tidak menghalangi license audit dan foundation spike, tetapi
-harus ditutup sebelum surface terkait dinyatakan final.
+1. Ikon `Bot` Lucide menjadi identitas release pertama dan tetap replaceable
+   ketika logo final dengan hak pakai disediakan.
+2. Empat suggestion yang terimplementasi menjadi copy release pertama;
+   penyesuaian terhadap knowledge base produksi adalah perubahan konten, bukan
+   blocker arsitektur frontend.
+3. Lucide dipertahankan sebagai icon system release pertama; migrasi icon
+   berikutnya memerlukan review lisensi dan visual tersendiri.
+4. Seluruh modul dashboard diselesaikan pada Phase 6 dengan urutan yang
+   terdokumentasi pada laporan phase tersebut.

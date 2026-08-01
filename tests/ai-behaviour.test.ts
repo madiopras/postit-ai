@@ -61,6 +61,9 @@ describe('AI behaviour system prompt', () => {
     expect(prompt).toContain('Respond in English.');
     expect(prompt).toContain('Do not use emoji.');
     expect(prompt).toContain('Refunds require manager approval.');
+    expect(prompt).toContain('conversation history only as a reference');
+    expect(prompt).toContain('Prioritize the latest user question');
+    expect(prompt).toContain('supported by the knowledge supplied in this prompt');
   });
 
   it('loads current behaviour for every generated answer', async () => {

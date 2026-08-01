@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 .PHONY: help check-tools install env-init db-up db-wait migrate seed-admin seed setup dev \
-	lint typecheck test test-e2e test-e2e-docker build validate db-down
+	lint typecheck test test-e2e test-e2e-docker eval-retrieval build validate db-down
 
 help:
 	@echo "PostIt AI development commands"
@@ -12,6 +12,7 @@ help:
 	@echo "  make seed                              Seed sample FAQ/SOP (needs AI endpoint)"
 	@echo "  make test-e2e                          Run browser E2E tests"
 	@echo "  make test-e2e-docker                   Run E2E in official browser image"
+	@echo "  make eval-retrieval                    Evaluate retrieval against seed knowledge"
 	@echo "  make validate                          Lint, typecheck, tests, E2E, build"
 
 check-tools:
@@ -82,6 +83,9 @@ test-e2e-docker:
 		--env-file .env \
 		-v "$(CURDIR):/work" -w /work \
 		mcr.microsoft.com/playwright:v1.62.0-noble npm run test:e2e
+
+eval-retrieval:
+	npm run eval:retrieval
 
 build:
 	npm run build

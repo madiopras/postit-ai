@@ -4,33 +4,34 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Loader2, Pencil, Plus, Search, ShieldBan, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import {
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+  TableError,
+} from '@/components/dashboard/dashboard-ui';
 
 interface UserAccount {
   id: string;
@@ -65,23 +66,26 @@ export default function UserManagementPage() {
   const [editing, setEditing] = useState<UserAccount | null>(null);
   const [form, setForm] = useState<UserForm>(EMPTY_FORM);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const loadUsers = useCallback(async () => {
     const params = new URLSearchParams({ search, pageSize: '100' });
     const response = await fetch(`/api/users?${params}`);
     const body = await response.json();
     if (!response.ok || !body.success) {
-      throw new Error(body.error?.message ?? 'Failed to load users');
+      throw new Error(body.error?.message ?? 'Gagal memuat pengguna');
     }
     return body.data as UserAccount[];
   }, [search]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       setUsers(await loadUsers());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load users');
+      setLoadError(error instanceof Error ? error.message : 'Gagal memuat pengguna');
+      toast.error(error instanceof Error ? error.message : 'Gagal memuat pengguna');
     } finally {
       setLoading(false);
     }
@@ -92,11 +96,15 @@ export default function UserManagementPage() {
 
     loadUsers()
       .then((rows) => {
-        if (!cancelled) setUsers(rows);
+        if (!cancelled) {
+          setUsers(rows);
+          setLoadError('');
+        }
       })
       .catch((error) => {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : 'Failed to load users');
+          setLoadError(error instanceof Error ? error.message : 'Gagal memuat pengguna');
+          toast.error(error instanceof Error ? error.message : 'Gagal memuat pengguna');
         }
       })
       .finally(() => {
@@ -128,7 +136,7 @@ export default function UserManagementPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!editing && form.password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+      toast.error('Kata sandi minimal 8 karakter');
       return;
     }
 
@@ -146,14 +154,14 @@ export default function UserManagementPage() {
       });
       const body = await response.json();
       if (!response.ok || !body.success) {
-        throw new Error(body.error?.message ?? 'Failed to save user');
+        throw new Error(body.error?.message ?? 'Gagal menyimpan pengguna');
       }
 
-      toast.success(editing ? 'User updated' : 'User created');
+      toast.success(editing ? 'Pengguna berhasil diperbarui' : 'Pengguna berhasil dibuat');
       setDialogOpen(false);
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save user');
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan pengguna');
     } finally {
       setSaving(false);
     }
@@ -165,7 +173,7 @@ export default function UserManagementPage() {
   ) => {
     const blockReason =
       status === 'blocked'
-        ? window.prompt('Reason for blocking this user:')
+        ? window.prompt('Alasan memblokir pengguna ini:')
         : undefined;
     if (status === 'blocked' && !blockReason?.trim()) return;
 
@@ -180,13 +188,13 @@ export default function UserManagementPage() {
       });
       const body = await response.json();
       if (!response.ok || !body.success) {
-        throw new Error(body.error?.message ?? 'Failed to update user status');
+        throw new Error(body.error?.message ?? 'Gagal memperbarui status pengguna');
       }
 
-      toast.success(`User ${status === 'active' ? 'activated' : status}`);
+      toast.success(status === 'active' ? 'Pengguna diaktifkan' : status === 'blocked' ? 'Pengguna diblokir' : 'Pengguna dinonaktifkan');
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update user status');
+      toast.error(error instanceof Error ? error.message : 'Gagal memperbarui status pengguna');
     }
   };
 
@@ -194,22 +202,22 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">User Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Kelola pengguna</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create and manage end-user accounts. Self-registration is disabled.
+            Buat dan kelola akun pengguna. Pendaftaran mandiri dinonaktifkan.
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="mr-2 size-4" />
-          Add user
+          Tambah pengguna
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>User accounts</CardTitle>
+          <CardTitle>Akun pengguna</CardTitle>
           <CardDescription>
-            These accounts can sign in to Chat PostIT AI but cannot access the dashboard.
+            Akun ini dapat masuk ke chat PostIt AI, tetapi tidak dapat membuka dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -218,7 +226,7 @@ export default function UserManagementPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search username or display name"
+              placeholder="Cari username atau nama tampilan"
               className="pl-9"
             />
           </div>
@@ -227,14 +235,16 @@ export default function UserManagementPage() {
             <div className="flex justify-center py-12">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
+          ) : loadError ? (
+            <TableError message={loadError} onRetry={refresh} />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
+                  <TableHead>Pengguna</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Diperbarui</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -252,7 +262,7 @@ export default function UserManagementPage() {
                         variant={user.status === 'active' ? 'default' : 'secondary'}
                         className={user.status === 'blocked' ? 'text-destructive' : undefined}
                       >
-                        {user.status}
+                        {user.status === 'active' ? 'Aktif' : user.status === 'blocked' ? 'Diblokir' : 'Nonaktif'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -272,7 +282,7 @@ export default function UserManagementPage() {
                               onClick={() => updateStatus(user, 'inactive')}
                             >
                               <ShieldBan className="size-4" />
-                              <span className="sr-only">Deactivate {user.username}</span>
+                              <span className="sr-only">Nonaktifkan {user.username}</span>
                             </Button>
                             <Button
                               variant="ghost"
@@ -280,7 +290,7 @@ export default function UserManagementPage() {
                               onClick={() => updateStatus(user, 'blocked')}
                             >
                               <ShieldBan className="size-4 text-destructive" />
-                              <span className="sr-only">Block {user.username}</span>
+                              <span className="sr-only">Blokir {user.username}</span>
                             </Button>
                           </>
                         ) : (
@@ -290,7 +300,7 @@ export default function UserManagementPage() {
                             onClick={() => updateStatus(user, 'active')}
                           >
                             <ShieldCheck className="size-4" />
-                            <span className="sr-only">Activate {user.username}</span>
+                            <span className="sr-only">Aktifkan {user.username}</span>
                           </Button>
                         )}
                       </div>
@@ -300,7 +310,7 @@ export default function UserManagementPage() {
                 {users.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
-                      No users found.
+                      Tidak ada pengguna ditemukan.
                     </TableCell>
                   </TableRow>
                 )}
@@ -314,11 +324,11 @@ export default function UserManagementPage() {
         <DialogContent className="sm:max-w-md">
           <form onSubmit={submit}>
             <DialogHeader>
-              <DialogTitle>{editing ? 'Edit user' : 'Add user'}</DialogTitle>
+              <DialogTitle>{editing ? 'Edit pengguna' : 'Tambah pengguna'}</DialogTitle>
               <DialogDescription>
                 {editing
-                  ? 'Leave password empty to keep the existing password.'
-                  : 'Create credentials for a new Chat PostIT AI user.'}
+                  ? 'Biarkan kata sandi kosong untuk mempertahankan kata sandi saat ini.'
+                  : 'Buat kredensial untuk pengguna baru PostIt AI.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -336,7 +346,7 @@ export default function UserManagementPage() {
               </div>
               <div>
                 <label htmlFor="user-display-name" className="text-sm font-medium">
-                  Display name
+                  Nama tampilan
                 </label>
                 <Input
                   id="user-display-name"
@@ -347,7 +357,7 @@ export default function UserManagementPage() {
               </div>
               <div>
                 <label htmlFor="user-password" className="text-sm font-medium">
-                  {editing ? 'New password' : 'Password'}
+                  {editing ? 'Kata sandi baru' : 'Kata sandi'}
                 </label>
                 <Input
                   id="user-password"
@@ -362,8 +372,9 @@ export default function UserManagementPage() {
               </div>
               {!editing && (
                 <div>
-                  <label className="text-sm font-medium">Initial status</label>
+                  <label className="text-sm font-medium">Status awal</label>
                   <Select
+                    aria-label="Status awal"
                     value={form.status}
                     onValueChange={(value) =>
                       setForm({ ...form, status: value as UserForm['status'] })
@@ -373,8 +384,8 @@ export default function UserManagementPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">Aktif</SelectItem>
+                      <SelectItem value="inactive">Nonaktif</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -383,11 +394,11 @@ export default function UserManagementPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Save
+                Simpan
               </Button>
             </DialogFooter>
           </form>

@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/dashboard/dashboard-ui';
 
 /**
  * Shown while a dashboard route segment loads. The shape mirrors the pages'

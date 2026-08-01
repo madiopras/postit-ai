@@ -4,33 +4,34 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Loader2, Pencil, Plus, Search, ShieldBan, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import {
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+  TableError,
+} from '@/components/dashboard/dashboard-ui';
 
 interface AdminAccount {
   id: string;
@@ -68,23 +69,26 @@ export default function AdminManagementPage() {
   const [editing, setEditing] = useState<AdminAccount | null>(null);
   const [form, setForm] = useState<AdminForm>(EMPTY_FORM);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const loadAdmins = useCallback(async () => {
     const params = new URLSearchParams({ search, pageSize: '100' });
     const response = await fetch(`/api/admins?${params}`);
     const body = await response.json();
     if (!response.ok || !body.success) {
-      throw new Error(body.error?.message ?? 'Failed to load administrators');
+      throw new Error(body.error?.message ?? 'Gagal memuat administrator');
     }
     return body.data as AdminAccount[];
   }, [search]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       setAdmins(await loadAdmins());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load administrators');
+      setLoadError(error instanceof Error ? error.message : 'Gagal memuat administrator');
+      toast.error(error instanceof Error ? error.message : 'Gagal memuat administrator');
     } finally {
       setLoading(false);
     }
@@ -95,11 +99,15 @@ export default function AdminManagementPage() {
 
     loadAdmins()
       .then((rows) => {
-        if (!cancelled) setAdmins(rows);
+        if (!cancelled) {
+          setAdmins(rows);
+          setLoadError('');
+        }
       })
       .catch((error) => {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : 'Failed to load administrators');
+          setLoadError(error instanceof Error ? error.message : 'Gagal memuat administrator');
+          toast.error(error instanceof Error ? error.message : 'Gagal memuat administrator');
         }
       })
       .finally(() => {
@@ -132,7 +140,7 @@ export default function AdminManagementPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!editing && form.password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+      toast.error('Kata sandi minimal 8 karakter');
       return;
     }
 
@@ -151,14 +159,14 @@ export default function AdminManagementPage() {
       });
       const body = await response.json();
       if (!response.ok || !body.success) {
-        throw new Error(body.error?.message ?? 'Failed to save administrator');
+        throw new Error(body.error?.message ?? 'Gagal menyimpan administrator');
       }
 
-      toast.success(editing ? 'Administrator updated' : 'Administrator created');
+      toast.success(editing ? 'Administrator berhasil diperbarui' : 'Administrator berhasil dibuat');
       setDialogOpen(false);
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save administrator');
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan administrator');
     } finally {
       setSaving(false);
     }
@@ -170,7 +178,7 @@ export default function AdminManagementPage() {
   ) => {
     const blockReason =
       status === 'blocked'
-        ? window.prompt('Reason for blocking this administrator:')
+        ? window.prompt('Alasan memblokir administrator ini:')
         : undefined;
     if (status === 'blocked' && !blockReason?.trim()) return;
 
@@ -185,13 +193,13 @@ export default function AdminManagementPage() {
       });
       const body = await response.json();
       if (!response.ok || !body.success) {
-        throw new Error(body.error?.message ?? 'Failed to update account status');
+        throw new Error(body.error?.message ?? 'Gagal memperbarui status akun');
       }
 
-      toast.success(`Administrator ${status === 'active' ? 'activated' : status}`);
+      toast.success(status === 'active' ? 'Administrator diaktifkan' : status === 'blocked' ? 'Administrator diblokir' : 'Administrator dinonaktifkan');
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update account status');
+      toast.error(error instanceof Error ? error.message : 'Gagal memperbarui status akun');
     }
   };
 
@@ -199,22 +207,22 @@ export default function AdminManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Admin Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Kelola admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage Super Admin and operational Admin accounts.
+            Kelola akun Super Admin dan Admin operasional.
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="mr-2 size-4" />
-          Add administrator
+          Tambah admin
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Administrative accounts</CardTitle>
+          <CardTitle>Akun administrator</CardTitle>
           <CardDescription>
-            Passwords are write-only and are never returned by the API.
+            Kata sandi hanya dapat ditulis dan tidak pernah dikembalikan oleh API.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -223,7 +231,7 @@ export default function AdminManagementPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search username or display name"
+              placeholder="Cari username atau nama tampilan"
               className="pl-9"
             />
           </div>
@@ -232,15 +240,17 @@ export default function AdminManagementPage() {
             <div className="flex justify-center py-12">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
+          ) : loadError ? (
+            <TableError message={loadError} onRetry={refresh} />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Administrator</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Peran</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Diperbarui</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -263,7 +273,7 @@ export default function AdminManagementPage() {
                         variant={admin.status === 'active' ? 'default' : 'secondary'}
                         className={admin.status === 'blocked' ? 'text-destructive' : undefined}
                       >
-                        {admin.status}
+                        {admin.status === 'active' ? 'Aktif' : admin.status === 'blocked' ? 'Diblokir' : 'Nonaktif'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -283,7 +293,7 @@ export default function AdminManagementPage() {
                               onClick={() => updateStatus(admin, 'inactive')}
                             >
                               <ShieldBan className="size-4" />
-                              <span className="sr-only">Deactivate {admin.username}</span>
+                              <span className="sr-only">Nonaktifkan {admin.username}</span>
                             </Button>
                             <Button
                               variant="ghost"
@@ -291,7 +301,7 @@ export default function AdminManagementPage() {
                               onClick={() => updateStatus(admin, 'blocked')}
                             >
                               <ShieldBan className="size-4 text-destructive" />
-                              <span className="sr-only">Block {admin.username}</span>
+                              <span className="sr-only">Blokir {admin.username}</span>
                             </Button>
                           </>
                         ) : (
@@ -301,7 +311,7 @@ export default function AdminManagementPage() {
                             onClick={() => updateStatus(admin, 'active')}
                           >
                             <ShieldCheck className="size-4" />
-                            <span className="sr-only">Activate {admin.username}</span>
+                            <span className="sr-only">Aktifkan {admin.username}</span>
                           </Button>
                         )}
                       </div>
@@ -311,7 +321,7 @@ export default function AdminManagementPage() {
                 {admins.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                      No administrators found.
+                      Tidak ada administrator ditemukan.
                     </TableCell>
                   </TableRow>
                 )}
@@ -325,11 +335,11 @@ export default function AdminManagementPage() {
         <DialogContent className="sm:max-w-md">
           <form onSubmit={submit}>
             <DialogHeader>
-              <DialogTitle>{editing ? 'Edit administrator' : 'Add administrator'}</DialogTitle>
+              <DialogTitle>{editing ? 'Edit administrator' : 'Tambah administrator'}</DialogTitle>
               <DialogDescription>
                 {editing
-                  ? 'Leave password empty to keep the existing password.'
-                  : 'Create credentials for a new administrative account.'}
+                  ? 'Biarkan kata sandi kosong untuk mempertahankan kata sandi saat ini.'
+                  : 'Buat kredensial untuk akun administrator baru.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -347,7 +357,7 @@ export default function AdminManagementPage() {
               </div>
               <div>
                 <label htmlFor="admin-display-name" className="text-sm font-medium">
-                  Display name
+                  Nama tampilan
                 </label>
                 <Input
                   id="admin-display-name"
@@ -358,7 +368,7 @@ export default function AdminManagementPage() {
               </div>
               <div>
                 <label htmlFor="admin-password" className="text-sm font-medium">
-                  {editing ? 'New password' : 'Password'}
+                  {editing ? 'Kata sandi baru' : 'Kata sandi'}
                 </label>
                 <Input
                   id="admin-password"
@@ -372,8 +382,9 @@ export default function AdminManagementPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Role</label>
+                <label className="text-sm font-medium">Peran</label>
                 <Select
+                  aria-label="Peran"
                   value={form.role}
                   onValueChange={(value) =>
                     setForm({ ...form, role: value as AdminAccount['role'] })
@@ -390,8 +401,9 @@ export default function AdminManagementPage() {
               </div>
               {!editing && (
                 <div>
-                  <label className="text-sm font-medium">Initial status</label>
+                  <label className="text-sm font-medium">Status awal</label>
                   <Select
+                    aria-label="Status awal"
                     value={form.status}
                     onValueChange={(value) =>
                       setForm({ ...form, status: value as AdminForm['status'] })
@@ -401,8 +413,8 @@ export default function AdminManagementPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">Aktif</SelectItem>
+                      <SelectItem value="inactive">Nonaktif</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -411,11 +423,11 @@ export default function AdminManagementPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Save
+                Simpan
               </Button>
             </DialogFooter>
           </form>

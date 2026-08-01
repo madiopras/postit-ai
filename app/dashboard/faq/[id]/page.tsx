@@ -8,18 +8,21 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  Textarea,
+} from '@/components/dashboard/dashboard-ui';
 
 /**
  * Mirrors createFaqSchema / updateFaqSchema in app/api/faq — keeping the limits
@@ -252,6 +255,7 @@ export default function FaqFormPage() {
                   <div>
                     <label className="text-sm font-medium text-foreground">Status</label>
                     <Select
+                      aria-label="Status FAQ"
                       value={status}
                       onValueChange={(value) =>
                         setValue('status', value as 'draft' | 'published', {
@@ -263,12 +267,12 @@ export default function FaqFormPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="published">Published</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Terbit</SelectItem>
+                        <SelectItem value="draft">Draf</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs font-medium text-muted-foreground mt-1">
-                      Hanya FAQ berstatus published yang dipakai menjawab di chat.
+                      Hanya FAQ berstatus terbit yang dipakai menjawab di chat.
                     </p>
                   </div>
                 )}
@@ -310,17 +314,17 @@ export default function FaqFormPage() {
                   <div>
                     {faq.status === 'published' && (
                       <Badge className="bg-primary/10 text-primary">
-                        Published
+                        Terbit
                       </Badge>
                     )}
                     {faq.status === 'draft' && (
                       <Badge className="bg-secondary text-secondary-foreground">
-                        Draft
+                        Draf
                       </Badge>
                     )}
                     {faq.status === 'error' && (
                       <Badge className="bg-destructive/10 text-destructive">
-                        Error
+                        Bermasalah
                       </Badge>
                     )}
                   </div>

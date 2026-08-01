@@ -19,6 +19,7 @@ import {
   buildContextualRetrievalQuery,
   loadModelHistory,
 } from '@/lib/chat-history';
+import { retrieveWithDiagnostics } from '@/lib/retrieval-observability';
 
 export const runtime = 'nodejs';
 
@@ -136,11 +137,7 @@ export async function POST(req: NextRequest) {
           sendEvent('status', { type: 'retrieving' });
           const config = await getAiConfig();
           const modelHistory = await loadModelHistory(chatId, identity.owner);
-          const retrievalQuery = buildContextualRetrievalQuery(
-            lastUserMessage,
-            modelHistory
-          );
-          const { sources, loginRequired } = await retrieveContext(retrievalQuery, {
+          const retrievalOptions = {
             maxSources: config.retrievalTopK ?? DEFAULT_RETRIEVAL_CONFIG.topK,
             minScore:
               config.retrievalSimilarityThreshold
@@ -153,7 +150,16 @@ export async function POST(req: NextRequest) {
             maxContextDocuments:
               config.retrievalMaxContextDocuments
               ?? DEFAULT_RETRIEVAL_CONFIG.maxContextDocuments,
+          };
+          const retrieval = await retrieveWithDiagnostics({
+            standaloneQuery: lastUserMessage,
+            contextualQuery: modelHistory.length > 0
+              ? () => buildContextualRetrievalQuery(lastUserMessage, modelHistory)
+              : undefined,
+            options: retrievalOptions,
+            retrieve: retrieveContext,
           });
+          const { sources, loginRequired } = retrieval;
           const dictionary = {
             forbiddenWords: config.responseForbiddenWords,
             requiredWords: config.responseRequiredWords,

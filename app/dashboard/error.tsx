@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/dashboard/dashboard-ui';
 
 /**
  * Dashboard-scoped boundary: keeps the sidebar and header mounted so a failed
@@ -21,10 +20,10 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <Card className="border-destructive/40 mx-auto mt-8 w-full max-w-lg">
+    <Card className="mx-auto mt-8 w-full max-w-lg border-error-border bg-error-bg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <AlertTriangleIcon className="text-destructive size-4" />
+          <AlertTriangleIcon className="size-4 text-error-fg" />
           Halaman gagal dimuat
         </CardTitle>
         <CardDescription>
@@ -33,7 +32,7 @@ export default function DashboardError({
       </CardHeader>
       <CardContent className="space-y-4">
         {error.digest && (
-          <p className="text-muted-foreground font-mono text-xs">Kode: {error.digest}</p>
+          <p className="font-mono text-xs text-fg-tertiary">Kode: {error.digest}</p>
         )}
         <Button size="sm" onClick={reset}>
           <RefreshCwIcon className="mr-2 size-4" />

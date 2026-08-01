@@ -39,9 +39,14 @@ describe('access-aware retrieval', () => {
       [0.1, 0.2],
       5,
       0.4,
-      { authenticated: false }
+      { authenticated: false, queryText: 'private procedure' }
     );
-    expect(result).toEqual({ sources: [], loginRequired: true });
+    expect(mocks.hasRelevantRestrictedSop).toHaveBeenCalledWith(
+      [0.1, 0.2],
+      0.4,
+      'private procedure'
+    );
+    expect(result).toEqual({ sources: [], loginRequired: true, candidateCount: 0 });
   });
 
   it('prefers accessible context over a login prompt', async () => {
@@ -73,7 +78,7 @@ describe('access-aware retrieval', () => {
       [0.1, 0.2],
       5,
       0.5,
-      { authenticated: true }
+      { authenticated: true, queryText: 'private procedure' }
     );
     expect(mocks.hasRelevantRestrictedSop).not.toHaveBeenCalled();
   });

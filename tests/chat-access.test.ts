@@ -203,7 +203,7 @@ describe('empty knowledge-base response', () => {
 });
 
 describe('multi-turn conversation context', () => {
-  it('uses owned server history for retrieval and generation', async () => {
+  it('falls back to owned server history when the standalone question has no result', async () => {
     const history = [
       { role: 'user' as const, content: 'Bagaimana prosedur refund?' },
       { role: 'assistant' as const, content: 'Refund memerlukan persetujuan manajer.' },
@@ -212,16 +212,18 @@ describe('multi-turn conversation context', () => {
     mocks.buildContextualRetrievalQuery.mockReturnValue(
       'Conversation context: refund. Current question: Berapa lama prosesnya?'
     );
-    mocks.retrieveContext.mockResolvedValue({
-      sources: [{
-        id: 'source-id',
-        type: 'faq',
-        title: 'Refund',
-        content: 'Refund diproses dalam tiga hari.',
-        score: 0.9,
-      }],
-      loginRequired: false,
-    });
+    mocks.retrieveContext
+      .mockResolvedValueOnce({ sources: [], loginRequired: false })
+      .mockResolvedValueOnce({
+        sources: [{
+          id: 'source-id',
+          type: 'faq',
+          title: 'Refund',
+          content: 'Refund diproses dalam tiga hari.',
+          score: 0.9,
+        }],
+        loginRequired: false,
+      });
     mocks.ragStreamFromSources.mockImplementation(async function* () {
       yield { content: 'Tiga hari.' };
     });
@@ -253,7 +255,13 @@ describe('multi-turn conversation context', () => {
       'Berapa lama prosesnya?',
       history
     );
-    expect(mocks.retrieveContext).toHaveBeenCalledWith(
+    expect(mocks.retrieveContext).toHaveBeenNthCalledWith(
+      1,
+      'Berapa lama prosesnya?',
+      expect.any(Object)
+    );
+    expect(mocks.retrieveContext).toHaveBeenNthCalledWith(
+      2,
       'Conversation context: refund. Current question: Berapa lama prosesnya?',
       expect.any(Object)
     );
@@ -262,6 +270,93 @@ describe('multi-turn conversation context', () => {
       expect.any(Array),
       history
     );
+  });
+
+  it.each([
+    {
+      direction: 'SOP to FAQ',
+      history: [
+        { role: 'user' as const, content: 'Bagaimana prosedur cuti?' },
+        { role: 'assistant' as const, content: 'Ikuti SOP pengajuan cuti.' },
+      ],
+      question: 'Bagaimana mengganti password?',
+      sourceType: 'faq' as const,
+    },
+    {
+      direction: 'FAQ to SOP',
+      history: [
+        { role: 'user' as const, content: 'Bagaimana mengganti password?' },
+        { role: 'assistant' as const, content: 'Gunakan menu lupa password.' },
+      ],
+      question: 'Bagaimana prosedur pengajuan cuti?',
+      sourceType: 'sop' as const,
+    },
+  ])('keeps a standalone topic switch independent for $direction', async ({
+    history,
+    question,
+    sourceType,
+  }) => {
+    mocks.loadModelHistory.mockResolvedValue(history);
+    mocks.retrieveContext.mockResolvedValue({
+      sources: [{
+        id: 'new-topic-source',
+        type: sourceType,
+        title: 'New topic',
+        content: 'New topic knowledge',
+        score: 0.91,
+      }],
+      loginRequired: false,
+    });
+    mocks.ragStreamFromSources.mockImplementation(async function* () {
+      yield { content: 'Jawaban topik baru.' };
+    });
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          visitorId: 'visitor-a',
+          chatId: '6a925ead-33c2-46a8-b94f-d172efdaf12d',
+          messages: [{ role: 'user', content: question }],
+        }),
+      })
+    );
+    for await (const frame of parseSseStream(response.body!)) void frame;
+
+    expect(mocks.retrieveContext).toHaveBeenCalledTimes(1);
+    expect(mocks.retrieveContext).toHaveBeenCalledWith(question, expect.any(Object));
+    expect(mocks.buildContextualRetrievalQuery).not.toHaveBeenCalled();
+    expect(mocks.ragStreamFromSources).toHaveBeenCalledWith(
+      question,
+      [expect.objectContaining({ type: sourceType })],
+      history
+    );
+  });
+
+  it('does not replace a standalone restricted-SOP login boundary with history', async () => {
+    mocks.loadModelHistory.mockResolvedValue([
+      { role: 'user', content: 'FAQ sebelumnya' },
+      { role: 'assistant', content: 'Jawaban FAQ sebelumnya' },
+    ]);
+    mocks.retrieveContext.mockResolvedValue({ sources: [], loginRequired: true });
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          visitorId: 'visitor-a',
+          chatId: '6a925ead-33c2-46a8-b94f-d172efdaf12d',
+          messages: [{ role: 'user', content: 'Buka SOP internal' }],
+        }),
+      })
+    );
+    for await (const frame of parseSseStream(response.body!)) void frame;
+
+    expect(mocks.retrieveContext).toHaveBeenCalledTimes(1);
+    expect(mocks.buildContextualRetrievalQuery).not.toHaveBeenCalled();
+    expect(mocks.ragStreamFromSources).not.toHaveBeenCalled();
   });
 });
 

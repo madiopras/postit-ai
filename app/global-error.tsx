@@ -36,6 +36,9 @@ export default function GlobalError({
         }}
       >
         <div style={{ maxWidth: '28rem', textAlign: 'center' }}>
+          <p style={{ color: '#444ce7', fontSize: '0.875rem', fontWeight: 600 }}>
+            PostIt AI
+          </p>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Aplikasi gagal dimuat</h1>
           <p style={{ fontSize: '0.875rem', color: '#464555' }}>
             Terjadi kesalahan fatal saat memuat halaman.
