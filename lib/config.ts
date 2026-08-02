@@ -1,7 +1,7 @@
-import { db } from '@/lib/db';
-import { appConfig } from '@/lib/schema';
-import { eq, sql } from 'drizzle-orm';
-import { decryptSecret, encryptSecret } from '@/lib/crypto';
+import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import { db } from "@/lib/db";
+import { appConfig } from "@/lib/schema";
+import { eq, sql } from "drizzle-orm";
 
 /**
  * Config interface untuk AI Model Configuration
@@ -14,9 +14,9 @@ export interface AiConfig {
   llmModel?: string;
   llmApiKey?: string;
   aiPersona?: string;
-  aiTone?: 'formal' | 'professional' | 'friendly';
-  aiDetailLevel?: 'concise' | 'medium' | 'detailed';
-  aiLanguage?: 'same_as_user' | 'id' | 'en';
+  aiTone?: "formal" | "professional" | "friendly";
+  aiDetailLevel?: "concise" | "medium" | "detailed";
+  aiLanguage?: "same_as_user" | "id" | "en";
   aiUseEmoji?: boolean;
   responseKnowledgeOnly?: boolean;
   responseNoHallucination?: boolean;
@@ -25,16 +25,16 @@ export interface AiConfig {
   responseRequiredWords?: Array<{ phrase: string; condition: string }>;
   retrievalTopK?: number;
   retrievalSimilarityThreshold?: number;
-  retrievalSourcePriority?: 'balanced' | 'faq_first' | 'sop_first';
-  retrievalSelectionRule?: 'highest_score' | 'diverse_sources';
+  retrievalSourcePriority?: "balanced" | "faq_first" | "sop_first";
+  retrievalSelectionRule?: "highest_score" | "diverse_sources";
   retrievalMaxContextDocuments?: number;
 }
 
 export const DEFAULT_AI_BEHAVIOUR = {
-  persona: 'You are a helpful assistant for PostIt AI.',
-  tone: 'professional' as const,
-  detailLevel: 'medium' as const,
-  language: 'same_as_user' as const,
+  persona: "You are a helpful assistant for PostIt AI.",
+  tone: "professional" as const,
+  detailLevel: "medium" as const,
+  language: "same_as_user" as const,
   useEmoji: false,
 };
 
@@ -42,7 +42,7 @@ export const DEFAULT_RESPONSE_RULES = {
   knowledgeOnly: true,
   noHallucination: true,
   fallbackMessage:
-    'Informasi belum tersedia dalam Knowledge Base. Silakan hubungi administrator atau pihak terkait.',
+    "Informasi belum tersedia dalam Knowledge Base. Silakan hubungi administrator atau pihak terkait.",
 };
 
 export const DEFAULT_RESPONSE_DICTIONARY = {
@@ -53,8 +53,8 @@ export const DEFAULT_RESPONSE_DICTIONARY = {
 export const DEFAULT_RETRIEVAL_CONFIG = {
   topK: 5,
   similarityThreshold: 0.5,
-  sourcePriority: 'balanced' as const,
-  selectionRule: 'highest_score' as const,
+  sourcePriority: "balanced" as const,
+  selectionRule: "highest_score" as const,
   maxContextDocuments: 5,
 };
 
@@ -83,7 +83,10 @@ function readSecret(stored: string | null, label: string): string | undefined {
   try {
     return decryptSecret(stored);
   } catch (error) {
-    console.error(`[Config] Could not decrypt ${label}; falling back to env.`, error);
+    console.error(
+      `[Config] Could not decrypt ${label}; falling back to env.`,
+      error,
+    );
     return undefined;
   }
 }
@@ -94,9 +97,9 @@ function readSecret(stored: string | null, label: string): string | undefined {
  */
 export async function getAiConfig(): Promise<AiConfig> {
   const now = Date.now();
-  
+
   // Return cached config jika masih valid
-  if (cachedConfig && (now - cacheTimestamp) < CACHE_TTL) {
+  if (cachedConfig && now - cacheTimestamp < CACHE_TTL) {
     return cachedConfig;
   }
 
@@ -105,17 +108,20 @@ export async function getAiConfig(): Promise<AiConfig> {
     const activeConfig = await db
       .select()
       .from(appConfig)
-      .where(eq(appConfig.isActive, 'true'))
+      .where(eq(appConfig.isActive, "true"))
       .limit(1);
 
     if (activeConfig.length > 0 && activeConfig[0]) {
       const config: AiConfig = {
         embeddingBaseUrl: activeConfig[0].embeddingBaseUrl || undefined,
         embeddingModel: activeConfig[0].embeddingModel || undefined,
-        embeddingApiKey: readSecret(activeConfig[0].embeddingApiKey, 'embedding API key'),
+        embeddingApiKey: readSecret(
+          activeConfig[0].embeddingApiKey,
+          "embedding API key",
+        ),
         llmBaseUrl: activeConfig[0].llmBaseUrl || undefined,
         llmModel: activeConfig[0].llmModel || undefined,
-        llmApiKey: readSecret(activeConfig[0].llmApiKey, 'LLM API key'),
+        llmApiKey: readSecret(activeConfig[0].llmApiKey, "LLM API key"),
         aiPersona: activeConfig[0].aiPersona,
         aiTone: activeConfig[0].aiTone,
         aiDetailLevel: activeConfig[0].aiDetailLevel,
@@ -127,15 +133,18 @@ export async function getAiConfig(): Promise<AiConfig> {
         responseForbiddenWords: activeConfig[0].responseForbiddenWords,
         responseRequiredWords: activeConfig[0].responseRequiredWords,
         retrievalTopK: activeConfig[0].retrievalTopK,
-        retrievalSimilarityThreshold: activeConfig[0].retrievalSimilarityThreshold,
+        retrievalSimilarityThreshold:
+          activeConfig[0].retrievalSimilarityThreshold,
         retrievalSourcePriority: activeConfig[0].retrievalSourcePriority,
         retrievalSelectionRule: activeConfig[0].retrievalSelectionRule,
-        retrievalMaxContextDocuments: activeConfig[0].retrievalMaxContextDocuments,
+        retrievalMaxContextDocuments:
+          activeConfig[0].retrievalMaxContextDocuments,
       };
 
       // Merge dengan environment variables sebagai fallback
       cachedConfig = {
-        embeddingBaseUrl: config.embeddingBaseUrl || process.env.ROUTER_BASE_URL,
+        embeddingBaseUrl:
+          config.embeddingBaseUrl || process.env.ROUTER_BASE_URL,
         embeddingModel: config.embeddingModel || process.env.EMBEDDING_MODEL,
         embeddingApiKey: config.embeddingApiKey || process.env.ROUTER_API_KEY,
         llmBaseUrl: config.llmBaseUrl || process.env.ROUTER_BASE_URL,
@@ -149,31 +158,37 @@ export async function getAiConfig(): Promise<AiConfig> {
         responseKnowledgeOnly:
           config.responseKnowledgeOnly ?? DEFAULT_RESPONSE_RULES.knowledgeOnly,
         responseNoHallucination:
-          config.responseNoHallucination ?? DEFAULT_RESPONSE_RULES.noHallucination,
+          config.responseNoHallucination ??
+          DEFAULT_RESPONSE_RULES.noHallucination,
         responseFallbackMessage:
-          config.responseFallbackMessage || DEFAULT_RESPONSE_RULES.fallbackMessage,
+          config.responseFallbackMessage ||
+          DEFAULT_RESPONSE_RULES.fallbackMessage,
         responseForbiddenWords:
-          config.responseForbiddenWords ?? DEFAULT_RESPONSE_DICTIONARY.forbiddenWords,
+          config.responseForbiddenWords ??
+          DEFAULT_RESPONSE_DICTIONARY.forbiddenWords,
         responseRequiredWords:
-          config.responseRequiredWords ?? DEFAULT_RESPONSE_DICTIONARY.requiredWords,
+          config.responseRequiredWords ??
+          DEFAULT_RESPONSE_DICTIONARY.requiredWords,
         retrievalTopK: config.retrievalTopK ?? DEFAULT_RETRIEVAL_CONFIG.topK,
         retrievalSimilarityThreshold:
-          config.retrievalSimilarityThreshold
-          ?? DEFAULT_RETRIEVAL_CONFIG.similarityThreshold,
+          config.retrievalSimilarityThreshold ??
+          DEFAULT_RETRIEVAL_CONFIG.similarityThreshold,
         retrievalSourcePriority:
-          config.retrievalSourcePriority ?? DEFAULT_RETRIEVAL_CONFIG.sourcePriority,
+          config.retrievalSourcePriority ??
+          DEFAULT_RETRIEVAL_CONFIG.sourcePriority,
         retrievalSelectionRule:
-          config.retrievalSelectionRule ?? DEFAULT_RETRIEVAL_CONFIG.selectionRule,
+          config.retrievalSelectionRule ??
+          DEFAULT_RETRIEVAL_CONFIG.selectionRule,
         retrievalMaxContextDocuments:
-          config.retrievalMaxContextDocuments
-          ?? DEFAULT_RETRIEVAL_CONFIG.maxContextDocuments,
+          config.retrievalMaxContextDocuments ??
+          DEFAULT_RETRIEVAL_CONFIG.maxContextDocuments,
       };
 
       cacheTimestamp = now;
       return cachedConfig;
     }
   } catch (error) {
-    console.error('[Config] Error loading from database:', error);
+    console.error("[Config] Error loading from database:", error);
     // Fallback ke environment variables jika database error
   }
 
@@ -225,7 +240,9 @@ export function invalidateConfigCache(): void {
  */
 export async function deleteAiConfig(): Promise<void> {
   await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('ai-config-save'))`);
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('ai-config-save'))`,
+    );
     await tx.delete(appConfig);
   });
 
@@ -242,7 +259,10 @@ export async function deleteAiConfig(): Promise<void> {
  * an omitted key has to be carried forward explicitly — otherwise editing just
  * the model name would drop the key from the new active row.
  */
-export async function saveAiConfig(config: AiConfig, updatedBy?: string): Promise<void> {
+export async function saveAiConfig(
+  config: AiConfig,
+  updatedBy?: string,
+): Promise<void> {
   const now = new Date();
 
   /**
@@ -250,14 +270,19 @@ export async function saveAiConfig(config: AiConfig, updatedBy?: string): Promis
    * ''        -> explicit clear
    * value     -> encrypt the new secret
    */
-  const nextSecret = (incoming: string | undefined, stored: string | null): string | null => {
+  const nextSecret = (
+    incoming: string | undefined,
+    stored: string | null,
+  ): string | null => {
     if (incoming === undefined) return stored ?? null;
-    if (incoming === '') return null;
+    if (incoming === "") return null;
     return encryptSecret(incoming);
   };
 
   await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('ai-config-save'))`);
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('ai-config-save'))`,
+    );
 
     // Read the outgoing row in the same transaction so undefined secrets and
     // behaviour fields can be preserved without leaving zero active rows if
@@ -265,67 +290,83 @@ export async function saveAiConfig(config: AiConfig, updatedBy?: string): Promis
     const [current] = await tx
       .select()
       .from(appConfig)
-      .where(eq(appConfig.isActive, 'true'))
+      .where(eq(appConfig.isActive, "true"))
       .limit(1);
 
     await tx
       .update(appConfig)
-      .set({ isActive: 'false', updatedAt: now })
-      .where(eq(appConfig.isActive, 'true'));
+      .set({ isActive: "false", updatedAt: now })
+      .where(eq(appConfig.isActive, "true"));
 
     await tx.insert(appConfig).values({
       embeddingBaseUrl: config.embeddingBaseUrl || null,
       embeddingModel: config.embeddingModel || null,
-      embeddingApiKey: nextSecret(config.embeddingApiKey, current?.embeddingApiKey ?? null),
+      embeddingApiKey: nextSecret(
+        config.embeddingApiKey,
+        current?.embeddingApiKey ?? null,
+      ),
       llmBaseUrl: config.llmBaseUrl || null,
       llmModel: config.llmModel || null,
       llmApiKey: nextSecret(config.llmApiKey, current?.llmApiKey ?? null),
-      aiPersona: config.aiPersona ?? current?.aiPersona ?? DEFAULT_AI_BEHAVIOUR.persona,
+      aiPersona:
+        config.aiPersona ?? current?.aiPersona ?? DEFAULT_AI_BEHAVIOUR.persona,
       aiTone: config.aiTone ?? current?.aiTone ?? DEFAULT_AI_BEHAVIOUR.tone,
       aiDetailLevel:
-        config.aiDetailLevel ?? current?.aiDetailLevel ?? DEFAULT_AI_BEHAVIOUR.detailLevel,
-      aiLanguage: config.aiLanguage ?? current?.aiLanguage ?? DEFAULT_AI_BEHAVIOUR.language,
-      aiUseEmoji: config.aiUseEmoji ?? current?.aiUseEmoji ?? DEFAULT_AI_BEHAVIOUR.useEmoji,
+        config.aiDetailLevel ??
+        current?.aiDetailLevel ??
+        DEFAULT_AI_BEHAVIOUR.detailLevel,
+      aiLanguage:
+        config.aiLanguage ??
+        current?.aiLanguage ??
+        DEFAULT_AI_BEHAVIOUR.language,
+      aiUseEmoji:
+        config.aiUseEmoji ??
+        current?.aiUseEmoji ??
+        DEFAULT_AI_BEHAVIOUR.useEmoji,
       responseKnowledgeOnly:
-        config.responseKnowledgeOnly
-        ?? current?.responseKnowledgeOnly
-        ?? DEFAULT_RESPONSE_RULES.knowledgeOnly,
+        config.responseKnowledgeOnly ??
+        current?.responseKnowledgeOnly ??
+        DEFAULT_RESPONSE_RULES.knowledgeOnly,
       responseNoHallucination:
-        config.responseNoHallucination
-        ?? current?.responseNoHallucination
-        ?? DEFAULT_RESPONSE_RULES.noHallucination,
+        config.responseNoHallucination ??
+        current?.responseNoHallucination ??
+        DEFAULT_RESPONSE_RULES.noHallucination,
       responseFallbackMessage:
-        config.responseFallbackMessage
-        ?? current?.responseFallbackMessage
-        ?? DEFAULT_RESPONSE_RULES.fallbackMessage,
+        config.responseFallbackMessage ??
+        current?.responseFallbackMessage ??
+        DEFAULT_RESPONSE_RULES.fallbackMessage,
       responseForbiddenWords:
-        config.responseForbiddenWords
-        ?? current?.responseForbiddenWords
-        ?? DEFAULT_RESPONSE_DICTIONARY.forbiddenWords,
+        config.responseForbiddenWords ??
+        current?.responseForbiddenWords ??
+        DEFAULT_RESPONSE_DICTIONARY.forbiddenWords,
       responseRequiredWords:
-        config.responseRequiredWords
-        ?? current?.responseRequiredWords
-        ?? DEFAULT_RESPONSE_DICTIONARY.requiredWords,
+        config.responseRequiredWords ??
+        current?.responseRequiredWords ??
+        DEFAULT_RESPONSE_DICTIONARY.requiredWords,
       retrievalTopK:
-        config.retrievalTopK ?? current?.retrievalTopK ?? DEFAULT_RETRIEVAL_CONFIG.topK,
+        config.retrievalTopK ??
+        current?.retrievalTopK ??
+        DEFAULT_RETRIEVAL_CONFIG.topK,
       retrievalSimilarityThreshold:
-        config.retrievalSimilarityThreshold
-        ?? current?.retrievalSimilarityThreshold
-        ?? DEFAULT_RETRIEVAL_CONFIG.similarityThreshold,
+        config.retrievalSimilarityThreshold ??
+        current?.retrievalSimilarityThreshold ??
+        DEFAULT_RETRIEVAL_CONFIG.similarityThreshold,
       retrievalSourcePriority:
-        config.retrievalSourcePriority
-        ?? current?.retrievalSourcePriority
-        ?? DEFAULT_RETRIEVAL_CONFIG.sourcePriority,
+        config.retrievalSourcePriority ??
+        current?.retrievalSourcePriority ??
+        DEFAULT_RETRIEVAL_CONFIG.sourcePriority,
       retrievalSelectionRule:
-        config.retrievalSelectionRule
-        ?? current?.retrievalSelectionRule
-        ?? DEFAULT_RETRIEVAL_CONFIG.selectionRule,
+        config.retrievalSelectionRule ??
+        current?.retrievalSelectionRule ??
+        DEFAULT_RETRIEVAL_CONFIG.selectionRule,
       retrievalMaxContextDocuments:
-        config.retrievalMaxContextDocuments
-        ?? current?.retrievalMaxContextDocuments
-        ?? DEFAULT_RETRIEVAL_CONFIG.maxContextDocuments,
-      isActive: 'true',
-      updatedBy: updatedBy ? updatedBy as unknown as import('@/lib/schema').User['id'] : null,
+        config.retrievalMaxContextDocuments ??
+        current?.retrievalMaxContextDocuments ??
+        DEFAULT_RETRIEVAL_CONFIG.maxContextDocuments,
+      isActive: "true",
+      updatedBy: updatedBy
+        ? (updatedBy as unknown as import("@/lib/schema").User["id"])
+        : null,
       createdAt: now,
       updatedAt: now,
     });
@@ -346,42 +387,42 @@ export async function saveAiConfig(config: AiConfig, updatedBy?: string): Promis
  * failed against a perfectly working endpoint.
  */
 async function drainBody(response: Response): Promise<void> {
-  await response.text().catch(() => '');
+  await response.text().catch(() => "");
 }
 
 /**
  * Test koneksi ke endpoint AI
  */
 export async function testConnection(
-  type: 'embedding' | 'llm',
+  type: "embedding" | "llm",
   baseUrl: string,
   apiKey?: string,
-  model?: string
+  model?: string,
 ): Promise<{ success: boolean; error?: string; latency?: number }> {
   try {
     const startTime = Date.now();
-    
-    if (type === 'embedding') {
+
+    if (type === "embedding") {
       // Test embedding endpoint
       const testPayload = {
-        input: 'test',
-        model: model || 'text-embedding-ada-002',
+        input: "test",
+        model: model || "text-embedding-ada-002",
       };
 
       const response = await fetch(`${baseUrl}/embeddings`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify(testPayload),
       });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        return { 
-          success: false, 
-          error: `HTTP ${response.status}: ${errorText}` 
+        const errorText = await response.text().catch(() => "Unknown error");
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${errorText}`,
         };
       }
 
@@ -389,27 +430,25 @@ export async function testConnection(
     } else {
       // Test LLM endpoint
       const testPayload = {
-        messages: [
-          { role: 'user', content: 'Hello' },
-        ],
-        model: model || 'gpt-4o-mini',
+        messages: [{ role: "user", content: "Hello" }],
+        model: model || "gpt-4o-mini",
         max_tokens: 1,
       };
 
       const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify(testPayload),
       });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        return { 
-          success: false, 
-          error: `HTTP ${response.status}: ${errorText}` 
+        const errorText = await response.text().catch(() => "Unknown error");
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${errorText}`,
         };
       }
 
@@ -419,7 +458,8 @@ export async function testConnection(
     const latency = Date.now() - startTime;
     return { success: true, latency };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return { success: false, error: errorMessage };
   }
 }
