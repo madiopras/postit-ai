@@ -45,6 +45,11 @@ yarn-error.log*
 
 # vercel
 .vercel
+.cline/
+.codex/
+.claude/
+.vscode/
+skills-lock.json
 
 # typescript
 *.tsbuildinfo

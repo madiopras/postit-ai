@@ -288,16 +288,18 @@ function ConversationListItem({
         isDisabled={isDeleting}
         aria-current={isActive ? 'page' : undefined}
         className={cn(
-          'min-h-11 min-w-0 flex-1 justify-start whitespace-normal border-0 bg-transparent px-2.5 py-2 text-left shadow-none hover:bg-transparent',
+          'min-h-11 min-w-0 flex-1 justify-start border-0 bg-transparent px-2.5 py-2 text-left shadow-none hover:bg-transparent [&_[data-slot=button-label]]:min-w-0 [&_[data-slot=button-label]]:flex-1 [&_[data-slot=button-label]]:overflow-hidden',
           isActive ? 'text-brand-text' : 'text-fg-secondary'
         )}
       >
-        <span className="block min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{title}</span>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <span className="block truncate text-sm font-medium" title={title}>
+            {title}
+          </span>
           <span className="mt-0.5 block truncate text-xs font-normal text-fg-quaternary">
             {formatChatSessionDate(session.updatedAt)}
           </span>
-        </span>
+        </div>
       </Button>
       <Button
         variant="tertiary"

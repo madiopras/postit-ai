@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { CircleAlert, LogIn, Menu, Plus, UserRound, X } from 'lucide-react';
+import { CircleAlert, LogIn, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from 'lucide-react';
 import { ChatProfileMenu } from '@/components/chat/chat-profile-menu';
 import { ChatThemeToggle } from '@/components/chat/chat-theme-toggle';
 import { ConversationSidebar } from '@/components/chat/conversation-sidebar';
@@ -24,6 +24,7 @@ export function ChatShell({
   children: ReactNode;
 }) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const activeTitle =
     controller.sessions.find((session) => session.id === controller.chatId)?.title ??
     'Chat baru';
@@ -53,13 +54,27 @@ export function ChatShell({
   };
 
   return (
-    <div className="ui-surface grid h-screen h-dvh w-full overflow-hidden bg-bg-primary md:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="hidden min-h-0 border-r border-border-secondary md:block">
-        <ConversationSidebar {...sidebarProps} />
+    <div
+      className={cn(
+        'ui-surface grid h-screen h-dvh w-full overflow-hidden bg-bg-primary transition-[grid-template-columns] duration-300 ease-in-out',
+        isDesktopSidebarOpen
+          ? 'md:grid-cols-[300px_minmax(0,1fr)]'
+          : 'md:grid-cols-[0px_minmax(0,1fr)]'
+      )}
+    >
+      <aside
+        className={cn(
+          'hidden min-h-0 overflow-hidden border-r border-border-secondary transition-all duration-300 md:block',
+          !isDesktopSidebarOpen && 'invisible opacity-0 border-r-0'
+        )}
+      >
+        <div className="w-[300px] h-full">
+          <ConversationSidebar {...sidebarProps} />
+        </div>
       </aside>
 
       <section className="flex min-h-0 min-w-0 flex-col bg-bg-primary">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border-secondary px-3 md:h-16 md:px-5">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border-secondary/60 bg-bg-primary/80 px-3 backdrop-blur-md md:h-16 md:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <Button
               variant="tertiary"
@@ -71,24 +86,30 @@ export function ChatShell({
               <Menu className="size-5" aria-hidden="true" />
               <span className="sr-only">Buka riwayat chat</span>
             </Button>
+            <Button
+              variant="tertiary"
+              size="sm"
+              onPress={() => setIsDesktopSidebarOpen((open) => !open)}
+              className="hidden size-9 min-h-9 p-0 md:inline-flex"
+              aria-label={isDesktopSidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
+            >
+              {isDesktopSidebarOpen ? (
+                <PanelLeftClose className="size-5" aria-hidden="true" />
+              ) : (
+                <PanelLeftOpen className="size-5" aria-hidden="true" />
+              )}
+              <span className="sr-only">
+                {isDesktopSidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
+              </span>
+            </Button>
             <h1 className="truncate text-sm font-semibold text-fg-primary md:text-base">
               {activeTitle}
             </h1>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1.5">
             <ChatThemeToggle className="hidden size-9 min-h-9 p-0 md:inline-flex" />
             <IdentityAction identity={identity} />
-            <Button
-              variant="tertiary"
-              size="sm"
-              onPress={startNewChat}
-              className="size-9 min-h-9 p-0 md:hidden"
-              aria-label="Mulai chat baru"
-            >
-              <Plus className="size-5" aria-hidden="true" />
-              <span className="sr-only">Chat baru</span>
-            </Button>
           </div>
         </header>
 
