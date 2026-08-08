@@ -61,7 +61,7 @@ export function ChatEmptyState({
       </p>
 
       {/* Suggestion Cards Grid */}
-      <div className="mt-8 grid w-full max-w-2xl grid-cols-1 gap-2.5 sm:grid-cols-2">
+      <div className="mt-8 hidden w-full max-w-2xl grid-cols-1 gap-2.5 sm:grid sm:grid-cols-2">
         {CHAT_SUGGESTIONS.map(({ icon: Icon, text, desc }) => (
           <Button
             key={text}
