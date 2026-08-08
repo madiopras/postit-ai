@@ -1,16 +1,7 @@
 'use client';
 
-import { ChevronDown, LayoutDashboard, LogOut } from 'lucide-react';
-import {
-  Menu,
-  MenuItem,
-  MenuTrigger,
-  Popover,
-  Separator,
-} from 'react-aria-components';
-import { Button } from '@/components/untitled/base/buttons/button';
+import { LayoutDashboard, LogOut, Shield } from 'lucide-react';
 import type { CurrentUserController } from '@/hooks/use-current-user';
-import { cn } from '@/lib/utils';
 
 export function ChatProfileMenu({
   identity,
@@ -24,84 +15,58 @@ export function ChatProfileMenu({
   const canOpenDashboard = user.role === 'admin' || user.role === 'super_admin';
 
   return (
-    <MenuTrigger>
-      <Button
-        variant="tertiary"
-        size="sm"
-        isLoading={identity.logoutPending}
-        className="size-9 min-h-9 p-0"
+    <div className="dropdown dropdown-end">
+      <div
+        tabIndex={0}
+        role="button"
+        className="btn btn-ghost btn-circle btn-sm avatar placeholder border border-base-300/60 bg-base-100/70 shadow-sm ring-1 ring-black/5 transition-all hover:border-primary/40 hover:bg-base-100"
         aria-label={`Buka menu profil ${name}`}
       >
-        <span className="flex size-7 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-text">
-          {profileInitial(name)}
-        </span>
-      </Button>
-
-      <Popover
-        placement="bottom end"
-        offset={8}
-        className={({ isEntering, isExiting }) =>
-          cn(
-            'ui-surface z-50 w-64 rounded-ui-lg border border-border-secondary bg-bg-primary p-1.5 shadow-ui-lg outline-none',
-            isEntering && 'animate-in fade-in zoom-in-95 duration-100',
-            isExiting && 'animate-out fade-out zoom-out-95 duration-75'
-          )
-        }
-      >
-        <div className="px-3 py-2.5">
-          <p className="truncate text-sm font-semibold text-fg-primary">{name}</p>
-          <p className="mt-1 text-xs font-medium text-fg-quaternary">
-            {roleLabel(user.role)}
-          </p>
+        <div className="bg-primary/10 text-primary font-semibold w-8 rounded-full text-xs">
+          <span>{profileInitial(name)}</span>
         </div>
+      </div>
 
-        <Separator className="my-1 h-px bg-border-secondary" />
+      <ul
+        tabIndex={0}
+        className="dropdown-content menu z-50 mt-3 w-56 space-y-1 rounded-[22px] border border-base-300/60 bg-base-100/90 p-2 shadow-[0_24px_80px_-36px_rgba(15,23,42,0.5)] backdrop-blur-2xl"
+      >
+        <li className="menu-title mb-1 rounded-2xl border border-base-300/50 bg-base-200/40 px-3 py-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="font-bold text-sm text-base-content truncate">{name}</span>
+            <span className="text-[11px] font-medium text-base-content/60 flex items-center gap-1">
+              <Shield className="size-3 text-primary" />
+              {roleLabel(user.role)}
+            </span>
+          </div>
+        </li>
 
-        <Menu
-          aria-label="Menu profil"
-          selectionMode="none"
-          onAction={(key) => {
-            if (key === 'logout') void identity.logout();
-          }}
-          className="outline-none"
-        >
-          {canOpenDashboard && (
-            <MenuItem
-              id="dashboard"
-              href="/dashboard"
-              className={menuItemClassName}
-            >
+        {canOpenDashboard && (
+          <li>
+            <a href="/dashboard" className="flex items-center gap-2 rounded-xl py-2 text-sm font-medium">
               <LayoutDashboard className="size-4" aria-hidden="true" />
-              Buka dashboard
-            </MenuItem>
-          )}
-          <MenuItem
-            id="logout"
-            isDisabled={identity.logoutPending}
-            className={(state) =>
-              cn(menuItemClassName(state), 'text-error-fg')
-            }
-          >
-            <LogOut className="size-4" aria-hidden="true" />
-            Logout
-          </MenuItem>
-        </Menu>
-      </Popover>
-    </MenuTrigger>
-  );
-}
+              Buka Dashboard
+            </a>
+          </li>
+        )}
 
-function menuItemClassName({
-  isFocused,
-  isDisabled,
-}: {
-  isFocused: boolean;
-  isDisabled: boolean;
-}) {
-  return cn(
-    'flex min-h-10 cursor-pointer items-center gap-2 rounded-ui-md px-3 py-2 text-sm font-medium text-fg-secondary outline-none',
-    isFocused && 'bg-bg-secondary',
-    isDisabled && 'cursor-not-allowed text-fg-disabled'
+        <li>
+          <button
+            type="button"
+            onClick={() => void identity.logout()}
+            disabled={identity.logoutPending}
+            className="flex items-center gap-2 rounded-xl py-2 text-sm font-medium text-error hover:bg-error/10"
+          >
+            {identity.logoutPending ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <LogOut className="size-4" aria-hidden="true" />
+            )}
+            Logout
+          </button>
+        </li>
+      </ul>
+    </div>
   );
 }
 

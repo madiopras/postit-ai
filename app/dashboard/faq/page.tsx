@@ -243,13 +243,13 @@ export default function FAQManagementPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Terbit</Badge>;
+        return <Badge className="badge-primary">Terbit</Badge>;
       case 'draft':
-        return <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary">Draf</Badge>;
+        return <Badge className="badge-neutral">Draf</Badge>;
       case 'error':
-        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">Bermasalah</Badge>;
+        return <Badge className="badge-error">Bermasalah</Badge>;
       default:
-        return <Badge className="bg-muted text-muted-foreground hover:bg-muted">{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -260,8 +260,8 @@ export default function FAQManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Kelola FAQ</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-base-content">Kelola FAQ</h1>
+          <p className="text-sm text-base-content/60 mt-1">
             Kelola, atur, dan pantau knowledge base AI Anda.
           </p>
         </div>
@@ -279,23 +279,23 @@ export default function FAQManagementPage() {
           />
           <button
             onClick={() => document.getElementById('csv-import')?.click()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            className="btn btn-outline btn-sm gap-2"
           >
-            <Upload className="size-5" />
+            <Upload className="size-4" />
             Impor CSV
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            className="btn btn-outline btn-sm gap-2"
           >
-            <Download className="size-5" />
+            <Download className="size-4" />
             Ekspor CSV
           </button>
           <button
             onClick={() => router.push('/dashboard/faq/new')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary transition-colors"
+            className="btn btn-primary btn-sm gap-2"
           >
-            <Plus className="size-5" />
+            <Plus className="size-4" />
             FAQ baru
           </button>
         </div>
@@ -303,50 +303,50 @@ export default function FAQManagementPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-muted rounded-xl p-4 border border-border">
+        <div className="card card-border bg-base-100 p-4 shadow-xs">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
-              <FileText className="size-6 text-primary-foreground" />
+            <div className="size-12 rounded-lg bg-primary text-primary-content flex items-center justify-center">
+              <FileText className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Total FAQ</p>
-              <p className="text-xl font-semibold tracking-tight text-foreground">{total}</p>
+              <p className="text-xs font-medium text-base-content/60">Total FAQ</p>
+              <p className="text-xl font-semibold tracking-tight text-base-content">{total}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-muted rounded-xl p-4 border border-border">
+        <div className="card card-border bg-base-100 p-4 shadow-xs">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="size-6 text-primary" />
+            <div className="size-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <CheckCircle2 className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Terbit</p>
-              <p className="text-xl font-semibold tracking-tight text-foreground">{faqs.filter(f => f.status === 'published').length}</p>
+              <p className="text-xs font-medium text-base-content/60">Terbit</p>
+              <p className="text-xl font-semibold tracking-tight text-base-content">{faqs.filter(f => f.status === 'published').length}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-muted rounded-xl p-4 border border-border">
+        <div className="card card-border bg-base-100 p-4 shadow-xs">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
-              <SquarePen className="size-6 text-secondary-foreground" />
+            <div className="size-12 rounded-lg bg-neutral text-neutral-content flex items-center justify-center">
+              <SquarePen className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Draf</p>
-              <p className="text-xl font-semibold tracking-tight text-foreground">{faqs.filter(f => f.status === 'draft').length}</p>
+              <p className="text-xs font-medium text-base-content/60">Draf</p>
+              <p className="text-xl font-semibold tracking-tight text-base-content">{faqs.filter(f => f.status === 'draft').length}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-muted rounded-xl p-4 border border-border">
+        <div className="card card-border bg-base-100 p-4 shadow-xs">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center">
-              <BarChart3 className="size-6 text-accent-foreground" />
+            <div className="size-12 rounded-lg bg-secondary text-secondary-content flex items-center justify-center">
+              <BarChart3 className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Rata-rata akurasi</p>
-              <p className="text-xl font-semibold tracking-tight text-foreground">
+              <p className="text-xs font-medium text-base-content/60">Rata-rata akurasi</p>
+              <p className="text-xl font-semibold tracking-tight text-base-content">
                 {faqs.length > 0 ? `${Math.round(faqs.reduce((sum, f) => sum + f.accuracy, 0) / faqs.length)}%` : '0%'}
               </p>
             </div>
@@ -355,10 +355,10 @@ export default function FAQManagementPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-muted rounded-xl p-4 border border-border">
+      <div className="card card-border bg-base-100 p-4 shadow-xs">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="size-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <Search className="size-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/40" />
             <Input
               placeholder="Cari pertanyaan dan jawaban..."
               value={search}
@@ -366,7 +366,7 @@ export default function FAQManagementPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-10 bg-card border-border"
+              className="pl-9"
             />
           </div>
           
@@ -374,7 +374,7 @@ export default function FAQManagementPage() {
             setCategory(value || '');
             setPage(1);
           }}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Semua kategori" />
             </SelectTrigger>
             <SelectContent>
@@ -391,7 +391,7 @@ export default function FAQManagementPage() {
             setStatus(value || '');
             setPage(1);
           }}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Semua status" />
             </SelectTrigger>
             <SelectContent>
@@ -405,88 +405,84 @@ export default function FAQManagementPage() {
       </div>
 
       {/* FAQ Table */}
-      <div className="bg-muted rounded-xl border border-border overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Daftar FAQ</h2>
+      <div className="card card-border bg-base-100 overflow-hidden shadow-xs">
+        <div className="px-6 py-4 border-b border-base-200">
+          <h2 className="text-lg font-semibold text-base-content">Daftar FAQ</h2>
         </div>
         <div className="p-6">
           {loading ? (
             <div className="flex justify-center items-center h-32">
-              <Loader2 className="size-10 animate-spin text-muted-foreground" />
+              <Loader2 className="size-10 animate-spin text-primary" />
             </div>
           ) : loadError ? (
             <TableError message={loadError} onRetry={refresh} />
           ) : faqs.length === 0 ? (
-            <div className="py-12 text-center text-sm text-fg-tertiary">
+            <div className="py-12 text-center text-sm text-base-content/60">
               Tidak ada FAQ yang cocok. Ubah filter atau buat FAQ baru.
             </div>
           ) : (
             <>
-              <div className="border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-accent border-b border-border hover:bg-accent">
-                      <TableHead className="text-sm font-medium text-muted-foreground">Pertanyaan</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Kategori</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Status</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Pemakaian</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Akurasi</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground">Diperbarui</TableHead>
-                      <TableHead className="text-sm font-medium text-muted-foreground text-right">Aksi</TableHead>
+                    <TableRow>
+                      <TableHead>Pertanyaan</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pemakaian</TableHead>
+                      <TableHead>Akurasi</TableHead>
+                      <TableHead>Diperbarui</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {faqs.map((faq) => (
-                      <TableRow key={faq.id} className="group border-b border-border hover:bg-accent">
-                        <TableCell className="text-sm text-foreground font-medium max-w-xs truncate">
+                      <TableRow key={faq.id}>
+                        <TableCell className="font-medium max-w-xs truncate">
                           {faq.question.replace(/'/g, "'")}
                         </TableCell>
                         <TableCell>
                           {faq.category ? (
-                            <Badge variant="secondary" className="capitalize bg-secondary text-secondary-foreground">
+                            <Badge variant="secondary" className="capitalize">
                               {faq.category}
                             </Badge>
                           ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
+                            <span className="text-sm text-base-content/40">-</span>
                           )}
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(faq.status)}
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm text-foreground">{faq.usageCount}</span>
+                          <span className="text-sm text-base-content">{faq.usageCount}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm text-foreground">{faq.accuracy}%</span>
+                          <span className="text-sm text-base-content">{faq.accuracy}%</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm text-base-content/60">
                             {new Date(faq.updatedAt).toLocaleDateString()}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
-                            {/* The trigger already renders a <button>; wrapping
-                                one inside it nested two buttons, which is
-                                invalid HTML and broke hydration. Style the
-                                trigger directly instead. */}
                             <DropdownMenuTrigger
-                              className="p-2 rounded-lg hover:bg-accent transition-all"
+                              className="btn btn-ghost btn-square btn-sm"
                               aria-label={`Aksi untuk ${faq.question}`}
                             >
-                              <MoreVertical className="size-5 text-foreground" />
+                              <MoreVertical className="size-4 text-base-content/70" />
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-muted border-border">
-                              <DropdownMenuItem onClick={() => router.push(`/dashboard/faq/${faq.id}`)} className="text-sm">
-                                <Pencil className="size-5 mr-2" />
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/faq/${faq.id}`)}>
+                                <Pencil className="size-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSync(faq.id)} className="text-sm">
-                                <RefreshCw className="size-5 mr-2" />
+                              <DropdownMenuItem onClick={() => handleSync(faq.id)}>
+                                <RefreshCw className="size-4 mr-2" />
                                 Sinkronkan
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(faq.id)} className="text-sm text-destructive">
-                                <Trash2 className="size-5 mr-2" />
+                              <DropdownMenuItem onClick={() => handleDelete(faq.id)} className="text-error hover:bg-error/10 hover:text-error">
+                                <Trash2 className="size-4 mr-2" />
                                 Hapus
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -501,28 +497,28 @@ export default function FAQManagementPage() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-base-content/60">
                     Menampilkan {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} dari {total} entri
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setPage(Math.max(1, page - 1))}
                       disabled={page === 1}
-                      className="px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="btn btn-outline btn-sm"
                     >
                       Sebelumnya
                     </button>
-                    <div className="flex items-center gap-1">
+                    <div className="join">
                       {[...Array(Math.min(5, totalPages))].map((_, i) => {
                         const pageNum = i + 1;
                         return (
                           <button
                             key={pageNum}
                             onClick={() => setPage(pageNum)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                            className={`btn btn-sm join-item ${
                               page === pageNum
-                                ? 'bg-primary text-primary-foreground'
-                                : 'border border-input text-foreground hover:bg-accent'
+                                ? 'btn-primary'
+                                : 'btn-outline'
                             }`}
                           >
                             {pageNum}
@@ -533,7 +529,7 @@ export default function FAQManagementPage() {
                     <button
                       onClick={() => setPage(Math.min(totalPages, page + 1))}
                       disabled={page === totalPages}
-                      className="px-4 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="btn btn-outline btn-sm"
                     >
                       Berikutnya
                     </button>

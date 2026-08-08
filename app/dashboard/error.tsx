@@ -20,10 +20,10 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <Card className="mx-auto mt-8 w-full max-w-lg border-error-border bg-error-bg">
+    <Card className="mx-auto mt-8 w-full max-w-lg border-error/40 bg-error/5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <AlertTriangleIcon className="size-4 text-error-fg" />
+        <CardTitle className="flex items-center gap-2 text-base text-error">
+          <AlertTriangleIcon className="size-5" />
           Halaman gagal dimuat
         </CardTitle>
         <CardDescription>
@@ -32,9 +32,9 @@ export default function DashboardError({
       </CardHeader>
       <CardContent className="space-y-4">
         {error.digest && (
-          <p className="font-mono text-xs text-fg-tertiary">Kode: {error.digest}</p>
+          <p className="font-mono text-xs text-base-content/60">Kode: {error.digest}</p>
         )}
-        <Button size="sm" onClick={reset}>
+        <Button size="sm" variant="primary" onClick={reset}>
           <RefreshCwIcon className="mr-2 size-4" />
           Coba lagi
         </Button>

@@ -68,8 +68,8 @@ export default function AuditLogsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Log audit</h1>
-        <p className="mt-1 text-sm text-fg-tertiary">
+        <h1 className="text-2xl font-semibold tracking-tight text-base-content">Log audit</h1>
+        <p className="mt-1 text-sm text-base-content/60">
           Riwayat keamanan append-only untuk perubahan administratif.
         </p>
       </div>
@@ -81,7 +81,7 @@ export default function AuditLogsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-quaternary" aria-hidden="true" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/40" aria-hidden="true" />
             <Input
               value={search}
               onChange={(event) => {
@@ -95,7 +95,7 @@ export default function AuditLogsPage() {
           </div>
 
           {error ? (
-            <div role="alert" className="flex flex-col gap-3 rounded-ui-lg border border-error-border bg-error-bg p-4 text-sm text-error-fg sm:flex-row sm:items-center">
+            <div role="alert" className="alert alert-error flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
               <span className="flex items-center gap-2">
                 <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
                 {error}
@@ -111,7 +111,7 @@ export default function AuditLogsPage() {
               ))}
             </div>
           ) : logs.length === 0 ? (
-            <div className="py-12 text-center text-fg-tertiary">
+            <div className="py-12 text-center text-base-content/60">
               <ShieldCheck className="mx-auto mb-2 size-6" aria-hidden="true" />
               Tidak ada aktivitas audit yang cocok.
             </div>
@@ -134,17 +134,17 @@ export default function AuditLogsPage() {
                     </TableCell>
                     <TableCell>
                       <div>{log.actorUsername}</div>
-                      <div className="text-xs text-fg-tertiary">{log.actorRole}</div>
+                      <div className="text-xs text-base-content/60">{log.actorRole}</div>
                     </TableCell>
                     <TableCell className="font-medium">{log.action}</TableCell>
                     <TableCell>
                       <div>{log.entityType}</div>
-                      <div className="max-w-48 truncate text-xs text-fg-tertiary">
+                      <div className="max-w-48 truncate text-xs text-base-content/60">
                         {log.entityId || "—"}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="block max-w-sm whitespace-pre-wrap break-all text-xs">
+                      <code className="block max-w-sm whitespace-pre-wrap break-all text-xs bg-base-200 p-1.5 rounded-sm">
                         {JSON.stringify(log.metadata)}
                       </code>
                     </TableCell>
@@ -164,7 +164,7 @@ export default function AuditLogsPage() {
               >
                 Sebelumnya
               </Button>
-              <span className="text-sm text-fg-tertiary">{page} / {totalPages}</span>
+              <span className="text-sm text-base-content/60">{page} / {totalPages}</span>
               <Button
                 variant="outline"
                 size="sm"

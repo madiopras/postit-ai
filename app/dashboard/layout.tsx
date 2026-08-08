@@ -6,7 +6,6 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import { Button } from "@/components/dashboard/dashboard-ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const LABELS: Record<string, string> = {
@@ -28,10 +27,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const segments = pathname.split("/").filter(Boolean);
 
   return (
-    <div className="ui-surface flex min-h-dvh bg-bg-secondary text-fg-primary">
+    <div className="flex min-h-dvh bg-base-200/50 text-base-content">
       <a
         href="#dashboard-main"
-        className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-ui-md bg-brand-solid px-3 py-2 text-sm font-semibold text-fg-on-brand focus:translate-y-0"
+        className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-content focus:translate-y-0 shadow-md transition-transform"
       >
         Lewati ke konten utama
       </a>
@@ -43,20 +42,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       />
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border-secondary bg-bg-primary/95 px-4 backdrop-blur sm:px-6 lg:px-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-base-200/60 bg-base-100/75 px-4 shadow-[0_8px_30px_-24px_rgba(15,23,42,0.35)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/60 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            className="btn btn-ghost btn-square btn-sm md:hidden"
             onClick={() => setIsMobileOpen(true)}
             aria-label="Buka navigasi dashboard"
           >
             <PanelLeftOpen className="size-5" aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden md:inline-flex"
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-square btn-sm hidden md:inline-flex"
             onClick={() => setIsCollapsed((current) => !current)}
             aria-label={isCollapsed ? "Perluas navigasi" : "Ciutkan navigasi"}
             aria-pressed={isCollapsed}
@@ -66,30 +63,29 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             ) : (
               <PanelLeftClose className="size-5" aria-hidden="true" />
             )}
-          </Button>
+          </button>
 
-          <nav aria-label="Breadcrumb" className="min-w-0">
-            <ol className="flex min-w-0 items-center gap-2 text-sm">
+          <nav aria-label="Breadcrumb" className="breadcrumbs min-w-0 text-sm py-0">
+            <ul className="flex min-w-0 items-center">
               {segments.map((segment, index) => {
                 const href = `/${segments.slice(0, index + 1).join("/")}`;
                 const isLast = index === segments.length - 1;
                 const label = LABELS[segment] ?? (index > 1 ? "Detail" : segment);
                 return (
-                  <li key={href} className="flex min-w-0 items-center gap-2">
-                    {index > 0 && <span aria-hidden="true" className="text-fg-quaternary">/</span>}
+                  <li key={href}>
                     {isLast ? (
-                      <span aria-current="page" className="truncate font-semibold text-fg-primary">
+                      <span aria-current="page" className="truncate font-semibold text-base-content">
                         {label}
                       </span>
                     ) : (
-                      <Link href={href} className="truncate text-fg-tertiary hover:text-fg-primary">
+                      <Link href={href} className="truncate text-base-content/60 hover:text-base-content">
                         {label}
                       </Link>
                     )}
                   </li>
                 );
               })}
-            </ol>
+            </ul>
           </nav>
 
           <ThemeToggle className="ml-auto" />

@@ -111,8 +111,8 @@ export default function SOPPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kelola SOP</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-base-content">Kelola SOP</h1>
+          <p className="text-sm text-base-content/60">
             Kelola prosedur operasional yang menjadi rujukan jawaban AI.
           </p>
         </div>
@@ -132,24 +132,24 @@ export default function SOPPage() {
         <CardContent>
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/40" />
               <Input
                 placeholder="Cari judul atau kategori SOP..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8"
+                className="pl-9"
               />
             </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-base-content/60">
               Memuat SOP…
             </div>
           ) : loadError ? (
             <TableError message={loadError} onRetry={refresh} />
           ) : filteredSOPs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-base-content/60">
               {search ? "Tidak ada SOP yang cocok." : "Belum ada SOP. Buat SOP pertama Anda."}
             </div>
           ) : (
@@ -169,7 +169,7 @@ export default function SOPPage() {
                   <TableRow key={sop.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <FileText className="h-4 w-4 text-base-content/60" />
                         {sop.title}
                       </div>
                     </TableCell>
@@ -177,13 +177,13 @@ export default function SOPPage() {
                       {sop.category ? (
                         <Badge variant="secondary">{sop.category}</Badge>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-base-content/40">-</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant={
-                          sop.status === "published" ? "default" : "secondary"
+                          sop.status === "published" ? "default" : sop.status === "draft" ? "secondary" : "error"
                         }
                       >
                         {sop.status === "published" ? "Terbit" : sop.status === "draft" ? "Draf" : "Error"}
@@ -195,7 +195,7 @@ export default function SOPPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(sop.updatedAt).toLocaleDateString()}
+                      {new Date(sop.updatedAt).toLocaleDateString("id-ID")}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -211,6 +211,7 @@ export default function SOPPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(sop.id)}
+                          className="text-error hover:bg-error/10"
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Hapus {sop.title}</span>
