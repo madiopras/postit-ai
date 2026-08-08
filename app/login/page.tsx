@@ -7,14 +7,11 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-import { AlertCircle, ArrowLeft, Bot, Lock, LogIn, User } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Lock, LogIn, User } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { PostItLogo } from '@/components/brand/postit-logo';
 import { ChatThemeToggle } from '@/components/chat/chat-theme-toggle';
-import {
-  Button,
-  ButtonLink,
-} from '@/components/untitled/base/buttons/button';
-import { Input } from '@/components/untitled/base/input/input';
 import { getStoredVisitorId } from '@/hooks/use-visitor-id';
 import {
   AuthClientError,
@@ -71,82 +68,100 @@ function LoginForm() {
   };
 
   return (
-    <main className="ui-surface relative flex min-h-screen min-h-dvh items-center justify-center bg-bg-secondary px-4 py-10 text-fg-primary">
+    <main className="relative flex min-h-screen min-h-dvh items-center justify-center bg-base-200/50 px-4 py-10 text-base-content">
       <ChatThemeToggle className="absolute right-4 top-4 size-10 min-h-10 p-0" />
 
       <div className="w-full max-w-[400px]">
         <div className="mb-7 text-center">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-ui-xl bg-brand-solid text-fg-on-brand shadow-ui-sm">
-            <Bot className="size-7" aria-hidden="true" />
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-base-100 shadow-sm ring-1 ring-base-300">
+            <PostItLogo size={40} className="size-10" />
           </div>
-          <p className="text-base font-semibold text-fg-primary">PostIt AI</p>
-          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-fg-primary">
+          <p className="text-base font-bold text-base-content">PostIt AI</p>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-base-content">
             Masuk ke akun Anda
           </h1>
-          <p className="mt-2 text-sm leading-6 text-fg-tertiary">
+          <p className="mt-2 text-sm leading-6 text-base-content/70">
             Akses SOP internal dan lanjutkan riwayat percakapan akun Anda.
           </p>
         </div>
 
-        <div className="rounded-ui-xl border border-border-secondary bg-bg-primary p-6 shadow-ui-lg sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input
-              label="Username"
-              placeholder="Masukkan username"
-              value={username}
-              onChange={setUsername}
-              leadingIcon={<User />}
-              autoComplete="username"
-              inputRef={usernameRef}
-              isRequired
-              isDisabled={loading}
-            />
+        <div className="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-lg sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="form-control">
+              <label className="label text-xs font-semibold text-base-content/80">
+                <span>Username</span>
+              </label>
+              <div className="input input-bordered flex items-center gap-2">
+                <User className="size-4 text-base-content/40" />
+                <input
+                  ref={usernameRef}
+                  type="text"
+                  placeholder="Masukkan username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  required
+                  disabled={loading}
+                  className="grow text-sm"
+                />
+              </div>
+            </div>
 
-            <Input
-              label="Kata sandi"
-              placeholder="Masukkan kata sandi"
-              type="password"
-              value={password}
-              onChange={setPassword}
-              leadingIcon={<Lock />}
-              autoComplete="current-password"
-              isRequired
-              isDisabled={loading}
-            />
+            <div className="form-control">
+              <label className="label text-xs font-semibold text-base-content/80">
+                <span>Kata sandi</span>
+              </label>
+              <div className="input input-bordered flex items-center gap-2">
+                <Lock className="size-4 text-base-content/40" />
+                <input
+                  type="password"
+                  placeholder="Masukkan kata sandi"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                  className="grow text-sm"
+                />
+              </div>
+            </div>
 
             {error && (
               <div
                 ref={errorRef}
                 tabIndex={-1}
                 role="alert"
-                className="flex items-start gap-2.5 rounded-ui-md border border-error-border bg-error-bg px-3.5 py-3 text-sm text-error-fg outline-none focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+                className="alert alert-error text-xs p-3 shadow-xs"
               >
-                <AlertCircle className="mt-0.5 size-4.5 shrink-0" aria-hidden="true" />
+                <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
                 <span>{error}</span>
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              isLoading={loading}
-              iconLeading={<LogIn />}
-              className="w-full"
+              disabled={loading}
+              className="btn btn-primary w-full mt-2 gap-2"
             >
-              {loading ? 'Menyiapkan akun...' : 'Masuk'}
-            </Button>
+              {loading ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <LogIn className="size-4" />
+              )}
+              <span>{loading ? 'Menyiapkan akun...' : 'Masuk'}</span>
+            </button>
           </form>
         </div>
 
         <div className="mt-6 text-center">
-          <ButtonLink
+          <Link
             href="/"
-            variant="link"
-            size="sm"
-            iconLeading={<ArrowLeft />}
+            className="btn btn-link btn-sm text-base-content/70 hover:text-primary gap-1 font-normal no-underline hover:underline"
           >
-            Kembali ke chat publik
-          </ButtonLink>
-          <p className="mt-4 text-xs text-fg-quaternary">
+            <ArrowLeft className="size-4" />
+            <span>Kembali ke chat publik</span>
+          </Link>
+          <p className="mt-3 text-xs text-base-content/50">
             Akses akun hanya untuk pengguna yang telah terdaftar.
           </p>
         </div>
@@ -166,14 +181,14 @@ export default function LoginPage() {
 function LoginPageLoading() {
   return (
     <main
-      className="ui-surface flex min-h-screen min-h-dvh items-center justify-center bg-bg-secondary"
+      className="flex min-h-screen min-h-dvh items-center justify-center bg-base-200/50"
       aria-label="Memuat halaman login"
     >
       <div className="flex flex-col items-center gap-4" role="status">
-        <div className="flex size-14 animate-pulse items-center justify-center rounded-ui-xl bg-brand-solid text-fg-on-brand">
-          <Bot className="size-7" aria-hidden="true" />
+        <div className="flex size-14 animate-pulse items-center justify-center overflow-hidden rounded-2xl bg-base-100 ring-1 ring-base-300">
+          <PostItLogo size={40} className="size-10" />
         </div>
-        <span className="text-sm text-fg-tertiary">Memuat halaman login...</span>
+        <span className="text-sm text-base-content/70">Memuat halaman login...</span>
       </div>
     </main>
   );

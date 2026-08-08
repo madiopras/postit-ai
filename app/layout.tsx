@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
-const inter = Inter({
-  variable: "--font-inter",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -14,6 +15,16 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "PostIt AI",
   description: "Smart Answers, Instant Actions — chatbot SOP & FAQ perusahaan",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PostIt AI",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +38,7 @@ export default function RootLayout({
     <html
       lang="id"
       suppressHydrationWarning
-      className={cn("h-full antialiased font-sans", inter.variable)}
+      className={cn("h-full antialiased font-sans", plusJakartaSans.variable)}
     >
       <head>
         {/* Server-rendered so it runs before first paint — no flash of the wrong
@@ -35,10 +46,12 @@ export default function RootLayout({
             is not, which is what React 19 was warning about. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full bg-background text-foreground">
+      <body className="min-h-full bg-base-100 text-base-content selection:bg-primary/20 selection:text-primary">
         {children}
+        <ServiceWorkerRegister />
         <Toaster position="top-right" richColors />
       </body>
     </html>
   );
 }
+

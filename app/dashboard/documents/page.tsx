@@ -125,8 +125,8 @@ function DocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dokumen</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-base-content">Dokumen</h1>
+        <p className="text-sm text-base-content/60 mt-1">
           Isi vector store — satu baris per chunk yang dipakai RAG untuk menjawab.
         </p>
       </div>
@@ -135,7 +135,7 @@ function DocumentsPage() {
       <Card>
         <CardContent className="flex flex-col gap-3 py-4 sm:flex-row">
           <div className="relative flex-1">
-            <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-base-content/40" />
             <Input
               placeholder="Cari judul atau isi chunk..."
               value={search}
@@ -208,7 +208,7 @@ function DocumentsPage() {
           ) : loadError ? (
             <TableError message={loadError} onRetry={load} />
           ) : rows.length === 0 ? (
-            <p className="text-muted-foreground py-12 text-center text-sm">
+            <p className="py-12 text-center text-sm text-base-content/60">
               Tidak ada dokumen yang cocok dengan filter.
             </p>
           ) : (
@@ -229,8 +229,8 @@ function DocumentsPage() {
                   {rows.map((doc) => (
                     <TableRow key={doc.id}>
                       <TableCell className="max-w-sm">
-                        <div className="truncate font-medium">{doc.title}</div>
-                        <div className="text-muted-foreground truncate text-xs">
+                        <div className="truncate font-medium text-base-content">{doc.title}</div>
+                        <div className="truncate text-xs text-base-content/60">
                           {doc.contentPreview}
                         </div>
                       </TableCell>
@@ -245,15 +245,15 @@ function DocumentsPage() {
                       </TableCell>
                       <TableCell>
                         {doc.hasEmbedding ? (
-                          <span className="text-muted-foreground text-xs">Ada</span>
+                          <span className="text-xs text-base-content/60">Ada</span>
                         ) : (
-                          <span className="text-destructive flex items-center gap-1 text-xs">
+                          <span className="flex items-center gap-1 text-xs text-error">
                             <AlertTriangleIcon className="size-3" />
                             Kosong
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs">
+                      <TableCell className="text-xs text-base-content/60">
                         {new Date(doc.updatedAt).toLocaleString('id-ID', {
                           day: 'numeric',
                           month: 'short',
@@ -285,7 +285,7 @@ function DocumentsPage() {
 
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-base-content/60">
                 Halaman {page} dari {totalPages}
               </p>
               <div className="flex gap-2">
@@ -318,7 +318,7 @@ function StatusBadge({ status }: { status: DocumentRow['status'] }) {
   if (status === 'published') return <Badge variant="secondary">Terbit</Badge>;
   if (status === 'draft') return <Badge variant="outline">Draf</Badge>;
   return (
-    <Badge variant="outline" className="border-destructive/40 text-destructive gap-1">
+    <Badge variant="error" className="badge-soft gap-1">
       <AlertTriangleIcon className="size-3" />
       Bermasalah
     </Badge>

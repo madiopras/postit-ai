@@ -22,7 +22,7 @@ export function ChatTimeline({
   ) => Promise<void>;
 }) {
   return (
-    <div className="mx-auto w-full max-w-3xl pb-6">
+    <div className="mx-auto w-full max-w-3xl space-y-1.5 pb-6 sm:space-y-2">
       {messages.map((message, index) => (
         <ChatMessage
           key={message.id ?? `${message.role}-${index}`}
@@ -36,10 +36,10 @@ export function ChatTimeline({
       {error && (
         <div
           role="alert"
-          className="mt-6 flex items-start gap-3 rounded-ui-lg border border-error-border bg-error-bg px-4 py-3 text-sm text-error-fg"
+          className="alert alert-error mt-5 rounded-2xl border border-error/20 bg-error/10 text-xs shadow-sm backdrop-blur-md md:text-sm"
         >
-          <CircleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          <p>{error}</p>
+          <CircleAlert className="size-5 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
         </div>
       )}
     </div>

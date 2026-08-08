@@ -1,9 +1,8 @@
 'use client';
 
 import { MoonIcon, SunIcon } from 'lucide-react';
-
-import { Button } from '@/components/untitled/base/buttons/button';
 import { toggleTheme } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 
 /**
  * Light/dark switch.
@@ -15,16 +14,16 @@ import { toggleTheme } from '@/lib/theme';
  */
 export function ThemeToggle({ className }: { className?: string }) {
   return (
-    <Button
-      variant="tertiary"
-      size="sm"
-      className={`size-9 min-h-9 px-2 ${className ?? ''}`}
-      onPress={toggleTheme}
+    <button
+      type="button"
+      className={cn('btn btn-ghost btn-circle btn-sm text-base-content/80 hover:text-base-content', className)}
+      onClick={toggleTheme}
       // Static label: deriving it from the theme would reintroduce the mismatch.
       aria-label="Ganti tema terang/gelap"
     >
-      <MoonIcon className="size-4 dark:hidden" />
-      <SunIcon className="size-4 hidden dark:block" />
-    </Button>
+      <MoonIcon className="size-4.5 dark:hidden" />
+      <SunIcon className="size-4.5 hidden dark:block" />
+      <span className="sr-only">Ganti tema</span>
+    </button>
   );
 }

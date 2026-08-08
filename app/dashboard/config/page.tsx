@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Brain, Eye, EyeOff, RotateCcw, Save, Search, ShieldCheck, SlidersHorizontal, Sparkles, Wifi } from 'lucide-react';
+import { BookOpen, Brain, Eye, EyeOff, Loader2, RotateCcw, Save, Search, ShieldCheck, SlidersHorizontal, Sparkles, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/dashboard/dashboard-ui';
 
 interface ConfigData {
   embedding: {
@@ -375,16 +376,19 @@ export default function ConfigPage() {
 
   if (error) {
     return (
-      <div role="alert" className="rounded-ui-xl border border-error-border bg-error-bg p-6 text-error-fg">
-        <h2 className="font-headline text-lg mb-2">Konfigurasi gagal dimuat</h2>
-        <p>{error}</p>
-        <button
-          type="button"
+      <div role="alert" className="alert alert-error">
+        <div>
+          <h2 className="text-lg font-semibold mb-1">Konfigurasi gagal dimuat</h2>
+          <p>{error}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => window.location.reload()}
-          className="mt-4 rounded-ui-md border border-error-border bg-bg-primary px-3 py-2 text-sm font-semibold text-fg-secondary outline-none focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+          className="mt-2"
         >
           Coba lagi
-        </button>
+        </Button>
       </div>
     );
   }
@@ -393,10 +397,10 @@ export default function ConfigPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-headline text-2xl text-foreground mb-2">
+        <h1 className="text-2xl font-bold tracking-tight text-base-content mb-2">
           Konfigurasi AI
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-base-content/60">
           Atur endpoint model dan perilaku jawaban asisten.
         </p>
       </div>
@@ -404,20 +408,20 @@ export default function ConfigPage() {
       {/* Config Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Embedding Configuration */}
-        <div className="bg-card border border-border rounded-xl p-6">
+        <div className="card card-border bg-base-100 p-6 shadow-xs">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Sparkles className="size-6 text-primary" />
               <div>
-                <h2 className="font-headline text-lg text-foreground">Model embedding</h2>
-                <p className="text-xs text-muted-foreground">Konfigurasi embedding teks</p>
+                <h2 className="text-lg font-semibold text-base-content">Model embedding</h2>
+                <p className="text-xs text-base-content/60">Konfigurasi embedding teks</p>
               </div>
             </div>
             {embeddingTestResult && (
-              <span className={`text-xs px-2 py-1 rounded-full ${
+              <span className={`badge badge-sm ${
                 embeddingTestResult.success 
-                  ? 'bg-success/10 text-success' 
-                  : 'bg-destructive/10 text-destructive'
+                  ? 'badge-success badge-soft' 
+                  : 'badge-error badge-soft'
               }`}>
                 {embeddingTestResult.success ? 'Terhubung' : 'Gagal'}
               </span>
@@ -427,71 +431,72 @@ export default function ConfigPage() {
           <div className="space-y-4">
             {/* Base URL */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Base URL</label>
+              <label className="text-xs font-medium text-base-content/70">Base URL</label>
               <input
                 type="text"
                 value={embeddingBaseUrl}
                 onChange={(e) => setEmbeddingBaseUrl(e.target.value)}
                 placeholder={config?.fallback.embeddingBaseUrl || 'http://localhost:20128/v1'}
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="input input-bordered w-full text-sm"
               />
             </div>
 
             {/* Model Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Nama model</label>
+              <label className="text-xs font-medium text-base-content/70">Nama model</label>
               <input
                 type="text"
                 value={embeddingModel}
                 onChange={(e) => setEmbeddingModel(e.target.value)}
                 placeholder={config?.fallback.embeddingModel || 'text-embedding-ada-002'}
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="input input-bordered w-full text-sm"
               />
             </div>
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Kunci API</label>
+              <label className="text-xs font-medium text-base-content/70">Kunci API</label>
               <div className="relative">
                 <input
                   type={showEmbeddingKey ? 'text' : 'password'}
                   value={embeddingApiKey}
                   onChange={(e) => setEmbeddingApiKey(e.target.value)}
                   placeholder={config?.embedding.hasApiKey ? `Tersimpan: ${config.embedding.apiKeyPreview} — isi untuk mengganti` : 'sk-...'}
-                  className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
+                  className="input input-bordered w-full text-sm pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowEmbeddingKey(!showEmbeddingKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                  className="btn btn-ghost btn-square btn-xs absolute right-2 top-1/2 -translate-y-1/2 text-base-content/60 hover:text-base-content"
                 >
-                  {showEmbeddingKey ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  {showEmbeddingKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
 
             {/* Test Button */}
             <div className="pt-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleTestEmbedding}
                 disabled={testingEmbedding || !embeddingBaseUrl}
-                className="w-full bg-muted border border-border text-foreground rounded-xl px-4 py-2.5 hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full"
               >
                 {testingEmbedding ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <Loader2 className="size-4 animate-spin" />
                     Menguji…
                   </>
                 ) : (
                   <>
-                    <Wifi className="size-[18px]" />
+                    <Wifi className="size-4" />
                     Uji koneksi
                   </>
                 )}
-              </button>
+              </Button>
               {embeddingTestResult && (
                 <p className={`text-xs mt-2 ${
-                  embeddingTestResult.success ? 'text-success' : 'text-destructive'
+                  embeddingTestResult.success ? 'text-success' : 'text-error'
                 }`}>
                   {embeddingTestResult.success
                     ? `✓ Terhubung${embeddingTestResult.latency !== undefined ? ` (${embeddingTestResult.latency}ms)` : ''}`
@@ -503,20 +508,20 @@ export default function ConfigPage() {
         </div>
 
         {/* LLM Configuration */}
-        <div className="bg-card border border-border rounded-xl p-6">
+        <div className="card card-border bg-base-100 p-6 shadow-xs">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Brain className="size-6 text-primary" />
               <div>
-                <h2 className="font-headline text-lg text-foreground">Model LLM</h2>
-                <p className="text-xs text-muted-foreground">Konfigurasi penyelesaian chat</p>
+                <h2 className="text-lg font-semibold text-base-content">Model LLM</h2>
+                <p className="text-xs text-base-content/60">Konfigurasi penyelesaian chat</p>
               </div>
             </div>
             {llmTestResult && (
-              <span className={`text-xs px-2 py-1 rounded-full ${
+              <span className={`badge badge-sm ${
                 llmTestResult.success 
-                  ? 'bg-success/10 text-success' 
-                  : 'bg-destructive/10 text-destructive'
+                  ? 'badge-success badge-soft' 
+                  : 'badge-error badge-soft'
               }`}>
                 {llmTestResult.success ? 'Terhubung' : 'Gagal'}
               </span>
@@ -526,71 +531,72 @@ export default function ConfigPage() {
           <div className="space-y-4">
             {/* Base URL */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Base URL</label>
+              <label className="text-xs font-medium text-base-content/70">Base URL</label>
               <input
                 type="text"
                 value={llmBaseUrl}
                 onChange={(e) => setLlmBaseUrl(e.target.value)}
                 placeholder={config?.fallback.llmBaseUrl || 'http://localhost:20128/v1'}
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="input input-bordered w-full text-sm"
               />
             </div>
 
             {/* Model Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Nama model</label>
+              <label className="text-xs font-medium text-base-content/70">Nama model</label>
               <input
                 type="text"
                 value={llmModel}
                 onChange={(e) => setLlmModel(e.target.value)}
                 placeholder={config?.fallback.llmModel || 'gpt-4o-mini'}
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="input input-bordered w-full text-sm"
               />
             </div>
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Kunci API</label>
+              <label className="text-xs font-medium text-base-content/70">Kunci API</label>
               <div className="relative">
                 <input
                   type={showLlmKey ? 'text' : 'password'}
                   value={llmApiKey}
                   onChange={(e) => setLlmApiKey(e.target.value)}
                   placeholder={config?.llm.hasApiKey ? `Tersimpan: ${config.llm.apiKeyPreview} — isi untuk mengganti` : 'sk-...'}
-                  className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full pr-12"
+                  className="input input-bordered w-full text-sm pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowLlmKey(!showLlmKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                  className="btn btn-ghost btn-square btn-xs absolute right-2 top-1/2 -translate-y-1/2 text-base-content/60 hover:text-base-content"
                 >
-                  {showLlmKey ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  {showLlmKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
 
             {/* Test Button */}
             <div className="pt-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleTestLlm}
                 disabled={testingLlm || !llmBaseUrl}
-                className="w-full bg-muted border border-border text-foreground rounded-xl px-4 py-2.5 hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full"
               >
                 {testingLlm ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <Loader2 className="size-4 animate-spin" />
                     Menguji…
                   </>
                 ) : (
                   <>
-                    <Wifi className="size-[18px]" />
+                    <Wifi className="size-4" />
                     Uji koneksi
                   </>
                 )}
-              </button>
+              </Button>
               {llmTestResult && (
                 <p className={`text-xs mt-2 ${
-                  llmTestResult.success ? 'text-success' : 'text-destructive'
+                  llmTestResult.success ? 'text-success' : 'text-error'
                 }`}>
                   {llmTestResult.success
                     ? `✓ Terhubung${llmTestResult.latency !== undefined ? ` (${llmTestResult.latency}ms)` : ''}`
@@ -602,12 +608,12 @@ export default function ConfigPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card card-border bg-base-100 p-6 shadow-xs">
         <div className="flex items-center gap-3 mb-6">
           <SlidersHorizontal className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">Perilaku AI</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-lg font-semibold text-base-content">Perilaku AI</h2>
+            <p className="text-xs text-base-content/60">
               Pengaturan ini disertakan dalam setiap system prompt.
             </p>
           </div>
@@ -615,27 +621,27 @@ export default function ConfigPage() {
 
         <div className="space-y-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Persona</label>
+            <label className="text-xs font-medium text-base-content/70">Persona</label>
             <textarea
               value={persona}
               onChange={(event) => setPersona(event.target.value)}
               maxLength={2000}
               rows={4}
               placeholder="Jelaskan peran dan identitas asisten"
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="textarea textarea-bordered w-full text-sm"
             />
-            <span className="text-xs text-muted-foreground text-right">
+            <span className="text-xs text-base-content/60 text-right">
               {persona.length}/2000
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Nada</label>
+              <label className="text-xs font-medium text-base-content/70">Nada</label>
               <select
                 value={tone}
                 onChange={(event) => setTone(event.target.value as ConfigData['behaviour']['tone'])}
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+                className="select select-bordered w-full text-sm"
               >
                 <option value="formal">Formal</option>
                 <option value="professional">Profesional</option>
@@ -644,13 +650,13 @@ export default function ConfigPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Tingkat detail</label>
+              <label className="text-xs font-medium text-base-content/70">Tingkat detail</label>
               <select
                 value={detailLevel}
                 onChange={(event) =>
                   setDetailLevel(event.target.value as ConfigData['behaviour']['detailLevel'])
                 }
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+                className="select select-bordered w-full text-sm"
               >
                 <option value="concise">Ringkas</option>
                 <option value="medium">Sedang</option>
@@ -659,13 +665,13 @@ export default function ConfigPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Bahasa</label>
+              <label className="text-xs font-medium text-base-content/70">Bahasa</label>
               <select
                 value={language}
                 onChange={(event) =>
                   setLanguage(event.target.value as ConfigData['behaviour']['language'])
                 }
-                className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+                className="select select-bordered w-full text-sm"
               >
                 <option value="same_as_user">Ikuti bahasa pengguna</option>
                 <option value="id">Bahasa Indonesia</option>
@@ -674,10 +680,10 @@ export default function ConfigPage() {
             </div>
           </div>
 
-          <label className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
+          <label className="flex items-center justify-between rounded-lg border border-base-200 bg-base-200/40 p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">Gunakan emoji</span>
-              <p className="text-xs text-muted-foreground">
+              <span className="text-sm font-medium text-base-content">Gunakan emoji</span>
+              <p className="text-xs text-base-content/60">
                 Izinkan asisten memakai emoji saat sesuai.
               </p>
             </div>
@@ -685,28 +691,28 @@ export default function ConfigPage() {
               type="checkbox"
               checked={useEmoji}
               onChange={(event) => setUseEmoji(event.target.checked)}
-              className="size-4 accent-primary"
+              className="toggle toggle-primary"
             />
           </label>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card card-border bg-base-100 p-6 shadow-xs">
         <div className="flex items-center gap-3 mb-6">
           <ShieldCheck className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">Aturan jawaban</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-lg font-semibold text-base-content">Aturan jawaban</h2>
+            <p className="text-xs text-base-content/60">
               Atur dasar jawaban dan penanganan informasi yang tidak ditemukan.
             </p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <label className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
+          <label className="flex items-center justify-between rounded-lg border border-base-200 bg-base-200/40 p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">Hanya knowledge base</span>
-              <p className="text-xs text-muted-foreground">
+              <span className="text-sm font-medium text-base-content">Hanya knowledge base</span>
+              <p className="text-xs text-base-content/60">
                 Wajibkan jawaban hanya memakai konteks dari knowledge base.
               </p>
             </div>
@@ -714,14 +720,14 @@ export default function ConfigPage() {
               type="checkbox"
               checked={knowledgeOnly}
               onChange={(event) => setKnowledgeOnly(event.target.checked)}
-              className="size-4 accent-primary"
+              className="toggle toggle-primary"
             />
           </label>
 
-          <label className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
+          <label className="flex items-center justify-between rounded-lg border border-base-200 bg-base-200/40 p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">Kebijakan tanpa halusinasi</span>
-              <p className="text-xs text-muted-foreground">
+              <span className="text-sm font-medium text-base-content">Kebijakan tanpa halusinasi</span>
+              <p className="text-xs text-base-content/60">
                 Larang klaim tanpa dukungan sumber pada jawaban.
               </p>
             </div>
@@ -729,26 +735,26 @@ export default function ConfigPage() {
               type="checkbox"
               checked={noHallucination}
               onChange={(event) => setNoHallucination(event.target.checked)}
-              className="size-4 accent-primary"
+              className="toggle toggle-primary"
             />
           </label>
 
-          <div className="flex items-center justify-between rounded-xl border border-border bg-muted p-4">
+          <div className="flex items-center justify-between rounded-lg border border-base-200 bg-base-200/40 p-4">
             <div>
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-sm font-medium text-base-content">
                 Terapkan akses dokumen
               </span>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-base-content/60">
                 Konten SOP terbatas selalu disaring sebelum konteks mencapai LLM.
               </p>
             </div>
-            <span className="rounded-full bg-success/10 px-2 py-1 text-xs text-success">
+            <span className="badge badge-success badge-soft text-xs">
               Selalu aktif
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-base-content/70">
               Pesan saat informasi tidak ditemukan
             </label>
             <textarea
@@ -757,21 +763,21 @@ export default function ConfigPage() {
               maxLength={2000}
               rows={3}
               placeholder="Pesan saat sumber knowledge base yang dapat diakses tidak ditemukan"
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="textarea textarea-bordered w-full text-sm"
             />
-            <span className="text-xs text-muted-foreground text-right">
+            <span className="text-xs text-base-content/60 text-right">
               {fallbackMessage.length}/2000
             </span>
           </div>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card card-border bg-base-100 p-6 shadow-xs">
         <div className="flex items-center gap-3 mb-6">
           <BookOpen className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">Kamus jawaban</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-lg font-semibold text-base-content">Kamus jawaban</h2>
+            <p className="text-xs text-base-content/60">
               Kelola frasa yang dilarang atau wajib disertakan dalam jawaban.
             </p>
           </div>
@@ -779,7 +785,7 @@ export default function ConfigPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-base-content/70">
               Frasa terlarang
             </label>
             <textarea
@@ -787,15 +793,15 @@ export default function ConfigPage() {
               onChange={(event) => setForbiddenWordsText(event.target.value)}
               rows={8}
               placeholder={'internal secret\nunapproved claim'}
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="textarea textarea-bordered w-full text-sm"
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-base-content/60">
               Satu frasa per baris. Pencocokan tidak peka huruf besar/kecil.
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-base-content/70">
               Aturan frasa wajib
             </label>
             <textarea
@@ -803,23 +809,23 @@ export default function ConfigPage() {
               onChange={(event) => setRequiredWordsText(event.target.value)}
               rows={8}
               placeholder={'Contact HR | employee\nTerms and conditions apply'}
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="textarea textarea-bordered w-full text-sm"
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-base-content/60">
               Gunakan “frasa | kondisi”. Kosongkan kondisi agar frasa wajib di setiap jawaban.
             </span>
           </div>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card card-border bg-base-100 p-6 shadow-xs">
         <div className="flex items-center gap-3 mb-6">
           <Search className="size-6 text-primary" />
           <div>
-            <h2 className="font-headline text-lg text-foreground">
+            <h2 className="text-lg font-semibold text-base-content">
               Konfigurasi pencarian
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-base-content/60">
               Atur kandidat pencarian dan konteks yang dikirim ke LLM.
             </p>
           </div>
@@ -827,7 +833,7 @@ export default function ConfigPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Kandidat Top K</label>
+            <label className="text-xs font-medium text-base-content/70">Kandidat Top K</label>
             <input
               type="number"
               min={1}
@@ -838,12 +844,12 @@ export default function ConfigPage() {
                 setRetrievalTopK(value);
                 setMaxContextDocuments((current) => Math.min(current, value));
               }}
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+              className="input input-bordered w-full text-sm"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-base-content/70">
               Maksimal dokumen konteks
             </label>
             <input
@@ -852,12 +858,12 @@ export default function ConfigPage() {
               max={Math.min(20, retrievalTopK)}
               value={maxContextDocuments}
               onChange={(event) => setMaxContextDocuments(Number(event.target.value))}
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+              className="input input-bordered w-full text-sm"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-base-content/70">
               Ambang kemiripan: {similarityThreshold.toFixed(2)}
             </label>
             <input
@@ -867,21 +873,21 @@ export default function ConfigPage() {
               step={0.01}
               value={similarityThreshold}
               onChange={(event) => setSimilarityThreshold(Number(event.target.value))}
-              className="accent-primary"
+              className="range range-primary range-sm"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-base-content/60">
               Berlaku untuk jalur semantik; istilah persis tetap dapat ditemukan oleh full-text.
             </p>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Prioritas sumber</label>
+            <label className="text-xs font-medium text-base-content/70">Prioritas sumber</label>
             <select
               value={sourcePriority}
               onChange={(event) =>
                 setSourcePriority(event.target.value as ConfigData['retrieval']['sourcePriority'])
               }
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+              className="select select-bordered w-full text-sm"
             >
               <option value="balanced">Seimbang berdasarkan relevansi</option>
               <option value="faq_first">FAQ terlebih dahulu</option>
@@ -890,18 +896,18 @@ export default function ConfigPage() {
           </div>
 
           <div className="flex flex-col gap-1.5 md:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Aturan pemilihan</label>
+            <label className="text-xs font-medium text-base-content/70">Aturan pemilihan</label>
             <select
               value={selectionRule}
               onChange={(event) =>
                 setSelectionRule(event.target.value as ConfigData['retrieval']['selectionRule'])
               }
-              className="bg-muted border border-border rounded-xl px-4 py-2.5 text-foreground"
+              className="select select-bordered w-full text-sm"
             >
               <option value="highest_score">Skor tertinggi</option>
               <option value="diverse_sources">Selang-seling FAQ dan SOP</option>
             </select>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-base-content/60">
               Pemilihan dijalankan setelah autentikasi dan filter akses dokumen.
             </p>
           </div>
@@ -909,42 +915,42 @@ export default function ConfigPage() {
       </div>
 
       {/* Configuration actions */}
-      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-border">
-        <button
-          type="button"
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-base-200">
+        <Button
+          variant="outline"
           onClick={handleReset}
           disabled={saving || resetting}
-          className="border border-destructive/40 text-destructive rounded-xl px-6 py-2.5 hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="text-error hover:bg-error/10 hover:border-error"
         >
           {resetting ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
+              <Loader2 className="size-4 animate-spin" />
               Menghapus…
             </>
           ) : (
             <>
-              <RotateCcw className="size-[18px]" />
+              <RotateCcw className="size-4" />
               Hapus konfigurasi tersimpan
             </>
           )}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="default"
           onClick={handleSave}
           disabled={saving || resetting}
-          className="bg-primary text-primary-foreground rounded-xl px-6 py-2.5 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {saving ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
+              <Loader2 className="size-4 animate-spin" />
               Menyimpan…
             </>
           ) : (
             <>
-              <Save className="size-[18px]" />
+              <Save className="size-4" />
               Simpan konfigurasi
             </>
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

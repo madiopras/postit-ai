@@ -207,8 +207,8 @@ export default function AdminManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kelola admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-base-content">Kelola admin</h1>
+          <p className="mt-1 text-sm text-base-content/60">
             Kelola akun Super Admin dan Admin operasional.
           </p>
         </div>
@@ -227,7 +227,7 @@ export default function AdminManagementPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/40" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -238,7 +238,7 @@ export default function AdminManagementPage() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              <Loader2 className="size-6 animate-spin text-base-content/40" />
             </div>
           ) : loadError ? (
             <TableError message={loadError} onRetry={refresh} />
@@ -257,10 +257,10 @@ export default function AdminManagementPage() {
                 {admins.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell>
-                      <div className="font-medium">{admin.displayName || admin.username}</div>
-                      <div className="text-xs text-muted-foreground">@{admin.username}</div>
+                      <div className="font-medium text-base-content">{admin.displayName || admin.username}</div>
+                      <div className="text-xs text-base-content/60">@{admin.username}</div>
                       {admin.blockReason && (
-                        <div className="mt-1 text-xs text-destructive">{admin.blockReason}</div>
+                        <div className="mt-1 text-xs text-error">{admin.blockReason}</div>
                       )}
                     </TableCell>
                     <TableCell>
@@ -270,13 +270,12 @@ export default function AdminManagementPage() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={admin.status === 'active' ? 'default' : 'secondary'}
-                        className={admin.status === 'blocked' ? 'text-destructive' : undefined}
+                        variant={admin.status === 'active' ? 'default' : admin.status === 'blocked' ? 'error' : 'secondary'}
                       >
                         {admin.status === 'active' ? 'Aktif' : admin.status === 'blocked' ? 'Diblokir' : 'Nonaktif'}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-base-content/80">
                       {new Date(admin.updatedAt).toLocaleDateString('id-ID')}
                     </TableCell>
                     <TableCell>
@@ -299,8 +298,9 @@ export default function AdminManagementPage() {
                               variant="ghost"
                               size="icon-sm"
                               onClick={() => updateStatus(admin, 'blocked')}
+                              className="text-error hover:bg-error/10"
                             >
-                              <ShieldBan className="size-4 text-destructive" />
+                              <ShieldBan className="size-4 text-error" />
                               <span className="sr-only">Blokir {admin.username}</span>
                             </Button>
                           </>
@@ -320,7 +320,7 @@ export default function AdminManagementPage() {
                 ))}
                 {admins.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="py-12 text-center text-base-content/60">
                       Tidak ada administrator ditemukan.
                     </TableCell>
                   </TableRow>

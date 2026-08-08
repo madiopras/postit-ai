@@ -75,15 +75,17 @@ export function ChatView({
         )}
       </div>
 
-      <ChatComposer
-        value={controller.input}
-        onChange={controller.setInput}
-        onSend={controller.send}
-        textareaRef={textareaRef}
-        disabled={controller.loading || !controller.ready}
-        loading={controller.loading}
-        status={controller.chatStatus}
-      />
+      <div className="pb-3 sm:pb-4 md:pb-0">
+        <ChatComposer
+          value={controller.input}
+          onChange={controller.setInput}
+          onSend={controller.send}
+          textareaRef={textareaRef}
+          disabled={controller.loading || !controller.ready}
+          loading={controller.loading}
+          status={controller.chatStatus}
+        />
+      </div>
     </ChatShell>
   );
 }

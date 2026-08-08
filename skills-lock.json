@@ -1,11 +1,23 @@
 {
   "version": 1,
   "skills": {
+    "daisyui": {
+      "source": "saadeghi/daisyui",
+      "sourceType": "github",
+      "skillPath": ".cline/skills/daisyui/SKILL.md",
+      "computedHash": "a7379c5c8ca1f4bb6c1dfbaccf42d0b1ce86e8a4a8d541a74902081931027476"
+    },
     "hallmark": {
       "source": "nutlope/hallmark",
       "sourceType": "github",
       "skillPath": ".cline/skills/hallmark/SKILL.md",
       "computedHash": "579f86b27cdd7eb972107f7aecedd537f472891c5fd7c7c821bea15f64e0fe86"
+    },
+    "nextjs-architecture": {
+      "source": "aiskillstore/marketplace",
+      "sourceType": "github",
+      "skillPath": "skills/89jobrien/nextjs-architecture/SKILL.md",
+      "computedHash": "c4017253ef84763447d3c7d98e716259f53c59995d8ed1292be7419a5f1db114"
     },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",

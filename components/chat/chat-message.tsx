@@ -7,18 +7,13 @@ import {
   Copy,
   LockKeyhole,
   LogIn,
-  Sparkles,
   ThumbsDown,
   ThumbsUp,
 } from 'lucide-react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { LoadingIndicator } from '@/components/untitled/application/loading-indicator/loading-indicator';
-import {
-  Button,
-  ButtonLink,
-} from '@/components/untitled/base/buttons/button';
-import { Tooltip } from '@/components/untitled/base/tooltip/tooltip';
+import { PostItLogo } from '@/components/brand/postit-logo';
+import { SourceList } from '@/components/chat/source-list';
 import type {
   ChatFeedback,
   ChatMessageData,
@@ -117,12 +112,12 @@ export function ChatMessage({
     return (
       <article
         className={cn(
-          'flex w-full justify-end transition-all',
-          isCompact ? 'mt-2.5' : 'mt-6'
+          'chat chat-end transition-all',
+          isCompact ? 'mt-1.5' : 'mt-4 sm:mt-5'
         )}
         aria-label="Pesan Anda"
       >
-        <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-brand-solid px-4.5 py-3 text-sm leading-relaxed text-fg-on-brand shadow-ui-xs [overflow-wrap:anywhere] md:max-w-[75%]">
+        <div className="chat-bubble chat-bubble-primary max-w-[88%] whitespace-pre-wrap break-words border border-primary/20 bg-primary/90 text-sm leading-relaxed [overflow-wrap:anywhere] shadow-lg shadow-primary/10 sm:max-w-[75%] backdrop-blur-sm">
           {message.content}
         </div>
       </article>
@@ -132,129 +127,120 @@ export function ChatMessage({
   return (
     <article
       className={cn(
-        'group/msg flex w-full items-start gap-3 transition-all',
-        isCompact ? 'mt-3' : 'mt-6'
+        'chat chat-start group/msg transition-all',
+        isCompact ? 'mt-2' : 'mt-5 sm:mt-6'
       )}
       aria-label="Jawaban PostIt AI"
     >
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border-brand/30 bg-brand-subtle/80 text-brand-text shadow-ui-xs">
-        <Sparkles className="size-4 text-brand-text" aria-hidden="true" />
+      <div className="chat-image avatar hidden sm:block">
+        <div className="bg-base-100/90 flex size-10 items-center justify-center overflow-hidden rounded-2xl border border-base-300/60 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+          <PostItLogo size={28} className="size-7" />
+        </div>
       </div>
-      <div className="min-w-0 max-w-[calc(100%-2.5rem)] flex-1">
+
+      <div className="chat-header text-base-content/60 mb-1.5 flex items-center gap-1.5 text-xs font-medium">
+        <span className="font-semibold text-base-content/80">PostIt AI</span>
+        <span className="badge badge-neutral badge-soft badge-xs border border-base-300/60 uppercase tracking-wide">
+          Asisten
+        </span>
+      </div>
+
+      <div className="chat-bubble min-w-0 max-w-[95%] border border-base-300/60 bg-base-100/80 text-base-content text-sm leading-relaxed [overflow-wrap:anywhere] shadow-sm sm:max-w-[85%] backdrop-blur-xl supports-[backdrop-filter]:bg-base-100/70">
         {message.content ? (
-          <div className="min-w-0 text-sm leading-relaxed text-fg-secondary [overflow-wrap:anywhere]">
+          <div className="min-w-0">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
               {message.content}
             </ReactMarkdown>
             {!isComplete && (
               <span
-                className="inline-block size-2 rounded-full bg-brand-solid align-middle animate-pulse ml-1"
+                className="bg-primary ml-1 inline-block size-2 animate-pulse rounded-full align-middle"
                 aria-label="Mengetik"
                 role="status"
               />
             )}
           </div>
         ) : (
-          <LoadingIndicator
-            size="sm"
-            label={<span className="text-sm text-fg-tertiary">Menyiapkan jawaban...</span>}
-            className="min-h-10 flex-row items-center justify-start py-1"
-          />
+          <div className="flex items-center gap-2 py-1">
+            <span className="loading loading-dots loading-sm text-primary" />
+            <span className="text-base-content/60 text-xs">Menyiapkan jawaban...</span>
+          </div>
         )}
 
         {message.loginRequired && isComplete && (
-          <div className="mt-3.5 rounded-xl border border-warning-bg bg-warning-bg/60 p-3.5 backdrop-blur-xs">
-            <div className="flex items-start gap-3">
-              <LockKeyhole className="mt-0.5 size-4.5 shrink-0 text-warning-fg" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-fg-primary">
-                  Login diperlukan untuk membuka SOP
-                </p>
-                <p className="mt-0.5 text-xs leading-5 text-fg-tertiary">
-                  Konten internal dilindungi dan tidak ditampilkan pada sesi visitor.
-                </p>
-                <ButtonLink
-                  href="/login?redirect=/"
-                  variant="primary"
-                  size="sm"
-                  iconLeading={<LogIn className="size-3.5" />}
-                  className="mt-2.5 h-8 text-xs font-medium"
-                >
-                  Login untuk membuka SOP
-                </ButtonLink>
-              </div>
+          <div className="alert alert-warning/70 border border-warning/20 mt-3 rounded-2xl py-3 shadow-sm backdrop-blur-md">
+            <LockKeyhole className="size-5 shrink-0" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-xs font-semibold sm:text-sm">Login diperlukan untuk membuka SOP</h3>
+              <p className="text-xs opacity-90">
+                Konten internal dilindungi dan tidak ditampilkan pada sesi visitor.
+              </p>
+              <a
+                href="/login?redirect=/"
+                className="btn btn-warning btn-xs mt-2 gap-1.5 font-medium"
+              >
+                <LogIn className="size-3" />
+                <span>Login sekarang</span>
+              </a>
             </div>
           </div>
         )}
 
-        {isComplete && message.content && (
-          <div className="mt-2.5 flex min-h-8 flex-wrap items-center gap-1.5 opacity-90 transition-opacity md:opacity-0 md:group-hover/msg:opacity-100 focus-within:opacity-100">
-            <Tooltip content={copyState === 'success' ? 'Tersalin' : 'Salin jawaban'}>
-              <Button
-                variant="tertiary"
-                size="sm"
-                onPress={() => void copyAnswer()}
-                className="size-8 min-h-8 rounded-lg p-0 text-fg-quaternary hover:bg-bg-secondary hover:text-fg-secondary"
-                aria-label={copyState === 'success' ? 'Tersalin' : 'Salin jawaban'}
-              >
-                {copyState === 'success' ? (
-                  <Check className="size-3.5 text-success-fg" aria-hidden="true" />
-                ) : (
-                  <Copy className="size-3.5" aria-hidden="true" />
-                )}
-                <span className="sr-only">
-                  {copyState === 'success' ? 'Tersalin' : 'Salin jawaban'}
-                </span>
-              </Button>
-            </Tooltip>
-
-            {canGiveFeedback && (
-              <>
-                <Tooltip content="Jawaban membantu">
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    onPress={() => void updateFeedback('thumbs_up')}
-                    isDisabled={feedbackState === 'pending'}
-                    className={cn(
-                      'size-8 min-h-8 rounded-lg p-0 transition-colors',
-                      feedback === 'thumbs_up'
-                        ? 'bg-success-bg text-success-fg'
-                        : 'text-fg-quaternary hover:bg-bg-secondary hover:text-fg-secondary'
-                    )}
-                    aria-label="Jawaban membantu"
-                    aria-pressed={feedback === 'thumbs_up'}
-                  >
-                    <ThumbsUp className="size-3.5" aria-hidden="true" />
-                    <span className="sr-only">Jawaban membantu</span>
-                  </Button>
-                </Tooltip>
-                <Tooltip content="Jawaban kurang tepat">
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    onPress={() => void updateFeedback('thumbs_down')}
-                    isDisabled={feedbackState === 'pending'}
-                    className={cn(
-                      'size-8 min-h-8 rounded-lg p-0 transition-colors',
-                      feedback === 'thumbs_down'
-                        ? 'bg-error-bg text-error-fg'
-                        : 'text-fg-quaternary hover:bg-bg-secondary hover:text-fg-secondary'
-                    )}
-                    aria-label="Jawaban kurang tepat"
-                    aria-pressed={feedback === 'thumbs_down'}
-                  >
-                    <ThumbsDown className="size-3.5" aria-hidden="true" />
-                    <span className="sr-only">Jawaban kurang tepat</span>
-                  </Button>
-                </Tooltip>
-              </>
-            )}
-
-            <ActionStatus copyState={copyState} feedbackState={feedbackState} />
-          </div>
-        )}
+        {message.sources?.length ? <SourceList sources={message.sources} /> : null}
       </div>
+
+      {isComplete && message.content && (
+        <div className="chat-footer mt-2 flex min-h-8 flex-wrap items-center gap-1.5 rounded-full border border-base-300/60 bg-base-100/70 px-2 py-1 opacity-90 shadow-xs backdrop-blur-md transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover/msg:opacity-100">
+          <button
+            onClick={() => void copyAnswer()}
+            className="btn btn-ghost btn-xs btn-square rounded-full text-base-content/60 hover:bg-base-200/70 hover:text-base-content"
+            aria-label={copyState === 'success' ? 'Tersalin' : 'Salin jawaban'}
+            title={copyState === 'success' ? 'Tersalin' : 'Salin jawaban'}
+          >
+            {copyState === 'success' ? (
+              <Check className="text-success size-3.5" aria-hidden="true" />
+            ) : (
+              <Copy className="size-3.5" aria-hidden="true" />
+            )}
+          </button>
+
+          {canGiveFeedback && (
+            <>
+              <button
+                onClick={() => void updateFeedback('thumbs_up')}
+                disabled={feedbackState === 'pending'}
+                className={cn(
+                  'btn btn-ghost btn-xs btn-square rounded-full',
+                  feedback === 'thumbs_up'
+                    ? 'bg-success/10 text-success hover:bg-success/15'
+                    : 'text-base-content/60 hover:bg-base-200/70 hover:text-base-content'
+                )}
+                aria-label="Jawaban membantu"
+                aria-pressed={feedback === 'thumbs_up'}
+                title="Jawaban membantu"
+              >
+                <ThumbsUp className="size-3.5" aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => void updateFeedback('thumbs_down')}
+                disabled={feedbackState === 'pending'}
+                className={cn(
+                  'btn btn-ghost btn-xs btn-square rounded-full',
+                  feedback === 'thumbs_down'
+                    ? 'bg-error/10 text-error hover:bg-error/15'
+                    : 'text-base-content/60 hover:bg-base-200/70 hover:text-base-content'
+                )}
+                aria-label="Jawaban kurang tepat"
+                aria-pressed={feedback === 'thumbs_down'}
+                title="Jawaban kurang tepat"
+              >
+                <ThumbsDown className="size-3.5" aria-hidden="true" />
+              </button>
+            </>
+          )}
+
+          <ActionStatus copyState={copyState} feedbackState={feedbackState} />
+        </div>
+      )}
     </article>
   );
 }
@@ -269,20 +255,28 @@ function ActionStatus({
   return (
     <>
       {copyState === 'success' && (
-        <span className="text-xs text-success-fg" role="status">Tersalin</span>
+        <span className="badge badge-success badge-soft badge-xs border border-success/20 font-medium" role="status">
+          Tersalin
+        </span>
       )}
       {copyState === 'error' && (
-        <span className="text-xs text-error-fg" role="alert">Gagal menyalin jawaban.</span>
+        <span className="badge badge-error badge-soft badge-xs border border-error/20 font-medium" role="alert">
+          Gagal menyalin.
+        </span>
       )}
       {feedbackState === 'pending' && (
-        <span className="text-xs text-fg-quaternary" role="status">Menyimpan feedback...</span>
+        <span className="badge badge-ghost badge-soft badge-xs border border-base-300/60 font-medium" role="status">
+          Menyimpan feedback...
+        </span>
       )}
       {feedbackState === 'success' && (
-        <span className="text-xs text-success-fg" role="status">Feedback tersimpan.</span>
+        <span className="badge badge-success badge-soft badge-xs border border-success/20 font-medium" role="status">
+          Feedback tersimpan.
+        </span>
       )}
       {feedbackState === 'error' && (
-        <span className="text-xs text-error-fg" role="alert">
-          Feedback gagal disimpan. Pilihan dikembalikan.
+        <span className="badge badge-error badge-soft badge-xs border border-error/20 font-medium" role="alert">
+          Feedback gagal disimpan.
         </span>
       )}
     </>
@@ -318,23 +312,21 @@ function CodeBlock({
   };
 
   return (
-    <div className="group/code relative my-3 overflow-hidden rounded-xl border border-border-secondary/80 bg-bg-secondary/95 shadow-ui-xs">
-      <div className="flex items-center justify-between border-b border-border-secondary/60 bg-bg-secondary/70 px-3.5 py-1.5 text-xs text-fg-tertiary">
-        <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium uppercase tracking-wider text-fg-quaternary">
+    <div className="bg-base-300/60 border-base-300 relative my-3 overflow-hidden rounded-xl border shadow-xs">
+      <div className="bg-base-300/90 border-base-300 text-base-content/70 flex items-center justify-between border-b px-3.5 py-1.5 text-xs">
+        <div className="text-base-content/60 flex items-center gap-1.5 font-mono text-[11px] font-medium uppercase tracking-wider">
           <Code2 className="size-3.5" aria-hidden="true" />
           <span>{language || 'code'}</span>
         </div>
-        <Button
-          variant="tertiary"
-          size="sm"
-          onPress={() => void handleCopy()}
-          className="h-6 gap-1 rounded-md px-2 text-[11px] text-fg-quaternary hover:bg-bg-tertiary hover:text-fg-secondary"
+        <button
+          onClick={() => void handleCopy()}
+          className="btn btn-ghost btn-xs gap-1 text-[11px] font-normal"
           aria-label={copied ? 'Tersalin' : 'Salin kode'}
         >
           {copied ? (
             <>
-              <Check className="size-3 text-success-fg" aria-hidden="true" />
-              <span className="text-success-fg">Tersalin</span>
+              <Check className="text-success size-3" aria-hidden="true" />
+              <span className="text-success">Tersalin</span>
             </>
           ) : (
             <>
@@ -342,9 +334,9 @@ function CodeBlock({
               <span>Salin</span>
             </>
           )}
-        </Button>
+        </button>
       </div>
-      <pre className="overflow-x-auto p-3.5 font-mono text-xs leading-relaxed text-fg-primary">
+      <pre className="text-base-content overflow-x-auto p-3.5 font-mono text-xs leading-relaxed">
         <code>{children}</code>
       </pre>
     </div>
@@ -361,7 +353,7 @@ const markdownComponents: Components = {
         href={href}
         target={isExternal ? '_blank' : undefined}
         rel={isExternal ? 'noopener noreferrer' : undefined}
-        className="font-medium text-brand-text underline underline-offset-4 decoration-border-brand/60 hover:decoration-brand-text"
+        className="link link-primary font-medium underline underline-offset-4"
       >
         {children}
       </a>
@@ -381,19 +373,19 @@ const markdownComponents: Components = {
   },
   h1: ({ node, ...props }) => {
     void node;
-    return <h2 {...props} className="mb-2 mt-4 text-base font-semibold text-fg-primary first:mt-0" />;
+    return <h2 {...props} className="text-base-content mb-2 mt-4 text-base font-semibold first:mt-0" />;
   },
   h2: ({ node, ...props }) => {
     void node;
-    return <h3 {...props} className="mb-1.5 mt-3.5 text-sm font-semibold text-fg-primary first:mt-0" />;
+    return <h3 {...props} className="text-base-content mb-1.5 mt-3.5 text-sm font-semibold first:mt-0" />;
   },
   h3: ({ node, ...props }) => {
     void node;
-    return <h4 {...props} className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wider text-fg-tertiary first:mt-0" />;
+    return <h4 {...props} className="text-base-content/70 mb-1 mt-3 text-xs font-semibold uppercase tracking-wider first:mt-0" />;
   },
   blockquote: ({ node, ...props }) => {
     void node;
-    return <blockquote {...props} className="my-2.5 border-l-2 border-border-brand/70 pl-3.5 text-fg-tertiary italic" />;
+    return <blockquote {...props} className="border-primary/60 text-base-content/70 my-2.5 border-l-2 pl-3.5 italic" />;
   },
   code: ({ node, className, children, ...props }) => {
     void node;
@@ -402,10 +394,10 @@ const markdownComponents: Components = {
     if (isBlock) {
       const codeText = String(children).replace(/\n$/, '');
       const language = match ? match[1] : '';
-      return <CodeBlock language={language} children={codeText} />;
+      return <CodeBlock language={language}>{codeText}</CodeBlock>;
     }
     return (
-      <code {...props} className="rounded-md bg-bg-secondary px-1.5 py-0.5 font-mono text-[0.85em] font-medium text-fg-primary border border-border-secondary/60">
+      <code {...props} className="bg-base-300/80 text-base-content border-base-300 rounded-md border px-1.5 py-0.5 font-mono text-[0.85em] font-medium">
         {children}
       </code>
     );
@@ -416,17 +408,17 @@ const markdownComponents: Components = {
   table: ({ node, ...props }) => {
     void node;
     return (
-      <div className="my-3 max-w-full overflow-x-auto rounded-xl border border-border-secondary/80 shadow-ui-xs">
-        <table {...props} className="w-full min-w-max border-collapse text-left text-xs" />
+      <div className="border-base-300 my-3 max-w-full overflow-x-auto rounded-xl border shadow-xs">
+        <table {...props} className="table table-zebra table-sm w-full min-w-max" />
       </div>
     );
   },
   th: ({ node, ...props }) => {
     void node;
-    return <th {...props} className="border-b border-border-secondary/80 bg-bg-secondary/70 px-3.5 py-2.5 font-semibold text-fg-primary" />;
+    return <th {...props} className="bg-base-300/70 text-base-content font-semibold" />;
   },
   td: ({ node, ...props }) => {
     void node;
-    return <td {...props} className="border-b border-border-secondary/40 px-3.5 py-2 align-top last:border-b-0" />;
+    return <td {...props} className="align-top" />;
   },
 };

@@ -11,73 +11,66 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import {
-  Button as AriaButton,
-  Menu,
-  MenuItem,
-  MenuTrigger,
-  Popover,
-  Switch as AriaSwitch,
-} from "react-aria-components";
-
-import {
-  Button as UntitledButton,
-  type ButtonProps as UntitledButtonProps,
-} from "@/components/untitled/base/buttons/button";
-import {
-  Dialog as UntitledDialog,
-  Modal,
-  ModalDescription,
-  ModalOverlay,
-  ModalTitle,
-} from "@/components/untitled/application/modals/modal";
 import { cn } from "@/lib/utils";
 
 type DashboardButtonVariant =
   | "default"
+  | "primary"
   | "outline"
   | "secondary"
   | "ghost"
   | "link"
-  | "destructive";
+  | "destructive"
+  | "error";
 type DashboardButtonSize = "default" | "sm" | "lg" | "icon" | "icon-sm";
 
 export interface ButtonProps
-  extends Omit<UntitledButtonProps, "variant" | "size" | "isDisabled"> {
+  extends Omit<ComponentPropsWithoutRef<"button">, "disabled"> {
   variant?: DashboardButtonVariant;
   size?: DashboardButtonSize;
   disabled?: boolean;
 }
 
-const buttonVariant = {
-  default: "primary",
-  outline: "secondary",
-  secondary: "secondary",
-  ghost: "tertiary",
-  link: "link",
-  destructive: "destructive",
-} as const;
+const BUTTON_VARIANT: Record<DashboardButtonVariant, string> = {
+  default: "btn-primary",
+  primary: "btn-primary",
+  outline: "btn-outline",
+  secondary: "btn-neutral",
+  ghost: "btn-ghost",
+  link: "btn-link",
+  destructive: "btn-error",
+  error: "btn-error",
+};
+
+const BUTTON_SIZE: Record<DashboardButtonSize, string> = {
+  default: "btn-sm",
+  sm: "btn-sm",
+  lg: "btn-md",
+  icon: "btn-square btn-sm",
+  "icon-sm": "btn-square btn-xs",
+};
 
 export function Button({
   variant = "default",
   size = "default",
   disabled,
   className,
+  children,
   ...props
 }: ButtonProps) {
-  const untitledSize = size === "lg" ? "lg" : size === "default" ? "md" : "sm";
-
   return (
-    <UntitledButton
+    <button
       {...props}
-      variant={buttonVariant[variant]}
-      size={untitledSize}
-      isDisabled={disabled}
+      disabled={disabled}
       className={cn(
-        (size === "icon" || size === "icon-sm") && "size-9 min-h-9 px-2",
-        className,
+        "btn",
+        BUTTON_VARIANT[variant],
+        BUTTON_SIZE[size],
+        className
       )}
-    />
+    >
+      {children}
+    </button>
   );
 }
 
@@ -89,13 +82,7 @@ export const Input = forwardRef<
     <input
       ref={ref}
       type={type}
-      className={cn(
-        "min-h-10 w-full rounded-ui-md border border-border-primary bg-bg-primary px-3.5 py-2.5 text-sm text-fg-primary shadow-ui-xs outline-none transition placeholder:text-fg-quaternary",
-        "focus:border-border-brand focus:ring-[3px] focus:ring-focus-ring",
-        "disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-fg-disabled",
-        "aria-invalid:border-error-border aria-invalid:ring-error-bg",
-        className,
-      )}
+      className={cn("input input-bordered w-full text-sm", className)}
       {...props}
     />
   );
@@ -108,13 +95,7 @@ export const Textarea = forwardRef<
   return (
     <textarea
       ref={ref}
-      className={cn(
-        "min-h-28 w-full resize-y rounded-ui-md border border-border-primary bg-bg-primary px-3.5 py-3 text-sm text-fg-primary shadow-ui-xs outline-none transition placeholder:text-fg-quaternary",
-        "focus:border-border-brand focus:ring-[3px] focus:ring-focus-ring",
-        "disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-fg-disabled",
-        "aria-invalid:border-error-border aria-invalid:ring-error-bg",
-        className,
-      )}
+      className={cn("textarea textarea-bordered w-full resize-y text-sm", className)}
       {...props}
     />
   );
@@ -123,25 +104,22 @@ export const Textarea = forwardRef<
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <section
-      className={cn(
-        "rounded-ui-xl border border-border-secondary bg-bg-primary shadow-ui-xs",
-        className,
-      )}
+      className={cn("card card-border bg-base-100 shadow-xs", className)}
       {...props}
     />
   );
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("grid gap-1.5 p-5 sm:p-6", className)} {...props} />;
+  return <div className={cn("card-body gap-1.5 pb-0", className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-lg font-semibold text-fg-primary", className)} {...props} />;
+  return <h2 className={cn("card-title text-lg text-base-content", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm text-fg-tertiary", className)} {...props} />;
+  return <p className={cn("text-sm text-base-content/60", className)} {...props} />;
 }
 
 export function CardAction({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -149,34 +127,44 @@ export function CardAction({ className, ...props }: HTMLAttributes<HTMLDivElemen
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-5 pb-5 sm:px-6 sm:pb-6", className)} {...props} />;
+  return <div className={cn("card-body pt-4", className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex items-center px-5 pb-5 sm:px-6 sm:pb-6", className)} {...props} />;
+  return <div className={cn("card-body pt-0 flex items-center", className)} {...props} />;
 }
 
-type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
+type BadgeVariant =
+  | "default"
+  | "primary"
+  | "secondary"
+  | "outline"
+  | "destructive"
+  | "error"
+  | "warning"
+  | "success"
+  | "info";
+
+const BADGE_VARIANT: Record<BadgeVariant, string> = {
+  default: "badge-primary",
+  primary: "badge-primary",
+  secondary: "badge-neutral",
+  outline: "badge-ghost border-base-300",
+  destructive: "badge-error",
+  error: "badge-error",
+  warning: "badge-warning",
+  success: "badge-success",
+  info: "badge-info",
+};
 
 export function Badge({
   className,
   variant = "default",
   ...props
 }: HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant }) {
-  const styles: Record<BadgeVariant, string> = {
-    default: "border-transparent bg-brand-subtle text-brand-text",
-    secondary: "border-transparent bg-bg-tertiary text-fg-secondary",
-    outline: "border-border-primary bg-bg-primary text-fg-secondary",
-    destructive: "border-error-border bg-error-bg text-error-fg",
-  };
-
   return (
     <span
-      className={cn(
-        "inline-flex min-h-6 items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-        styles[variant],
-        className,
-      )}
+      className={cn("badge", BADGE_VARIANT[variant], className)}
       {...props}
     />
   );
@@ -186,7 +174,7 @@ export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>
   return (
     <div
       aria-hidden="true"
-      className={cn("animate-pulse rounded-ui-sm bg-bg-tertiary", className)}
+      className={cn("skeleton", className)}
       {...props}
     />
   );
@@ -202,7 +190,7 @@ export function TableError({
   return (
     <div
       role="alert"
-      className="flex flex-col gap-3 rounded-ui-lg border border-error-border bg-error-bg p-4 text-sm text-error-fg sm:flex-row sm:items-center"
+      className="alert alert-error flex flex-col gap-3 text-sm sm:flex-row sm:items-center"
     >
       <span>{message}</span>
       <Button variant="outline" size="sm" className="sm:ml-auto" onClick={onRetry}>
@@ -215,34 +203,34 @@ export function TableError({
 export function Table({ className, ...props }: ComponentPropsWithoutRef<"table">) {
   return (
     <div className="w-full overflow-x-auto">
-      <table className={cn("w-full min-w-[640px] text-sm", className)} {...props} />
+      <table className={cn("table table-sm w-full min-w-[640px]", className)} {...props} />
     </div>
   );
 }
 
 export function TableHeader({ className, ...props }: ComponentPropsWithoutRef<"thead">) {
-  return <thead className={cn("border-b border-border-secondary bg-bg-secondary", className)} {...props} />;
+  return <thead className={cn("", className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: ComponentPropsWithoutRef<"tbody">) {
-  return <tbody className={cn("divide-y divide-border-secondary", className)} {...props} />;
+  return <tbody className={cn("", className)} {...props} />;
 }
 
 export function TableRow({ className, ...props }: ComponentPropsWithoutRef<"tr">) {
-  return <tr className={cn("min-h-13 transition-colors hover:bg-bg-secondary", className)} {...props} />;
+  return <tr className={cn("hover:bg-base-200/50 transition-colors", className)} {...props} />;
 }
 
 export function TableHead({ className, ...props }: ComponentPropsWithoutRef<"th">) {
   return (
     <th
-      className={cn("h-11 whitespace-nowrap px-4 text-left text-xs font-semibold text-fg-tertiary", className)}
+      className={cn("text-left text-xs font-semibold text-base-content/60", className)}
       {...props}
     />
   );
 }
 
 export function TableCell({ className, ...props }: ComponentPropsWithoutRef<"td">) {
-  return <td className={cn("h-13 px-4 py-3 text-fg-secondary", className)} {...props} />;
+  return <td className={cn("py-3 text-sm text-base-content", className)} {...props} />;
 }
 
 interface SelectItemProps {
@@ -309,9 +297,7 @@ export function Select({
       disabled={disabled}
       onChange={(event) => onValueChange?.(event.target.value)}
       className={cn(
-        "min-h-10 rounded-ui-md border border-border-primary bg-bg-primary px-3.5 py-2.5 text-sm text-fg-primary shadow-ui-xs outline-none",
-        "focus:border-border-brand focus:ring-[3px] focus:ring-focus-ring",
-        "disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-fg-disabled",
+        "select select-bordered w-full text-sm",
         triggerProps?.className,
       )}
     >
@@ -332,7 +318,8 @@ export function Switch({
   onCheckedChange,
   disabled,
   className,
-  ...props
+  id,
+  "aria-label": ariaLabel,
 }: {
   id?: string;
   checked?: boolean;
@@ -342,20 +329,16 @@ export function Switch({
   "aria-label"?: string;
 }) {
   return (
-    <AriaSwitch
-      {...props}
-      isSelected={checked}
-      onChange={onCheckedChange}
-      isDisabled={disabled}
-      className={cn(
-        "group inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-    >
-      <span className="flex h-6 w-11 items-center rounded-full bg-bg-tertiary p-0.5 transition group-selected:bg-brand-solid">
-        <span className="size-5 rounded-full bg-bg-primary shadow-ui-sm transition-transform group-selected:translate-x-5" />
-      </span>
-    </AriaSwitch>
+    <input
+      type="checkbox"
+      id={id}
+      role="switch"
+      aria-label={ariaLabel}
+      checked={checked}
+      disabled={disabled}
+      onChange={(e) => onCheckedChange?.(e.target.checked)}
+      className={cn("toggle toggle-primary", className)}
+    />
   );
 }
 
@@ -382,42 +365,60 @@ export function DialogContent({ className, children }: { className?: string; chi
   const context = useContext(DialogContext);
   if (!context) throw new Error("DialogContent harus berada di dalam Dialog");
 
+  if (!context.open) return null;
+
   return (
-    <ModalOverlay isOpen={context.open} onOpenChange={context.onOpenChange} isDismissable>
-      <Modal className={className}>
-        <UntitledDialog>{children}</UntitledDialog>
-      </Modal>
-    </ModalOverlay>
+    <dialog className="modal modal-open" aria-modal="true">
+      <div className={cn("modal-box bg-base-100", className)}>{children}</div>
+      <form method="dialog" className="modal-backdrop">
+        <button type="button" onClick={() => context.onOpenChange(false)}>close</button>
+      </form>
+    </dialog>
   );
 }
 
 export function DialogHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("space-y-1.5", className)} {...props} />;
+  return <div className={cn("mb-4 space-y-1.5", className)} {...props} />;
 }
 
-export const DialogTitle = ModalTitle;
-export const DialogDescription = ModalDescription;
-
-export function DialogFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function DialogTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <div
-      className={cn("mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end", className)}
+    <h3
+      className={cn("text-lg font-semibold text-base-content", className)}
       {...props}
     />
   );
 }
 
-export const DropdownMenu = MenuTrigger;
-
-export function DropdownMenuTrigger({ className, ...props }: ComponentPropsWithoutRef<typeof AriaButton>) {
+export function DialogDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <AriaButton
+    <p className={cn("text-sm text-base-content/60", className)} {...props} />
+  );
+}
+
+export function DialogFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("modal-action mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end", className)}
       {...props}
-      className={cn(
-        "cursor-pointer rounded-ui-md outline-none focus-visible:ring-[3px] focus-visible:ring-focus-ring",
-        className,
-      )}
     />
+  );
+}
+
+export function DropdownMenu({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("dropdown dropdown-end", className)}>{children}</div>;
+}
+
+export function DropdownMenuTrigger({ className, children, ...props }: ComponentPropsWithoutRef<"button">) {
+  return (
+    <button
+      type="button"
+      tabIndex={0}
+      className={cn("cursor-pointer outline-none", className)}
+      {...props}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -430,12 +431,15 @@ export function DropdownMenuContent({
   children: ReactNode;
 }) {
   return (
-    <Popover
-      placement="bottom end"
-      className="ui-surface z-50 min-w-44 rounded-ui-md border border-border-secondary bg-bg-primary p-1 shadow-ui-lg outline-none"
+    <ul
+      tabIndex={0}
+      className={cn(
+        "dropdown-content menu z-50 min-w-44 rounded-box border border-base-200 bg-base-100 p-1 shadow-lg",
+        className,
+      )}
     >
-      <Menu className={cn("outline-none", className)}>{children}</Menu>
-    </Popover>
+      {children}
+    </ul>
   );
 }
 
@@ -449,14 +453,14 @@ export function DropdownMenuItem({
   children: ReactNode;
 }) {
   return (
-    <MenuItem
-      onAction={onClick}
-      className={cn(
-        "flex min-h-9 cursor-pointer items-center rounded-ui-sm px-2.5 py-2 text-sm text-fg-secondary outline-none hover:bg-bg-secondary focused:bg-bg-secondary",
-        className,
-      )}
-    >
-      {children}
-    </MenuItem>
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn("flex w-full items-center gap-2 px-2 py-2 text-sm text-base-content hover:bg-base-200", className)}
+      >
+        {children}
+      </button>
+    </li>
   );
 }

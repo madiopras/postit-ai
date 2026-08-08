@@ -202,8 +202,8 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kelola pengguna</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-base-content">Kelola pengguna</h1>
+          <p className="mt-1 text-sm text-base-content/60">
             Buat dan kelola akun pengguna. Pendaftaran mandiri dinonaktifkan.
           </p>
         </div>
@@ -222,7 +222,7 @@ export default function UserManagementPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/40" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -233,7 +233,7 @@ export default function UserManagementPage() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              <Loader2 className="size-6 animate-spin text-base-content/40" />
             </div>
           ) : loadError ? (
             <TableError message={loadError} onRetry={refresh} />
@@ -251,21 +251,20 @@ export default function UserManagementPage() {
                 {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
-                      <div className="font-medium">{user.displayName || user.username}</div>
-                      <div className="text-xs text-muted-foreground">@{user.username}</div>
+                      <div className="font-medium text-base-content">{user.displayName || user.username}</div>
+                      <div className="text-xs text-base-content/60">@{user.username}</div>
                       {user.blockReason && (
-                        <div className="mt-1 text-xs text-destructive">{user.blockReason}</div>
+                        <div className="mt-1 text-xs text-error">{user.blockReason}</div>
                       )}
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={user.status === 'active' ? 'default' : 'secondary'}
-                        className={user.status === 'blocked' ? 'text-destructive' : undefined}
+                        variant={user.status === 'active' ? 'default' : user.status === 'blocked' ? 'error' : 'secondary'}
                       >
                         {user.status === 'active' ? 'Aktif' : user.status === 'blocked' ? 'Diblokir' : 'Nonaktif'}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-base-content/80">
                       {new Date(user.updatedAt).toLocaleDateString('id-ID')}
                     </TableCell>
                     <TableCell>
@@ -288,8 +287,9 @@ export default function UserManagementPage() {
                               variant="ghost"
                               size="icon-sm"
                               onClick={() => updateStatus(user, 'blocked')}
+                              className="text-error hover:bg-error/10"
                             >
-                              <ShieldBan className="size-4 text-destructive" />
+                              <ShieldBan className="size-4 text-error" />
                               <span className="sr-only">Blokir {user.username}</span>
                             </Button>
                           </>
@@ -309,7 +309,7 @@ export default function UserManagementPage() {
                 ))}
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="py-12 text-center text-base-content/60">
                       Tidak ada pengguna ditemukan.
                     </TableCell>
                   </TableRow>

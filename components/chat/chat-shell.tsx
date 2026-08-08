@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import { useState, type ReactNode } from 'react';
-import { CircleAlert, LogIn, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from 'lucide-react';
-import { ChatProfileMenu } from '@/components/chat/chat-profile-menu';
-import { ChatThemeToggle } from '@/components/chat/chat-theme-toggle';
-import { ConversationSidebar } from '@/components/chat/conversation-sidebar';
-import { SlideoutMenu } from '@/components/untitled/application/slideout-menus/slideout-menu';
+import { PostItLogo } from "@/components/brand/postit-logo";
+import { ChatProfileMenu } from "@/components/chat/chat-profile-menu";
+import { ChatThemeToggle } from "@/components/chat/chat-theme-toggle";
+import { ConversationSidebar } from "@/components/chat/conversation-sidebar";
+import { PWAInstallBanner } from "@/components/pwa-install-banner";
+import type { ChatController } from "@/hooks/use-chat-controller";
+import type { CurrentUserController } from "@/hooks/use-current-user";
+import { cn } from "@/lib/utils";
 import {
-  Button,
-  ButtonLink,
-} from '@/components/untitled/base/buttons/button';
-import type { ChatController } from '@/hooks/use-chat-controller';
-import type { CurrentUserController } from '@/hooks/use-current-user';
-import { cn } from '@/lib/utils';
+  CircleAlert,
+  History,
+  LogIn,
+  MessageSquarePlus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  User,
+  UserRound,
+} from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 export function ChatShell({
   controller,
@@ -23,20 +29,20 @@ export function ChatShell({
   identity: CurrentUserController;
   children: ReactNode;
 }) {
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const activeTitle =
-    controller.sessions.find((session) => session.id === controller.chatId)?.title ??
-    'Chat baru';
+    controller.sessions.find((session) => session.id === controller.chatId)
+      ?.title ?? "Chat baru";
 
   const startNewChat = () => {
     controller.startNewChat();
-    setIsHistoryOpen(false);
+    setIsDrawerOpen(false);
   };
 
   const selectSession = (chatId: string) => {
     void controller.selectSession(chatId);
-    setIsHistoryOpen(false);
+    setIsDrawerOpen(false);
   };
 
   const sidebarProps = {
@@ -54,125 +60,173 @@ export function ChatShell({
   };
 
   return (
-    <div
-      className={cn(
-        'ui-surface grid h-screen h-dvh w-full overflow-hidden bg-bg-primary transition-[grid-template-columns] duration-300 ease-in-out',
-        isDesktopSidebarOpen
-          ? 'md:grid-cols-[300px_minmax(0,1fr)]'
-          : 'md:grid-cols-[0px_minmax(0,1fr)]'
-      )}
-    >
-      <aside
-        className={cn(
-          'hidden min-h-0 overflow-hidden border-r border-border-secondary transition-all duration-300 md:block',
-          !isDesktopSidebarOpen && 'invisible opacity-0 border-r-0'
-        )}
-      >
-        <div className="w-[300px] h-full">
-          <ConversationSidebar {...sidebarProps} />
-        </div>
-      </aside>
+    <div className="drawer h-screen h-dvh w-full overflow-hidden bg-base-200/40 md:drawer-open">
+      <input
+        id="chat-drawer"
+        type="checkbox"
+        className="drawer-toggle"
+        checked={isDrawerOpen}
+        onChange={(e) => setIsDrawerOpen(e.target.checked)}
+      />
 
-      <section className="flex min-h-0 min-w-0 flex-col bg-bg-primary">
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border-secondary/60 bg-bg-primary/80 px-3 backdrop-blur-md md:h-16 md:px-5">
-          <div className="flex min-w-0 items-center gap-2">
-            <Button
-              variant="tertiary"
-              size="sm"
-              onPress={() => setIsHistoryOpen(true)}
-              className="size-9 min-h-9 p-0 md:hidden"
-              aria-label="Buka riwayat chat"
-            >
-              <Menu className="size-5" aria-hidden="true" />
-              <span className="sr-only">Buka riwayat chat</span>
-            </Button>
-            <Button
-              variant="tertiary"
-              size="sm"
-              onPress={() => setIsDesktopSidebarOpen((open) => !open)}
-              className="hidden size-9 min-h-9 p-0 md:inline-flex"
-              aria-label={isDesktopSidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
+      {/* Main Content Area */}
+      <div className="drawer-content relative flex min-h-0 min-w-0 flex-col overflow-hidden pb-16 md:pb-0">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top,rgba(79,70,229,0.08),transparent_70%)]" />
+        {/* Header */}
+        <header className="sticky top-0 z-20 mx-3 mt-3 flex h-14 shrink-0 items-center justify-between rounded-[26px] border border-base-300/60 bg-base-100/75 px-3 shadow-[0_18px_50px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/65 md:mx-4 md:h-16 md:px-5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              onClick={() => setIsDesktopSidebarOpen((open) => !open)}
+              className="btn btn-ghost btn-sm btn-square hidden border border-base-300/60 bg-base-100/70 shadow-sm md:inline-flex"
+              aria-label={
+                isDesktopSidebarOpen
+                  ? "Sembunyikan sidebar"
+                  : "Tampilkan sidebar"
+              }
             >
               {isDesktopSidebarOpen ? (
                 <PanelLeftClose className="size-5" aria-hidden="true" />
               ) : (
                 <PanelLeftOpen className="size-5" aria-hidden="true" />
               )}
-              <span className="sr-only">
-                {isDesktopSidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
-              </span>
-            </Button>
-            <h1 className="truncate text-sm font-semibold text-fg-primary md:text-base">
-              {activeTitle}
-            </h1>
+            </button>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center overflow-hidden rounded-2xl border border-base-300/60 bg-base-100/85 shadow-sm ring-1 ring-black/5 md:hidden">
+                <PostItLogo size={28} className="size-7" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-sm font-semibold text-base-content md:text-base">
+                  {activeTitle}
+                </h1>
+                <p className="hidden text-[11px] text-base-content/45 md:block">
+                  Percakapan aktif
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-2.5">
             <ChatThemeToggle className="hidden size-9 min-h-9 p-0 md:inline-flex" />
             <IdentityAction identity={identity} />
           </div>
         </header>
 
         <IdentityBanner identity={identity} />
+        <PWAInstallBanner />
 
         <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
-      </section>
 
-      <SlideoutMenu
-        isOpen={isHistoryOpen}
-        onOpenChange={setIsHistoryOpen}
-        aria-label="Riwayat chat"
+        {/* DaisyUI Dock (Bottom App Bar for Mobile PWA) */}
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 md:hidden">
+          <div className="dock dock-bottom dock-sm pointer-events-auto mx-auto flex max-w-xl items-end justify-between gap-1 rounded-[26px] border border-base-300/60 bg-base-100/82 px-2 py-2 shadow-[0_18px_60px_-34px_rgba(15,23,42,0.5)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/72">
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 text-base-content/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 hover:text-primary active:translate-y-0"
+              aria-label="Riwayat chat"
+            >
+              <History className="size-5" />
+              {/* <span className="dock-label text-[10px] leading-none">
+                Riwayat
+              </span> */}
+            </button>
+
+            <button
+              onClick={startNewChat}
+              className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] bg-primary/10 px-3 py-2 font-semibold text-primary transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/15 active:translate-y-0"
+              aria-label="Chat Baru"
+            >
+              <MessageSquarePlus className="size-5" />
+              {/* <span className="dock-label text-[10px] leading-none">Chat Baru</span> */}
+            </button>
+
+            <div className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 active:translate-y-0">
+              <ChatThemeToggle className="size-9 min-h-9 p-0" />
+              {/* <span className="dock-label text-[10px] leading-none text-base-content/70">
+                Tema
+              </span> */}
+            </div>
+
+            {identity.status === "authenticated" ? (
+              <div className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 active:translate-y-0">
+                <ChatProfileMenu identity={identity} />
+                {/* <span className="dock-label text-[10px] leading-none text-base-content/70">
+                  Akun
+                </span> */}
+              </div>
+            ) : (
+              <a
+                href="/login?redirect=/"
+                className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 text-base-content/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 hover:text-primary active:translate-y-0"
+                aria-label="Masuk Akun"
+              >
+                <User className="size-5" />
+                {/* <span className="dock-label text-[10px] leading-none">
+                  Masuk
+                </span> */}
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Drawer Side (Sidebar for Desktop & Mobile Slideout) */}
+      <div
+        className={cn("drawer-side z-40", !isDesktopSidebarOpen && "md:hidden")}
       >
-        <ConversationSidebar
-          {...sidebarProps}
-          onClose={() => setIsHistoryOpen(false)}
-          showMobileFooter
+        <label
+          htmlFor="chat-drawer"
+          aria-label="close sidebar"
+          className="drawer-overlay md:hidden"
         />
-      </SlideoutMenu>
+        <div className="h-full w-72 overflow-hidden border-r border-base-300/60 bg-base-100/85 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/72 sm:w-80 md:m-3 md:rounded-[28px] md:border">
+          <ConversationSidebar
+            {...sidebarProps}
+            onClose={() => setIsDrawerOpen(false)}
+            showMobileFooter
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
 function IdentityAction({ identity }: { identity: CurrentUserController }) {
-  if (identity.status === 'loading') {
+  if (identity.status === "loading") {
     return (
       <span
-        className="size-9 animate-pulse rounded-full bg-bg-tertiary"
+        className="skeleton size-8 rounded-full ring-1 ring-base-300/60"
         role="status"
         aria-label="Memuat profil"
       />
     );
   }
 
-  if (identity.status === 'authenticated') {
+  if (identity.status === "authenticated") {
     return <ChatProfileMenu identity={identity} />;
   }
 
-  if (identity.status === 'error') {
+  if (identity.status === "error") {
     return (
-      <Button
-        variant="tertiary"
-        size="sm"
-        onPress={identity.retry}
-        className="size-9 min-h-9 p-0"
+      <button
+        type="button"
+        onClick={identity.retry}
+        className="btn btn-ghost btn-circle btn-sm border border-base-300/60 bg-base-100/70 text-error shadow-sm"
         aria-label="Coba muat profil"
       >
-        <UserRound className="size-5" aria-hidden="true" />
+        <UserRound className="size-4.5" aria-hidden="true" />
         <span className="sr-only">Coba muat profil</span>
-      </Button>
+      </button>
     );
   }
 
   return (
-    <ButtonLink
+    <a
       href="/login?redirect=/"
-      variant="secondary"
-      size="sm"
-      iconLeading={<LogIn />}
-      className="px-2.5 md:px-3"
+      className="btn btn-primary btn-sm gap-1.5 border border-primary/20 shadow-sm shadow-primary/10"
     >
-      Masuk
-    </ButtonLink>
+      <LogIn className="size-4" />
+      <span>Masuk</span>
+    </a>
   );
 }
 
@@ -189,38 +243,39 @@ function IdentityBanner({ identity }: { identity: CurrentUserController }) {
 
   return (
     <div
-      role={isError ? 'alert' : 'status'}
+      role={isError ? "alert" : "status"}
       className={cn(
-        'flex shrink-0 items-start gap-2 border-b px-4 py-2.5 text-sm md:px-5',
+        "alert mx-3 mt-2 flex items-center justify-between rounded-2xl border text-xs py-2 px-4 shadow-sm backdrop-blur-md md:mx-4",
         isError
-          ? 'border-error-border bg-error-bg text-error-fg'
-          : 'border-warning-bg bg-warning-bg text-warning-fg'
+          ? "alert-error border-error/20 bg-error/10"
+          : "alert-warning border-warning/20 bg-warning/10",
       )}
     >
-      <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <p className="min-w-0 flex-1">{message}</p>
-      {identity.error && (
-        <Button
-          variant="link"
-          size="sm"
-          onPress={identity.retry}
-          className="shrink-0 text-error-fg"
-        >
-          Coba lagi
-        </Button>
-      )}
-      {dismiss && (
-        <Button
-          variant="tertiary"
-          size="sm"
-          onPress={dismiss}
-          className="size-7 min-h-7 shrink-0 p-0 text-current"
-          aria-label="Tutup pemberitahuan"
-        >
-          <X className="size-4" aria-hidden="true" />
-          <span className="sr-only">Tutup</span>
-        </Button>
-      )}
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
+        <span className="truncate">{message}</span>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {identity.error && (
+          <button
+            type="button"
+            onClick={identity.retry}
+            className="btn btn-link btn-xs text-inherit p-0"
+          >
+            Coba lagi
+          </button>
+        )}
+        {dismiss && (
+          <button
+            type="button"
+            onClick={dismiss}
+            className="btn btn-ghost btn-circle btn-xs text-inherit"
+            aria-label="Tutup pemberitahuan"
+          >
+            ✕
+          </button>
+        )}
+      </div>
     </div>
   );
 }

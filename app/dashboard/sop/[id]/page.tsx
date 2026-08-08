@@ -297,7 +297,7 @@ export default function SOPFormPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-base-content/60" />
       </div>
     );
   }
@@ -314,10 +314,10 @@ export default function SOPFormPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-base-content">
             {isNew ? 'Buat SOP' : 'Edit SOP'}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-base-content/60 mt-1">
             {isNew 
               ? 'Tambahkan prosedur operasional baru'
               : `Mengedit SOP • Dibuat ${sop ? new Date(sop.createdAt).toLocaleDateString('id-ID') : ''}`}
@@ -336,7 +336,7 @@ export default function SOPFormPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Title */}
                 <div>
-                  <label className="text-sm font-medium">Judul</label>
+                  <label className="text-sm font-medium text-base-content">Judul</label>
                   <Input
                     placeholder="Masukkan judul SOP"
                     value={formData.title}
@@ -345,14 +345,14 @@ export default function SOPFormPage() {
                     }
                     maxLength={200}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-base-content/60 mt-1">
                     {formData.title.length}/200
                   </p>
                 </div>
 
                 {/* Category */}
                 <div>
-                  <label className="text-sm font-medium">Kategori</label>
+                  <label className="text-sm font-medium text-base-content">Kategori</label>
                   <Input
                     placeholder="mis. Penjualan, Dukungan, Operasional"
                     value={formData.category}
@@ -365,7 +365,7 @@ export default function SOPFormPage() {
 
                 {/* Content */}
                 <div>
-                  <label className="text-sm font-medium">Konten</label>
+                  <label className="text-sm font-medium text-base-content">Konten</label>
                   <Textarea
                     placeholder="Masukkan konten SOP (mendukung Markdown)"
                     value={formData.content}
@@ -375,17 +375,17 @@ export default function SOPFormPage() {
                     maxLength={50000}
                     rows={12}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-base-content/60 mt-1">
                     {formData.content.length}/50000 karakter
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center justify-between rounded-lg border border-base-200 bg-base-200/40 p-4">
                   <div>
-                    <label htmlFor="requires-login" className="text-sm font-medium">
+                    <label htmlFor="requires-login" className="text-sm font-medium text-base-content">
                       Wajib login
                     </label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-base-content/60">
                       Visitor anonim tidak dapat mengambil isi SOP ini.
                     </p>
                   </div>
@@ -436,19 +436,19 @@ export default function SOPFormPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Status saat ini</p>
+                  <p className="text-sm text-base-content/60">Status saat ini</p>
                   {sop.status === 'published' && (
-                    <Badge className="bg-success/10 text-success hover:bg-success/10">
+                    <Badge variant="success">
                       Terbit
                     </Badge>
                   )}
                   {sop.status === 'draft' && (
-                    <Badge className="bg-warning/10 text-warning hover:bg-warning/10">
+                    <Badge variant="warning">
                       Draf
                     </Badge>
                   )}
                   {sop.status === 'error' && (
-                    <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">
+                    <Badge variant="error">
                       Bermasalah
                     </Badge>
                   )}
@@ -467,15 +467,15 @@ export default function SOPFormPage() {
                   const isPublished = version.id === sop.publishedVersionId;
                   const isRollback = version.publishedAt !== null;
                   return (
-                    <div key={version.id} className="rounded-lg border p-3 space-y-2">
+                    <div key={version.id} className="rounded-lg border border-base-200 p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Versi {version.versionNumber}</span>
+                        <span className="text-sm font-medium text-base-content">Versi {version.versionNumber}</span>
                         <Badge variant={isPublished ? 'default' : 'outline'}>
                           {isPublished ? 'Terbit' : version.indexingStatus}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(version.createdAt).toLocaleString()}
+                      <p className="text-xs text-base-content/60">
+                        {new Date(version.createdAt).toLocaleString('id-ID')}
                       </p>
                       <Button
                         type="button"
@@ -527,14 +527,14 @@ export default function SOPFormPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {attachments.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Belum ada lampiran pada versi ini.</p>
+                    <p className="text-sm text-base-content/60">Belum ada lampiran pada versi ini.</p>
                   )}
                   {attachments.map((attachment) => (
-                    <div key={attachment.id} className="rounded-lg border p-3">
-                      <p className="truncate text-sm font-medium" title={attachment.filename}>
+                    <div key={attachment.id} className="rounded-lg border border-base-200 p-3">
+                      <p className="truncate text-sm font-medium text-base-content" title={attachment.filename}>
                         {attachment.filename}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-base-content/60">
                         {(attachment.size / 1024).toFixed(1)} KB
                       </p>
                       <div className="mt-1 flex items-center gap-2">
@@ -546,19 +546,19 @@ export default function SOPFormPage() {
                             : attachment.extractionStatus}
                         </Badge>
                         {attachment.extractedCharacterCount !== null && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-base-content/60">
                             {attachment.extractedCharacterCount.toLocaleString('id-ID')} karakter
                           </span>
                         )}
                       </div>
                       {attachment.extractionError && (
-                        <p className="mt-1 text-xs text-destructive">
+                        <p className="mt-1 text-xs text-error">
                           {attachment.extractionError}
                         </p>
                       )}
                       <div className="mt-2 flex gap-2">
                         <a
-                          className="inline-flex h-7 items-center rounded-lg border px-2.5 text-[0.8rem] font-medium hover:bg-muted"
+                          className="inline-flex h-7 items-center rounded-lg border border-base-300 px-2.5 text-[0.8rem] font-medium hover:bg-base-200"
                           href={`/api/sop/${sopId}/versions/${activeVersionId}/attachments/${attachment.id}`}
                         >
                           <Download className="mr-1 h-3 w-3" />
@@ -602,13 +602,13 @@ export default function SOPFormPage() {
                           event.target.value = '';
                         }}
                       />
-                      <span className="mt-1 block text-xs text-muted-foreground">
+                      <span className="mt-1 block text-xs text-base-content/60">
                         PDF teks, DOCX, XLSX, PPTX, TXT, atau CSV · maksimal 10 MB
                       </span>
                     </label>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-base-content/60">
                         Versi terbit tidak dapat diubah. Buat draf sebelum mengubah lampiran.
                       </p>
                       {activeVersionId === versions[0]?.id && (
@@ -630,7 +630,7 @@ export default function SOPFormPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Ukuran konten</p>
+                <p className="text-base-content/60">Ukuran konten</p>
                 <p className="font-medium">
                   {Math.round(formData.content.length / 1024)}KB
                 </p>
@@ -638,13 +638,13 @@ export default function SOPFormPage() {
               {!isNew && sop && (
                 <>
                   <div>
-                    <p className="text-muted-foreground">Dibuat</p>
+                    <p className="text-base-content/60">Dibuat</p>
                     <p className="font-medium">
                       {new Date(sop.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Diperbarui</p>
+                    <p className="text-base-content/60">Diperbarui</p>
                     <p className="font-medium">
                       {new Date(sop.updatedAt).toLocaleDateString()}
                     </p>
@@ -661,15 +661,15 @@ export default function SOPFormPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Ukuran chunk</p>
+                <p className="text-base-content/60">Ukuran chunk</p>
                 <p className="font-medium">~800 tokens (3.2KB)</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Overlap</p>
+                <p className="text-base-content/60">Overlap</p>
                 <p className="font-medium">400 karakter antar-chunk</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Perkiraan chunk</p>
+                <p className="text-base-content/60">Perkiraan chunk</p>
                 <p className="font-medium">
                   {Math.ceil(formData.content.length / 2800)}
                 </p>
@@ -694,11 +694,11 @@ export default function SOPFormPage() {
           </DialogHeader>
             <div className="mt-5 max-h-80 space-y-4 overflow-y-auto">
               {chunks.map((chunk, i) => (
-                <div key={i} className="pb-4 border-b last:border-0">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                <div key={i} className="pb-4 border-b border-base-200 last:border-0">
+                  <p className="text-xs font-medium text-base-content/60 mb-2">
                     Chunk {i + 1} ({chunk.length} karakter)
                   </p>
-                  <p className="text-sm bg-muted p-3 rounded line-clamp-4">
+                  <p className="text-sm bg-base-200 p-3 rounded line-clamp-4 text-base-content">
                     {chunk}...
                   </p>
                 </div>

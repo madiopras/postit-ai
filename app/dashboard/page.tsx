@@ -2,20 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { AlertTriangleIcon } from 'lucide-react';
+import Link from 'next/link';
 
 import { ChartAreaInteractive } from '@/components/chart-area-interactive';
 import { SectionCards } from '@/components/section-cards';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/dashboard/dashboard-ui';
 import type { DashboardStats } from '@/lib/stats';
-import Link from 'next/link';
 
 /**
  * Dashboard overview.
- *
- * Renders inside app/dashboard/layout.tsx, which already provides the sidebar
- * and header. The previous version mounted its own SidebarProvider + AppSidebar
- * on top of the layout's, so this page showed two sidebars — and every figure on
- * it came from the shadcn dashboard-01 demo rather than the database.
  */
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -57,31 +52,29 @@ export default function DashboardPage() {
   return (
     <div className="@container/main flex flex-1 flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-base-content">Overview</h1>
+        <p className="mt-1 text-sm text-base-content/60">
           Ringkasan knowledge base dan aktivitas chatbot.
         </p>
       </div>
 
       {error && (
         <div>
-          <Card role="alert" className="border-error-border bg-error-bg">
-            <CardContent className="flex flex-col gap-3 py-4 text-sm text-error-fg sm:flex-row sm:items-center">
-              <AlertTriangleIcon className="size-4" />
-              {error}
-              <Button
-                variant="outline"
-                size="sm"
-                className="sm:ml-auto"
-                onClick={() => {
-                  setError(null);
-                  setReloadVersion((value) => value + 1);
-                }}
-              >
-                Coba lagi
-              </Button>
-            </CardContent>
-          </Card>
+          <div role="alert" className="alert alert-error">
+            <AlertTriangleIcon className="size-5" />
+            <span className="text-sm">{error}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto"
+              onClick={() => {
+                setError(null);
+                setReloadVersion((value) => value + 1);
+              }}
+            >
+              Coba lagi
+            </Button>
+          </div>
         </div>
       )}
 
@@ -89,10 +82,10 @@ export default function DashboardPage() {
 
       {needsAttention && (
         <div>
-          <Card className="border-error-border">
+          <Card className="border-error/40 bg-error/5">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangleIcon className="size-4 text-error-fg" />
+              <CardTitle className="flex items-center gap-2 text-base text-error">
+                <AlertTriangleIcon className="size-5" />
                 Perlu perhatian
               </CardTitle>
               <CardDescription>
@@ -101,7 +94,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-4 text-sm">
-              <ul className="text-muted-foreground list-inside list-disc space-y-1">
+              <ul className="list-inside list-disc space-y-1 text-base-content/70">
                 {stats.documents.missingEmbedding > 0 && (
                   <li>{stats.documents.missingEmbedding} chunk tanpa vektor</li>
                 )}
@@ -113,7 +106,7 @@ export default function DashboardPage() {
               </ul>
               <Link
                 href="/dashboard/documents?status=error"
-                className="ml-auto inline-flex min-h-9 items-center rounded-ui-md border border-border-primary bg-bg-primary px-3 py-2 text-sm font-semibold text-fg-secondary shadow-ui-xs outline-none hover:bg-bg-secondary focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+                className="btn btn-neutral btn-sm ml-auto"
               >
                 Buka dokumen
               </Link>
