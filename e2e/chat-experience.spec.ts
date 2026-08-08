@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('suggestions fill and focus the composer without submitting', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   let chatRequests = 0;
   await page.route(/\/api\/chat$/, async (route) => {
     chatRequests += 1;
