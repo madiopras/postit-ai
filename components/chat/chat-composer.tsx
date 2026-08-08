@@ -8,9 +8,10 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from 'react';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, CornerDownLeft } from 'lucide-react';
 import { Button } from '@/components/untitled/base/buttons/button';
 import { TextArea } from '@/components/untitled/base/textarea/textarea';
+import { cn } from '@/lib/utils';
 
 const MAX_TEXTAREA_HEIGHT_PX = 200;
 
@@ -81,35 +82,57 @@ export function ChatComposer({
   return (
     <div
       ref={composerRef}
-      className="shrink-0 border-t border-border-secondary bg-bg-primary px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6 md:pt-4"
+      className="relative shrink-0 bg-transparent px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:px-6 md:pb-5"
     >
-      <div className="mx-auto w-full max-w-[800px]">
-        <div className="relative mx-auto w-full max-w-3xl">
+      <div className="mx-auto w-full max-w-3xl">
+        {/* Floating Capsule Box */}
+        <div className="group relative rounded-2xl border border-border-secondary/80 bg-bg-primary/95 p-1.5 shadow-ui-md ring-1 ring-border-secondary/40 backdrop-blur-md transition-all duration-200 focus-within:border-border-brand/70 focus-within:ring-2 focus-within:ring-border-brand/20">
           <TextArea
             aria-label="Tanyakan sesuatu"
-            placeholder="Tanyakan sesuatu..."
+            placeholder="Tanyakan sesuatu tentang SOP, kebijakan, atau panduan..."
             value={value}
             onChange={onChange}
             onKeyDown={handleKeyDown}
             isDisabled={disabled}
             rows={1}
             textAreaRef={textareaRef}
-            textAreaClassName="min-h-14 resize-none overflow-y-auto rounded-ui-xl py-4 pl-4 pr-14 text-sm shadow-ui-sm"
+            textAreaClassName="min-h-[52px] border-0 bg-transparent py-3 pl-3.5 pr-14 text-sm leading-relaxed text-fg-primary placeholder:text-fg-quaternary focus:ring-0 shadow-none"
           />
-          <Button
-            onPress={() => void submit()}
-            isDisabled={!canSend}
-            isLoading={loading}
-            className="absolute bottom-2 right-2 size-10 min-h-10 rounded-full p-0"
-            aria-label="Kirim pesan"
-          >
-            <ArrowUp className="size-5" aria-hidden="true" />
-            <span className="sr-only">Kirim pesan</span>
-          </Button>
+
+          <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5">
+            <Button
+              onPress={() => void submit()}
+              isDisabled={!canSend}
+              isLoading={loading}
+              className={cn(
+                'size-9 min-h-9 rounded-xl p-0 transition-all duration-200',
+                canSend
+                  ? 'bg-brand-solid text-fg-on-brand shadow-ui-xs hover:bg-brand-solid-hover'
+                  : 'bg-bg-tertiary text-fg-disabled'
+              )}
+              aria-label="Kirim pesan"
+            >
+              <ArrowUp className="size-4.5" aria-hidden="true" />
+              <span className="sr-only">Kirim pesan</span>
+            </Button>
+          </div>
         </div>
-        <p className="mt-2 text-center text-xs text-fg-quaternary">
-          PostIt AI dapat membuat kesalahan. Periksa informasi penting.
-        </p>
+
+        {/* Footer info & shortcut hint */}
+        <div className="mt-2 flex items-center justify-between px-2 text-[11px] text-fg-quaternary">
+          <span className="hidden items-center gap-1 sm:inline-flex">
+            <span>Tekan</span>
+            <kbd className="inline-flex items-center gap-0.5 rounded border border-border-secondary bg-bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-fg-tertiary shadow-ui-xs">
+              <span>Enter</span>
+              <CornerDownLeft className="size-2.5" aria-hidden="true" />
+            </kbd>
+            <span>untuk kirim</span>
+          </span>
+          <p className="mx-auto truncate text-center text-fg-quaternary sm:mx-0">
+            PostIt AI dapat membuat kesalahan. Periksa informasi penting.
+          </p>
+        </div>
+
         <p className="sr-only" aria-live="polite">
           {statusLabel(status)}
         </p>

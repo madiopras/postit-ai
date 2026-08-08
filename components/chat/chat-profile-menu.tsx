@@ -29,14 +29,12 @@ export function ChatProfileMenu({
         variant="tertiary"
         size="sm"
         isLoading={identity.logoutPending}
-        className="min-h-9 gap-2 px-1.5 md:px-2"
+        className="size-9 min-h-9 p-0"
         aria-label={`Buka menu profil ${name}`}
       >
         <span className="flex size-7 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-text">
           {profileInitial(name)}
         </span>
-        <span className="hidden max-w-32 truncate text-sm md:inline">{name}</span>
-        <ChevronDown className="hidden size-4 text-fg-quaternary md:block" aria-hidden="true" />
       </Button>
 
       <Popover
@@ -44,7 +42,7 @@ export function ChatProfileMenu({
         offset={8}
         className={({ isEntering, isExiting }) =>
           cn(
-            'ui-surface z-50 w-72 rounded-ui-lg border border-border-secondary bg-bg-primary p-1.5 shadow-ui-lg outline-none',
+            'ui-surface z-50 w-64 rounded-ui-lg border border-border-secondary bg-bg-primary p-1.5 shadow-ui-lg outline-none',
             isEntering && 'animate-in fade-in zoom-in-95 duration-100',
             isExiting && 'animate-out fade-out zoom-out-95 duration-75'
           )
@@ -52,8 +50,7 @@ export function ChatProfileMenu({
       >
         <div className="px-3 py-2.5">
           <p className="truncate text-sm font-semibold text-fg-primary">{name}</p>
-          <p className="mt-0.5 truncate text-xs text-fg-tertiary">@{user.username}</p>
-          <p className="mt-2 text-xs font-medium text-fg-quaternary">
+          <p className="mt-1 text-xs font-medium text-fg-quaternary">
             {roleLabel(user.role)}
           </p>
         </div>

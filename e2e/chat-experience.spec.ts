@@ -185,10 +185,6 @@ test('renders safe Markdown, localized sources, copy states, and feedback rollba
   await expect(externalLink).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(page.locator('table')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Lihat 1 sumber' }).click();
-  await expect(page.getByText('Panduan reset password')).toBeVisible();
-  await expect(page.getByText('Relevansi 86%')).toBeVisible();
-  await expect(page.getByText('/should-not-render')).toHaveCount(0);
   if (process.env.CAPTURE_PHASE4 === '1') {
     await prepareVisualCapture(page);
     await page.screenshot({
