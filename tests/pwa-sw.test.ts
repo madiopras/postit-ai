@@ -30,7 +30,7 @@ describe('PWA & Service Worker configuration', () => {
     expect(manifestContent).toContain('short_name: "PostIt AI"');
     expect(manifestContent).toContain('start_url: "/"');
     expect(manifestContent).toContain('display: "standalone"');
-    expect(manifestContent).toContain('theme_color: "#4f46e5"');
+    expect(manifestContent).toContain('theme_color: "#004b6b"');
     expect(manifestContent).toContain('purpose: "maskable"');
   });
 

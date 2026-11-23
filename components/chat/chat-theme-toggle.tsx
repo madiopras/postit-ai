@@ -9,8 +9,12 @@ export function ChatThemeToggle({ className }: { className?: string }) {
     <button
       type="button"
       onClick={toggleTheme}
-      className={cn('btn btn-ghost btn-circle btn-sm text-base-content/80 hover:text-base-content', className)}
+      className={cn(
+        'btn btn-ghost btn-sm btn-square rounded-xl text-base-content/75 transition-colors hover:bg-base-200 hover:text-primary',
+        className
+      )}
       aria-label="Ganti tema terang/gelap"
+      title="Ganti tema terang/gelap"
     >
       <Moon className="size-4.5 dark:hidden" aria-hidden="true" />
       <Sun className="hidden size-4.5 dark:block" aria-hidden="true" />

@@ -1,16 +1,13 @@
 /*
- * Canonical PostIt AI token layer, derived from Untitled UI foundations.
- *
- * Source values and semantic decisions are defined in
- * docs/enhancement/go2/design.md. Phase 7 removed the legacy shadcn/Base UI
- * token layer, so all application surfaces now resolve through this file.
+ * Canonical PostIt AI (by utaraSU) token layer, derived from Untitled UI foundations
+ * and themed with the signature Utarasu palette (Deep Lake Toba Teal & Ulos Crimson).
  */
 
 @theme inline {
-  --font-ui: var(--font-inter);
-  --font-sans: var(--font-inter);
-  --font-headline: var(--font-inter);
-  --font-heading: var(--font-inter);
+  --font-ui: var(--font-plus-jakarta-sans);
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-headline: var(--font-plus-jakarta-sans);
+  --font-heading: var(--font-plus-jakarta-sans);
 
   --color-brand-25: var(--ui-brand-25);
   --color-brand-50: var(--ui-brand-50);
@@ -88,8 +85,8 @@
   --color-secondary-foreground: var(--ui-fg-secondary);
   --color-muted: var(--ui-bg-secondary);
   --color-muted-foreground: var(--ui-fg-tertiary);
-  --color-accent: var(--ui-bg-active);
-  --color-accent-foreground: var(--ui-fg-primary);
+  --color-accent: var(--ui-accent-solid);
+  --color-accent-foreground: var(--ui-fg-on-accent);
   --color-destructive: var(--ui-error-solid);
   --color-destructive-foreground: var(--ui-fg-on-error);
   --color-success: var(--ui-success-fg);
@@ -98,7 +95,7 @@
   --color-input: var(--ui-border-primary);
   --color-ring: var(--ui-border-brand);
 
-  --color-sidebar: var(--ui-bg-primary);
+  --color-sidebar: var(--ui-bg-secondary);
   --color-sidebar-foreground: var(--ui-fg-primary);
   --color-sidebar-primary: var(--ui-brand-solid);
   --color-sidebar-primary-foreground: var(--ui-fg-on-brand);
@@ -133,133 +130,138 @@
 :root {
   color-scheme: light;
 
-  --ui-brand-25: #f5f8ff;
-  --ui-brand-50: #eef4ff;
-  --ui-brand-100: #e0eaff;
-  --ui-brand-200: #c7d7fe;
-  --ui-brand-300: #a4bcfd;
-  --ui-brand-400: #8098f9;
-  --ui-brand-500: #6172f3;
-  --ui-brand-600: #444ce7;
-  --ui-brand-700: #3538cd;
-  --ui-brand-800: #2d31a6;
-  --ui-brand-900: #2d3282;
-  --ui-brand-950: #1f235b;
+  /* Utarasu Deep Lake Toba Teal scale */
+  --ui-brand-25: #f4fafc;
+  --ui-brand-50: #e8f4f8;
+  --ui-brand-100: #d0e9f2;
+  --ui-brand-200: #a5d5e6;
+  --ui-brand-300: #6ebbe0;
+  --ui-brand-400: #389ec7;
+  --ui-brand-500: #0e7ca3;
+  --ui-brand-600: #004b6b;
+  --ui-brand-700: #003b54;
+  --ui-brand-800: #062f42;
+  --ui-brand-900: #082433;
+  --ui-brand-950: #051620;
 
-  --ui-gray-25: #fcfcfd;
-  --ui-gray-50: #f9fafb;
-  --ui-gray-100: #f2f4f7;
-  --ui-gray-200: #eaecf0;
-  --ui-gray-300: #d0d5dd;
-  --ui-gray-400: #98a2b3;
-  --ui-gray-500: #667085;
-  --ui-gray-600: #475467;
-  --ui-gray-700: #344054;
-  --ui-gray-800: #1d2939;
-  --ui-gray-900: #101828;
-  --ui-gray-950: #0c111d;
+  /* Marine-tinted neutral slate scale */
+  --ui-gray-25: #fafcfd;
+  --ui-gray-50: #f4f7f9;
+  --ui-gray-100: #ebf0f4;
+  --ui-gray-200: #dde7ee;
+  --ui-gray-300: #c4d4df;
+  --ui-gray-400: #8da2b0;
+  --ui-gray-500: #5c7382;
+  --ui-gray-600: #405664;
+  --ui-gray-700: #293e4b;
+  --ui-gray-800: #162936;
+  --ui-gray-900: #0b1f2a;
+  --ui-gray-950: #08131a;
 
   --ui-bg-primary: #ffffff;
-  --ui-bg-secondary: #f9fafb;
-  --ui-bg-tertiary: #f2f4f7;
-  --ui-bg-active: #f2f4f7;
-  --ui-bg-disabled: #f2f4f7;
-  --ui-bg-overlay: rgb(16 24 40 / 70%);
-  --ui-fg-primary: #101828;
-  --ui-fg-secondary: #344054;
-  --ui-fg-tertiary: #475467;
-  --ui-fg-quaternary: #667085;
-  --ui-fg-disabled: #98a2b3;
+  --ui-bg-secondary: #f4f7f9;
+  --ui-bg-tertiary: #ebf0f4;
+  --ui-bg-active: #e6f1f6;
+  --ui-bg-disabled: #ebf0f4;
+  --ui-bg-overlay: rgb(8 19 26 / 68%);
+  --ui-fg-primary: #0b1f2a;
+  --ui-fg-secondary: #293e4b;
+  --ui-fg-tertiary: #405664;
+  --ui-fg-quaternary: #5c7382;
+  --ui-fg-disabled: #8da2b0;
   --ui-fg-on-brand: #ffffff;
+  --ui-fg-on-accent: #ffffff;
   --ui-fg-on-error: #ffffff;
-  --ui-border-primary: #d0d5dd;
-  --ui-border-secondary: #eaecf0;
-  --ui-border-brand: #6172f3;
-  --ui-brand-solid: #444ce7;
-  --ui-brand-solid-hover: #3538cd;
-  --ui-brand-subtle: #eef4ff;
-  --ui-brand-text: #3538cd;
-  --ui-focus-ring: rgb(97 114 243 / 24%);
+  --ui-border-primary: #c4d4df;
+  --ui-border-secondary: #dde7ee;
+  --ui-border-brand: #0e7ca3;
+  --ui-brand-solid: #004b6b;
+  --ui-brand-solid-hover: #003b54;
+  --ui-brand-subtle: #e8f4f8;
+  --ui-brand-text: #004b6b;
+  --ui-accent-solid: #a8141e;
+  --ui-focus-ring: rgb(0 75 107 / 22%);
 
-  --ui-error-solid: #d92d20;
-  --ui-error-solid-hover: #b42318;
-  --ui-error-bg: #fef3f2;
-  --ui-error-fg: #b42318;
-  --ui-error-border: #fecdca;
-  --ui-success-bg: #ecfdf3;
-  --ui-success-fg: #067647;
-  --ui-warning-bg: #fffaeb;
-  --ui-warning-fg: #b54708;
-  --ui-info-bg: #eef4ff;
-  --ui-info-fg: #3538cd;
-  --ui-chart-1: #2a78d6;
-  --ui-chart-2: #eb6834;
-  --ui-chart-3: #1baf7a;
-  --ui-chart-4: #eda100;
-  --ui-chart-5: #e87ba4;
+  --ui-error-solid: #c81e2b;
+  --ui-error-solid-hover: #a8141e;
+  --ui-error-bg: #fef2f2;
+  --ui-error-fg: #a8141e;
+  --ui-error-border: #fecaca;
+  --ui-success-bg: #ecfdf5;
+  --ui-success-fg: #047857;
+  --ui-warning-bg: #fffbeb;
+  --ui-warning-fg: #b45309;
+  --ui-info-bg: #e8f4f8;
+  --ui-info-fg: #004b6b;
+  --ui-chart-1: #004b6b;
+  --ui-chart-2: #a8141e;
+  --ui-chart-3: #0f8a5f;
+  --ui-chart-4: #d97706;
+  --ui-chart-5: #0e7ca3;
 
   --ui-radius-sm: 0.375rem;
   --ui-radius-md: 0.5rem;
   --ui-radius-lg: 0.625rem;
   --ui-radius-xl: 0.75rem;
-  --ui-shadow-xs: 0 1px 2px rgb(16 24 40 / 5%);
-  --ui-shadow-sm: 0 1px 3px rgb(16 24 40 / 10%), 0 1px 2px rgb(16 24 40 / 6%);
-  --ui-shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 8%), 0 4px 6px -2px rgb(16 24 40 / 3%);
-
+  --ui-shadow-xs: 0 1px 2px rgb(8 19 26 / 5%);
+  --ui-shadow-sm: 0 1px 3px rgb(8 19 26 / 8%), 0 1px 2px rgb(8 19 26 / 4%);
+  --ui-shadow-lg: 0 14px 24px -6px rgb(8 19 26 / 10%), 0 4px 8px -2px rgb(8 19 26 / 4%);
 }
 
 .dark,
 .ui-surface[data-ui-theme="dark"] {
   color-scheme: dark;
 
-  --ui-bg-primary: #0c111d;
-  --ui-bg-secondary: #161b26;
-  --ui-bg-tertiary: #1f242f;
-  --ui-bg-active: #1d2939;
-  --ui-bg-disabled: #1f242f;
-  --ui-bg-overlay: rgb(0 0 0 / 76%);
-  --ui-fg-primary: #f9fafb;
-  --ui-fg-secondary: #eaecf0;
-  --ui-fg-tertiary: #d0d5dd;
-  --ui-fg-quaternary: #98a2b3;
-  --ui-fg-disabled: #667085;
-  --ui-fg-on-brand: #0c111d;
-  --ui-fg-on-error: #0c111d;
-  --ui-border-primary: #344054;
-  --ui-border-secondary: #1d2939;
-  --ui-border-brand: #8098f9;
-  --ui-brand-solid: #8098f9;
-  --ui-brand-solid-hover: #a4bcfd;
-  --ui-brand-subtle: #1f235b;
-  --ui-brand-text: #a4bcfd;
-  --ui-focus-ring: rgb(128 152 249 / 32%);
+  --ui-bg-primary: #08131a;
+  --ui-bg-secondary: #0d1d27;
+  --ui-bg-tertiary: #142836;
+  --ui-bg-active: #163142;
+  --ui-bg-disabled: #142836;
+  --ui-bg-overlay: rgb(2 8 12 / 78%);
+  --ui-fg-primary: #edf4f8;
+  --ui-fg-secondary: #d4e3ec;
+  --ui-fg-tertiary: #a5bccb;
+  --ui-fg-quaternary: #7c97a8;
+  --ui-fg-disabled: #516b7b;
+  --ui-fg-on-brand: #051620;
+  --ui-fg-on-accent: #1c0507;
+  --ui-fg-on-error: #230607;
+  --ui-border-primary: #254052;
+  --ui-border-secondary: #1a303f;
+  --ui-border-brand: #38b6e2;
+  --ui-brand-solid: #38b6e2;
+  --ui-brand-solid-hover: #62c7ea;
+  --ui-brand-subtle: #0e2c3d;
+  --ui-brand-text: #62c7ea;
+  --ui-accent-solid: #eb5b65;
+  --ui-focus-ring: rgb(56 182 226 / 30%);
 
-  --ui-error-solid: #f97066;
-  --ui-error-solid-hover: #fda29b;
-  --ui-error-bg: rgb(240 68 56 / 14%);
-  --ui-error-fg: #fda29b;
-  --ui-error-border: rgb(249 112 102 / 45%);
-  --ui-success-bg: rgb(18 183 106 / 14%);
-  --ui-success-fg: #6ce9a6;
-  --ui-warning-bg: rgb(247 144 9 / 14%);
-  --ui-warning-fg: #fec84b;
-  --ui-info-bg: rgb(97 114 243 / 16%);
-  --ui-info-fg: #a4bcfd;
-  --ui-chart-1: #3987e5;
-  --ui-chart-2: #d95926;
-  --ui-chart-3: #199e70;
-  --ui-chart-4: #c98500;
-  --ui-chart-5: #d55181;
+  --ui-error-solid: #f87171;
+  --ui-error-solid-hover: #fca5a5;
+  --ui-error-bg: rgb(235 91 101 / 14%);
+  --ui-error-fg: #fca5a5;
+  --ui-error-border: rgb(248 113 113 / 40%);
+  --ui-success-bg: rgb(52 211 153 / 14%);
+  --ui-success-fg: #6ee7b7;
+  --ui-warning-bg: rgb(251 191 36 / 14%);
+  --ui-warning-fg: #fcd34d;
+  --ui-info-bg: rgb(56 182 226 / 16%);
+  --ui-info-fg: #7dd3fc;
+  --ui-chart-1: #38b6e2;
+  --ui-chart-2: #eb5b65;
+  --ui-chart-3: #34d399;
+  --ui-chart-4: #fbbf24;
+  --ui-chart-5: #60a5fa;
 
-  --ui-shadow-xs: 0 1px 2px rgb(0 0 0 / 30%);
-  --ui-shadow-sm: 0 2px 6px rgb(0 0 0 / 32%);
-  --ui-shadow-lg: 0 16px 32px rgb(0 0 0 / 45%);
+  --ui-shadow-xs: 0 1px 2px rgb(0 0 0 / 35%);
+  --ui-shadow-sm: 0 2px 8px rgb(0 0 0 / 38%);
+  --ui-shadow-lg: 0 18px 36px rgb(0 0 0 / 50%);
 }
 
 .ui-surface {
   color: var(--ui-fg-primary);
   color-scheme: light;
-  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 .dark .ui-surface,

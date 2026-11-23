@@ -10,15 +10,14 @@ import type { CurrentUserController } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import {
   CircleAlert,
-  History,
   LogIn,
-  MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
-  User,
+  SquarePen,
   UserRound,
+  X,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function ChatShell({
   controller,
@@ -29,20 +28,42 @@ export function ChatShell({
   identity: CurrentUserController;
   children: ReactNode;
 }) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
-  const activeTitle =
-    controller.sessions.find((session) => session.id === controller.chatId)
-      ?.title ?? "Chat baru";
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const activeSession = controller.sessions.find(
+    (session) => session.id === controller.chatId,
+  );
+  const activeTitle = activeSession?.title ?? "Chat baru";
+
+  const closeMobileDrawer = (restoreFocus = false) => {
+    setIsMobileDrawerOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus());
+    }
+  };
+
+  useEffect(() => {
+    if (!isMobileDrawerOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMobileDrawer(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileDrawerOpen]);
 
   const startNewChat = () => {
     controller.startNewChat();
-    setIsDrawerOpen(false);
+    setIsMobileDrawerOpen(false);
   };
 
   const selectSession = (chatId: string) => {
     void controller.selectSession(chatId);
-    setIsDrawerOpen(false);
+    setIsMobileDrawerOpen(false);
   };
 
   const sidebarProps = {
@@ -60,24 +81,75 @@ export function ChatShell({
   };
 
   return (
-    <div className="drawer h-screen h-dvh w-full overflow-hidden bg-base-200/40 md:drawer-open">
-      <input
-        id="chat-drawer"
-        type="checkbox"
-        className="drawer-toggle"
-        checked={isDrawerOpen}
-        onChange={(e) => setIsDrawerOpen(e.target.checked)}
+    <div className="relative flex h-screen h-dvh w-full overflow-hidden bg-base-100 text-base-content">
+      {/* Signature Utarasu Ulos accent hairline */}
+      <div
+        className="utarasu-ulos-bar pointer-events-none fixed inset-x-0 top-0 z-50 h-[2.5px]"
+        aria-hidden="true"
       />
 
-      {/* Main Content Area */}
-      <div className="drawer-content relative flex min-h-0 min-w-0 flex-col overflow-hidden pb-16 md:pb-0">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top,rgba(79,70,229,0.08),transparent_70%)]" />
-        {/* Header */}
-        <header className="sticky top-0 z-20 mx-3 mt-3 flex h-14 shrink-0 items-center justify-between rounded-[26px] border border-base-300/60 bg-base-100/75 px-3 shadow-[0_18px_50px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/65 md:mx-4 md:h-16 md:px-5">
-          <div className="flex min-w-0 items-center gap-2.5">
+      {/* Desktop Collapsible Left Rail */}
+      <aside
+        aria-label="Riwayat chat"
+        className={cn(
+          "hidden shrink-0 border-r border-base-300/80 bg-base-200/75 transition-[width,opacity] duration-200 ease-out md:flex md:flex-col",
+          isDesktopSidebarOpen
+            ? "w-[276px] opacity-100"
+            : "w-0 overflow-hidden border-r-0 opacity-0",
+        )}
+      >
+        {isDesktopSidebarOpen && (
+          <ConversationSidebar
+            {...sidebarProps}
+            onToggleDesktop={() => setIsDesktopSidebarOpen(false)}
+          />
+        )}
+      </aside>
+
+      {/* Mobile Slide-Over Drawer */}
+      {isMobileDrawerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Riwayat chat"
+        >
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity"
+            onClick={() => closeMobileDrawer(true)}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 flex h-full w-[min(86vw,320px)] flex-col border-r border-base-300 bg-base-200 shadow-2xl">
+            <ConversationSidebar
+              {...sidebarProps}
+              onClose={() => closeMobileDrawer(true)}
+              showMobileFooter
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Chat Workspace */}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-base-100">
+        {/* Top Slim Header */}
+        <header className="relative z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-base-300/60 bg-base-100/85 px-3 backdrop-blur-xl sm:px-4">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            {/* Mobile Drawer Trigger */}
             <button
+              ref={mobileMenuTriggerRef}
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="btn btn-ghost btn-sm btn-square rounded-xl text-base-content/75 hover:bg-base-200 hover:text-base-content md:hidden"
+              aria-label="Buka riwayat chat"
+            >
+              <PanelLeftOpen className="size-5" aria-hidden="true" />
+            </button>
+
+            {/* Desktop Sidebar Toggle */}
+            <button
+              type="button"
               onClick={() => setIsDesktopSidebarOpen((open) => !open)}
-              className="btn btn-ghost btn-sm btn-square hidden border border-base-300/60 bg-base-100/70 shadow-sm md:inline-flex"
+              className="btn btn-ghost btn-sm btn-square hidden rounded-xl text-base-content/75 hover:bg-base-200 hover:text-base-content md:inline-flex"
               aria-label={
                 isDesktopSidebarOpen
                   ? "Sembunyikan sidebar"
@@ -90,23 +162,50 @@ export function ChatShell({
                 <PanelLeftOpen className="size-5" aria-hidden="true" />
               )}
             </button>
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center overflow-hidden rounded-2xl border border-base-300/60 bg-base-100/85 shadow-sm ring-1 ring-black/5 md:hidden">
-                <PostItLogo size={28} className="size-7" />
+
+            {/* Quick New Chat shortcut (mobile or when desktop sidebar is collapsed) */}
+            <button
+              type="button"
+              onClick={startNewChat}
+              className={cn(
+                "btn btn-ghost btn-sm btn-square rounded-xl text-base-content/75 hover:bg-base-200 hover:text-primary",
+                isDesktopSidebarOpen && "md:hidden",
+              )}
+              aria-label="Mulai chat baru"
+              title="Chat baru"
+            >
+              <SquarePen className="size-4.5" aria-hidden="true" />
+            </button>
+
+            {/* Active Conversation Title / Brand Pill */}
+            <div className="flex min-w-0 items-center gap-2.5 pl-0.5">
+              <div
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-base-300/80 bg-base-100 shadow-2xs",
+                  isDesktopSidebarOpen && "md:hidden",
+                )}
+              >
+                <PostItLogo size={22} className="size-5.5" />
               </div>
-              <div className="min-w-0">
-                <h1 className="truncate text-sm font-semibold text-base-content md:text-base">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="truncate text-sm font-semibold tracking-tight text-base-content sm:text-[15px]">
                   {activeTitle}
                 </h1>
-                <p className="hidden text-[11px] text-base-content/45 md:block">
-                  Percakapan aktif
-                </p>
+                {!activeSession && (
+                  <span className="hidden items-center gap-1.5 rounded-full border border-base-300/80 bg-base-200/70 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-base-content/65 sm:inline-flex">
+                    <span
+                      className="size-1.5 rounded-full bg-accent"
+                      aria-hidden="true"
+                    />
+                    utaraSU
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2.5">
-            <ChatThemeToggle className="hidden size-9 min-h-9 p-0 md:inline-flex" />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <ChatThemeToggle className="size-9 min-h-9 rounded-xl p-0" />
             <IdentityAction identity={identity} />
           </div>
         </header>
@@ -115,76 +214,6 @@ export function ChatShell({
         <PWAInstallBanner />
 
         <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
-
-        {/* DaisyUI Dock (Bottom App Bar for Mobile PWA) */}
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 md:hidden">
-          <div className="dock dock-bottom dock-sm pointer-events-auto mx-auto flex max-w-xl items-end justify-between gap-1 rounded-[26px] border border-base-300/60 bg-base-100/82 px-2 py-2 shadow-[0_18px_60px_-34px_rgba(15,23,42,0.5)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/72">
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 text-base-content/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 hover:text-primary active:translate-y-0"
-              aria-label="Riwayat chat"
-            >
-              <History className="size-5" />
-              {/* <span className="dock-label text-[10px] leading-none">
-                Riwayat
-              </span> */}
-            </button>
-
-            <button
-              onClick={startNewChat}
-              className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] bg-primary/10 px-3 py-2 font-semibold text-primary transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/15 active:translate-y-0"
-              aria-label="Chat Baru"
-            >
-              <MessageSquarePlus className="size-5" />
-              {/* <span className="dock-label text-[10px] leading-none">Chat Baru</span> */}
-            </button>
-
-            <div className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 active:translate-y-0">
-              <ChatThemeToggle className="size-9 min-h-9 p-0" />
-              {/* <span className="dock-label text-[10px] leading-none text-base-content/70">
-                Tema
-              </span> */}
-            </div>
-
-            {identity.status === "authenticated" ? (
-              <div className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 active:translate-y-0">
-                <ChatProfileMenu identity={identity} />
-                {/* <span className="dock-label text-[10px] leading-none text-base-content/70">
-                  Akun
-                </span> */}
-              </div>
-            ) : (
-              <a
-                href="/login?redirect=/"
-                className="flex min-w-[4.25rem] flex-col items-center justify-center gap-1 rounded-[18px] px-3 py-2 text-base-content/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-base-200/70 hover:text-primary active:translate-y-0"
-                aria-label="Masuk Akun"
-              >
-                <User className="size-5" />
-                {/* <span className="dock-label text-[10px] leading-none">
-                  Masuk
-                </span> */}
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Drawer Side (Sidebar for Desktop & Mobile Slideout) */}
-      <div
-        className={cn("drawer-side z-40", !isDesktopSidebarOpen && "md:hidden")}
-      >
-        <label
-          htmlFor="chat-drawer"
-          aria-label="close sidebar"
-          className="drawer-overlay md:hidden"
-        />
-        <div className="h-full w-72 overflow-hidden border-r border-base-300/60 bg-base-100/85 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/72 sm:w-80 md:m-3 md:rounded-[28px] md:border">
-          <ConversationSidebar
-            {...sidebarProps}
-            onClose={() => setIsDrawerOpen(false)}
-            showMobileFooter
-          />
-        </div>
       </div>
     </div>
   );
@@ -194,7 +223,7 @@ function IdentityAction({ identity }: { identity: CurrentUserController }) {
   if (identity.status === "loading") {
     return (
       <span
-        className="skeleton size-8 rounded-full ring-1 ring-base-300/60"
+        className="skeleton size-8 rounded-full"
         role="status"
         aria-label="Memuat profil"
       />
@@ -210,10 +239,10 @@ function IdentityAction({ identity }: { identity: CurrentUserController }) {
       <button
         type="button"
         onClick={identity.retry}
-        className="btn btn-ghost btn-circle btn-sm border border-base-300/60 bg-base-100/70 text-error shadow-sm"
+        className="btn btn-ghost btn-circle btn-sm border border-error/30 bg-error/10 text-error"
         aria-label="Coba muat profil"
       >
-        <UserRound className="size-4.5" aria-hidden="true" />
+        <UserRound className="size-4" aria-hidden="true" />
         <span className="sr-only">Coba muat profil</span>
       </button>
     );
@@ -222,9 +251,9 @@ function IdentityAction({ identity }: { identity: CurrentUserController }) {
   return (
     <a
       href="/login?redirect=/"
-      className="btn btn-primary btn-sm gap-1.5 border border-primary/20 shadow-sm shadow-primary/10"
+      className="btn btn-primary btn-sm h-9 min-h-9 gap-1.5 rounded-xl px-3.5 text-xs font-semibold shadow-2xs"
     >
-      <LogIn className="size-4" />
+      <LogIn className="size-3.5" aria-hidden="true" />
       <span>Masuk</span>
     </a>
   );
@@ -242,39 +271,41 @@ function IdentityBanner({ identity }: { identity: CurrentUserController }) {
       : null;
 
   return (
-    <div
-      role={isError ? "alert" : "status"}
-      className={cn(
-        "alert mx-3 mt-2 flex items-center justify-between rounded-2xl border text-xs py-2 px-4 shadow-sm backdrop-blur-md md:mx-4",
-        isError
-          ? "alert-error border-error/20 bg-error/10"
-          : "alert-warning border-warning/20 bg-warning/10",
-      )}
-    >
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
-        <span className="truncate">{message}</span>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {identity.error && (
-          <button
-            type="button"
-            onClick={identity.retry}
-            className="btn btn-link btn-xs text-inherit p-0"
-          >
-            Coba lagi
-          </button>
+    <div className="mx-auto w-full max-w-3xl px-4 pt-3">
+      <div
+        role={isError ? "alert" : "status"}
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-xs shadow-2xs",
+          isError
+            ? "border-error/25 bg-error/10 text-error"
+            : "border-warning/30 bg-warning/10 text-warning-content dark:text-warning",
         )}
-        {dismiss && (
-          <button
-            type="button"
-            onClick={dismiss}
-            className="btn btn-ghost btn-circle btn-xs text-inherit"
-            aria-label="Tutup pemberitahuan"
-          >
-            ✕
-          </button>
-        )}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
+          <span className="leading-snug">{message}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {identity.error && (
+            <button
+              type="button"
+              onClick={identity.retry}
+              className="btn btn-ghost btn-xs h-7 px-2 font-semibold text-inherit"
+            >
+              Coba lagi
+            </button>
+          )}
+          {dismiss && (
+            <button
+              type="button"
+              onClick={dismiss}
+              className="btn btn-ghost btn-circle btn-xs text-inherit"
+              aria-label="Tutup pemberitahuan"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

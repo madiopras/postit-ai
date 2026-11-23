@@ -75,8 +75,8 @@ export function AppSidebar({
       <aside
         aria-label="Navigasi dashboard"
         className={cn(
-          "sticky top-0 hidden h-dvh shrink-0 overflow-hidden border-r border-base-200/60 bg-base-100/70 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/60 transition-[width] duration-200 md:flex",
-          isCollapsed ? "w-20" : "w-[280px]",
+          "sticky top-0 hidden h-dvh shrink-0 overflow-hidden border-r border-base-300/80 bg-base-200/70 transition-[width] duration-200 md:flex",
+          isCollapsed ? "w-20" : "w-[276px]",
         )}
       >
         <SidebarContent identity={identity} isCollapsed={isCollapsed} />
@@ -86,11 +86,11 @@ export function AppSidebar({
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity"
             onClick={() => onMobileOpenChange(false)}
             aria-hidden="true"
           />
-          <div className="relative flex w-[280px] max-w-[80vw] flex-1 flex-col overflow-hidden border-r border-base-200/60 bg-base-100/80 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/70">
+          <div className="relative flex w-[276px] max-w-[82vw] flex-1 flex-col overflow-hidden border-r border-base-300 bg-base-200 shadow-2xl">
             <div className="absolute right-3 top-4 z-10">
               <button
                 type="button"
@@ -131,23 +131,27 @@ function SidebarContent({
 
   return (
     <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(79,70,229,0.08),transparent_70%)]" />
+      <div className="utarasu-ambient-glow pointer-events-none absolute inset-x-0 top-0 h-24" />
       <Link
         href="/dashboard"
         onClick={onNavigate}
         className={cn(
-          "relative z-10 flex h-16 shrink-0 items-center gap-3 border-b border-base-200/60 bg-base-100/45 px-5 shadow-[0_8px_30px_-24px_rgba(15,23,42,0.35)] outline-none backdrop-blur-xl supports-[backdrop-filter]:bg-base-100/35 focus-visible:ring-2 focus-visible:ring-primary",
+          "relative z-10 flex h-16 shrink-0 items-center gap-3 border-b border-base-300/70 bg-base-100/60 px-5 outline-none backdrop-blur-xl focus-visible:ring-2 focus-visible:ring-primary",
           isCollapsed && "justify-center px-3",
         )}
         aria-label={isCollapsed ? "PostIt AI Admin" : undefined}
       >
-        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-base-300/60 bg-base-100/85 shadow-sm ring-1 ring-black/5">
-          <PostItLogo size={36} className="size-9" />
+        <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-2xs">
+          <PostItLogo size={34} className="size-8.5" />
+          <span className="utarasu-ulos-bar absolute inset-x-0 bottom-0 h-[2px]" aria-hidden="true" />
         </span>
         {!isCollapsed && (
           <span className="min-w-0">
-            <span className="block truncate text-base font-semibold text-base-content">PostIt AI</span>
-            <span className="block truncate text-xs text-base-content/60">Admin dashboard</span>
+            <span className="block truncate text-base font-bold tracking-tight text-base-content">PostIt AI</span>
+            <span className="flex items-center gap-1 truncate text-xs text-base-content/60">
+              <span className="inline-block size-1.5 rounded-full bg-accent" aria-hidden="true" />
+              Admin · utaraSU
+            </span>
           </span>
         )}
       </Link>

@@ -5,9 +5,77 @@
 @plugin "daisyui" {
   themes:
     light --default,
-    dark --prefersdark,
-    corporate,
-    business;
+    dark --prefersdark;
+}
+
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f4f7f9;
+  --color-base-300: #dde7ee;
+  --color-base-content: #0b1f2a;
+  --color-primary: #004b6b;
+  --color-primary-content: #ffffff;
+  --color-secondary: #0e6787;
+  --color-secondary-content: #ffffff;
+  --color-accent: #a8141e;
+  --color-accent-content: #ffffff;
+  --color-neutral: #0f2735;
+  --color-neutral-content: #edf4f8;
+  --color-info: #0284c7;
+  --color-info-content: #ffffff;
+  --color-success: #0f8a5f;
+  --color-success-content: #ffffff;
+  --color-warning: #c27803;
+  --color-warning-content: #ffffff;
+  --color-error: #c81e2b;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.625rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #08131a;
+  --color-base-200: #0d1d27;
+  --color-base-300: #1a303f;
+  --color-base-content: #edf4f8;
+  --color-primary: #38b6e2;
+  --color-primary-content: #051620;
+  --color-secondary: #1e7c9f;
+  --color-secondary-content: #f2f9fc;
+  --color-accent: #eb5b65;
+  --color-accent-content: #1c0507;
+  --color-neutral: #132938;
+  --color-neutral-content: #e2eef4;
+  --color-info: #38bdf8;
+  --color-info-content: #051620;
+  --color-success: #34d399;
+  --color-success-content: #041d15;
+  --color-warning: #fbbf24;
+  --color-warning-content: #241502;
+  --color-error: #f87171;
+  --color-error-content: #230607;
+  --radius-selector: 0.625rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -33,4 +101,72 @@
       Roboto,
       sans-serif;
   }
+}
+
+/* Signature Utarasu micro-accents: Deep Lake Toba Teal + Batak Ulos Crimson */
+.utarasu-ulos-bar {
+  background: linear-gradient(
+    90deg,
+    #004b6b 0%,
+    #0e6787 38%,
+    #a8141e 52%,
+    #0e6787 66%,
+    #004b6b 100%
+  );
+}
+
+.dark .utarasu-ulos-bar {
+  background: linear-gradient(
+    90deg,
+    #134e6f 0%,
+    #38b6e2 38%,
+    #eb5b65 52%,
+    #38b6e2 66%,
+    #134e6f 100%
+  );
+}
+
+.utarasu-ulos-weave {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23004b6b' stroke-opacity='0.06' stroke-width='1' d='M12 2L22 12L12 22L2 12Z'/%3E%3Cpath fill='none' stroke='%23a8141e' stroke-opacity='0.05' stroke-width='0.8' d='M12 7L17 12L12 17L7 12Z'/%3E%3C/svg%3E");
+  background-size: 24px 24px;
+}
+
+.dark .utarasu-ulos-weave {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%2338b6e2' stroke-opacity='0.07' stroke-width='1' d='M12 2L22 12L12 22L2 12Z'/%3E%3Cpath fill='none' stroke='%23eb5b65' stroke-opacity='0.06' stroke-width='0.8' d='M12 7L17 12L12 17L7 12Z'/%3E%3C/svg%3E");
+}
+
+.utarasu-ambient-glow {
+  background:
+    radial-gradient(ellipse 65% 45% at 50% -10%, rgb(0 75 107 / 8%), transparent 70%),
+    radial-gradient(ellipse 35% 28% at 72% 4%, rgb(168 20 30 / 4.5%), transparent 72%);
+}
+
+.dark .utarasu-ambient-glow {
+  background:
+    radial-gradient(ellipse 65% 45% at 50% -10%, rgb(56 182 226 / 10%), transparent 70%),
+    radial-gradient(ellipse 35% 28% at 72% 4%, rgb(235 91 101 / 6%), transparent 72%);
+}
+
+/* Refined thin scrollbars for chat timeline & sidebar */
+.utarasu-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-base-content) 18%, transparent) transparent;
+}
+
+.utarasu-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.utarasu-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.utarasu-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--color-base-content) 16%, transparent);
+}
+
+.utarasu-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--color-base-content) 28%, transparent);
 }
