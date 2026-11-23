@@ -27,10 +27,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const segments = pathname.split("/").filter(Boolean);
 
   return (
-    <div className="flex min-h-dvh bg-base-200/50 text-base-content">
+    <div className="relative flex min-h-dvh bg-base-100 text-base-content">
+      <div
+        className="utarasu-ulos-bar pointer-events-none fixed inset-x-0 top-0 z-50 h-[2.5px]"
+        aria-hidden="true"
+      />
       <a
         href="#dashboard-main"
-        className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-content focus:translate-y-0 shadow-md transition-transform"
+        className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-content shadow-md transition-transform focus:translate-y-0"
       >
         Lewati ke konten utama
       </a>
@@ -41,8 +45,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         onMobileOpenChange={setIsMobileOpen}
       />
 
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-base-200/60 bg-base-100/75 px-4 shadow-[0_8px_30px_-24px_rgba(15,23,42,0.35)] backdrop-blur-2xl supports-[backdrop-filter]:bg-base-100/60 sm:px-6 lg:px-8">
+      <div className="min-w-0 flex-1 bg-base-200/40">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-base-300/75 bg-base-100/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <button
             type="button"
             className="btn btn-ghost btn-square btn-sm md:hidden"

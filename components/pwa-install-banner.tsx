@@ -11,16 +11,16 @@ export function PWAInstallBanner() {
   }
 
   return (
-    <div className="bg-base-200/90 border-base-300 relative z-30 flex shrink-0 items-center justify-between border-b px-4 py-2.5 backdrop-blur-md transition-all">
+    <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-base-300/80 bg-base-200/80 px-4 py-2.5 backdrop-blur-md transition-all">
       <div className="flex items-center gap-3">
-        <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <Sparkles className="size-4" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
+          <Sparkles className="size-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <p className="text-base-content text-xs font-semibold sm:text-sm">
+          <p className="text-xs font-semibold text-base-content sm:text-sm">
             Pasang Aplikasi PostIt AI
           </p>
-          <p className="text-base-content/70 hidden text-xs sm:block">
+          <p className="hidden text-xs text-base-content/65 sm:block">
             Akses instan 1-tap di layar utama HP atau Desktop tanpa membuka browser.
           </p>
         </div>
@@ -28,18 +28,20 @@ export function PWAInstallBanner() {
 
       <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={() => void triggerInstall()}
-          className="btn btn-primary btn-xs sm:btn-sm gap-1.5 font-medium shadow-xs"
+          className="btn btn-primary btn-xs sm:btn-sm gap-1.5 rounded-xl font-semibold shadow-2xs"
         >
-          <Download className="size-3.5" />
+          <Download className="size-3.5" aria-hidden="true" />
           <span>Pasang</span>
         </button>
         <button
+          type="button"
           onClick={dismissPrompt}
-          className="btn btn-ghost btn-xs btn-square text-base-content/60 hover:text-base-content"
+          className="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/60 hover:bg-base-300/60 hover:text-base-content"
           aria-label="Tutup saran instalasi"
         >
-          <X className="size-3.5" />
+          <X className="size-3.5" aria-hidden="true" />
         </button>
       </div>
     </div>

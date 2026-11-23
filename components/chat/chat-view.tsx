@@ -43,17 +43,26 @@ export function ChatView({
     });
   };
 
+  const isEmpty = controller.messages.length === 0;
+
   return (
     <ChatShell controller={controller} identity={identity}>
       <div className="relative flex min-h-0 flex-1">
+        {isEmpty && (
+          <div
+            className="utarasu-ambient-glow pointer-events-none absolute inset-0"
+            aria-hidden="true"
+          />
+        )}
+
         <main
           ref={scrollRef}
           onScroll={onScroll}
           aria-label="Percakapan"
           aria-busy={controller.loading}
-          className="absolute inset-0 flex overflow-y-auto px-4 py-5 md:px-6 md:py-7"
+          className="utarasu-scroll absolute inset-0 flex overflow-y-auto px-4 py-5 sm:px-6 md:py-8"
         >
-          {controller.messages.length === 0 ? (
+          {isEmpty ? (
             <ChatEmptyState
               onSelectSuggestion={selectSuggestion}
               displayName={identity.user?.displayName ?? identity.user?.username}
@@ -68,24 +77,28 @@ export function ChatView({
           )}
         </main>
 
+        {/* Soft bottom gradient fade into the floating composer */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent"
+          aria-hidden="true"
+        />
+
         {showScrollToBottom && (
-          <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
+          <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
             <ScrollToBottom onPress={() => scrollToBottom('smooth')} />
           </div>
         )}
       </div>
 
-      <div className="pb-3 sm:pb-4 md:pb-0">
-        <ChatComposer
-          value={controller.input}
-          onChange={controller.setInput}
-          onSend={controller.send}
-          textareaRef={textareaRef}
-          disabled={controller.loading || !controller.ready}
-          loading={controller.loading}
-          status={controller.chatStatus}
-        />
-      </div>
+      <ChatComposer
+        value={controller.input}
+        onChange={controller.setInput}
+        onSend={controller.send}
+        textareaRef={textareaRef}
+        disabled={controller.loading || !controller.ready}
+        loading={controller.loading}
+        status={controller.chatStatus}
+      />
     </ChatShell>
   );
 }

@@ -1,23 +1,27 @@
 try {
   process.loadEnvFile(".env");
 } catch {
-  // Tidak masalah jika .env tidak ada (misalnya di Vercel)
+  // Tidak masalah jika .env tidak ada (misalnya di CI/Vercel)
 }
-
-import { hashPassword } from "../lib/auth";
-import { db } from "../lib/db";
-import { users } from "../lib/schema";
-
-// Override for any environment that should not ship with a known password.
-const USERNAME = process.env.ADMIN_USERNAME || "admin";
-const PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 async function seedAdmin() {
   try {
+    // Dynamic import AFTER process.loadEnvFile(".env") so DATABASE_URL is loaded
+    // before lib/db.ts initializes the PostgreSQL connection pool.
+    const [{ hashPassword }, { db }, { users }] = await Promise.all([
+      import("../lib/auth"),
+      import("../lib/db"),
+      import("../lib/schema"),
+    ]);
+
+    // Override for any environment that should not ship with a known password.
+    const USERNAME = process.env.ADMIN_USERNAME || "admin";
+    const PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+
     console.log("🌱 Starting admin user seed...");
 
     const existingAdmin = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.username, USERNAME),
+      where: (usersTable, { eq }) => eq(usersTable.username, USERNAME),
     });
 
     if (existingAdmin) {

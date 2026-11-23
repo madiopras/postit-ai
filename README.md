@@ -1,91 +1,189 @@
-# PostIt AI
+# PostIt AI (by utaraSU)
 
-PostIt AI adalah aplikasi RAG berbasis Next.js, PostgreSQL, dan PGVector untuk
-chat atas FAQ dan SOP perusahaan. Aplikasi menyediakan akses chat publik,
-kontrol akses SOP, versioning dan attachment indexing, Admin/User Management,
-AI Configuration, serta audit log.
+**PostIt AI** adalah aplikasi asisten pengetahuan (RAG) berbasis **Next.js, PostgreSQL, dan PGVector** untuk menjawab pertanyaan seputar **FAQ dan SOP perusahaan** secara cepat, akurat, dan dilengkapi sitasi sumber.
 
-## First setup
+Fitur utama:
+- **Chat AI Publik & Internal:** Bisa langsung digunakan tanpa login untuk FAQ & SOP publik, serta otomatis melindungi SOP internal (`requiresLogin`) hingga pengguna login.
+- **Manajemen Knowledge Base:** Kelola FAQ, SOP berversi (*versioning* & *rollback*), serta indexing lampiran dokumen (PDF, DOCX, XLSX, PPTX, TXT/MD).
+- **Konfigurasi AI Fleksibel:** Pengaturan model embedding & LLM, persona, aturan respons, kamus istilah, dan parameter retrieval langsung dari dashboard.
+- **Kontrol Akses & Audit:** Manajemen Pengguna, Admin/Super Admin, dan Audit Log keamanan.
 
-Prasyarat:
+---
 
-- Node.js 22
-- npm
-- Docker dengan Docker Compose
-- OpenSSL
-- endpoint OpenAI-compatible untuk embedding dan chat jika ingin menjalankan
-  indexing atau chat AI
+## Panduan Cepat (Quick Start)
 
-Jalankan:
+### 1. Prasyarat
+
+Pastikan perangkat/server Anda sudah memiliki:
+- **Node.js 22+** dan **npm**
+- **Docker** dan **Docker Compose v2** (pastikan Docker daemon sudah menyala)
+- **OpenSSL** & **GNU Make**
+- **Endpoint AI OpenAI-compatible** (misalnya OpenRouter, OpenAI, Gemini via proxy/router, atau local router) untuk embedding dan chat completion
+
+### 2. Siapkan File `.env`
+
+Jika belum memiliki `.env`, buat otomatis dari template beserta secret acak:
 
 ```bash
-make setup ADMIN_PASSWORD='gunakan-password-kuat-minimal-12-karakter'
-make dev
+make env-init
 ```
 
-`make setup` menjalankan alur berikut secara berurutan:
+Lalu buka `.env` dan isi bagian endpoint AI Anda:
 
-1. memeriksa tool wajib;
-2. menjalankan `npm ci`;
-3. membuat `.env` dari `.env.example` jika belum tersedia;
-4. membuat `JWT_SECRET` dan `CONFIG_ENCRYPTION_KEY` lokal secara acak;
-5. menyalakan PostgreSQL/PGVector;
-6. menunggu database siap;
-7. menerapkan seluruh migration;
-8. membuat akun Super Admin pertama.
-
-Password Super Admin tidak disimpan atau dicetak oleh Makefile. Username
-default adalah `admin`; ubah dengan:
-
-```bash
-make setup ADMIN_USERNAME='superadmin' ADMIN_PASSWORD='password-kuat-anda'
+```env
+ROUTER_BASE_URL=https://endpoint-ai-anda/v1
+ROUTER_API_KEY=isi-api-key-anda
+EMBEDDING_MODEL=openrouter/openai/text-embedding-3-small
+LLM_MODEL=nama-model-chat-anda
 ```
 
-Sample FAQ/SOP bersifat opsional karena memanggil embedding endpoint:
+> **Catatan:** Jika Anda sudah menyiapkan file `.env` sendiri, `make env-init` dan `make setup` tidak akan menimpanya.
+
+### 3. Setup Pertama Kali
+
+Jalankan satu perintah berikut (ganti password dengan password kuat minimal **12 karakter**):
 
 ```bash
+make setup ADMIN_PASSWORD='GantiPasswordKuat12!'
+```
+
+Perintah `make setup` otomatis menjalankan seluruh tahap ini secara berurutan:
+1. Memeriksa ketersediaan tool wajib (`node`, `npm`, `docker`, `docker compose`, `openssl`).
+2. Menginstal dependensi (`npm ci`).
+3. Membuat `.env` dari `.env.example` jika belum ada (sekaligus membuat `JWT_SECRET` dan `CONFIG_ENCRYPTION_KEY` acak).
+4. Menyalakan container **PostgreSQL + PGVector** (`docker compose up -d postgres`).
+5. Menunggu database siap menerima koneksi.
+6. Menerapkan seluruh migrasi schema database (`npm run db:migrate`).
+7. Membuat akun **Super Admin** pertama (username default: `admin`, password tidak pernah dicetak di log terminal).
+
+Ingin username selain `admin`? Tambahkan `ADMIN_USERNAME`:
+
+```bash
+make setup ADMIN_USERNAME='superadmin' ADMIN_PASSWORD='GantiPasswordKuat12!'
+```
+
+### 4. Isi Contoh Knowledge Base (Opsional)
+
+Untuk langsung mencoba AI dengan data contoh lengkap perusahaan (**61 FAQ + 16 SOP Coffe Gaul**, terdiri dari 11 SOP publik & 5 SOP internal berproteksi login):
+
+```bash
+# Memasukkan data, mempublikasikan, sekaligus meng-embed ke PGVector (butuh endpoint AI aktif)
 make seed
 ```
 
-## Environment
-
-`.env.example` adalah template resmi. Variabel utama:
-
-| Variable | Kegunaan |
-|---|---|
-| `DATABASE_URL` | Koneksi PostgreSQL aplikasi dan migration |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Provisioning container database |
-| `JWT_SECRET` | Penandatanganan session |
-| `CONFIG_ENCRYPTION_KEY` | Enkripsi API key dalam database |
-| `ROUTER_BASE_URL`, `ROUTER_API_KEY` | Endpoint dan credential OpenAI-compatible |
-| `EMBEDDING_MODEL` | Model embedding 1536 dimensi |
-| `LLM_MODEL` | Model chat completion |
-
-Jangan commit `.env`. Backup `CONFIG_ENCRYPTION_KEY` melalui secret manager;
-kehilangan key tersebut membuat credential AI tersimpan tidak dapat didekripsi.
-
-## Perintah Make
+Jika endpoint AI belum dikonfigurasi tetapi Anda ingin melihat isi data contoh di dashboard terlebih dahulu:
 
 ```bash
-make help
-make dev
-make migrate
-make seed
-make lint
-make typecheck
-make test
-make test-e2e
-make build
-make validate
-make db-down
+# Memasukkan data sebagai draft saja (tanpa memanggil API embedding)
+make seed-draft
 ```
 
-Migration tetap menjadi sumber kebenaran schema. Gunakan `make migrate` atau
-`npm run db:migrate`; jangan gunakan `db:push` untuk deployment.
+### 5. Jalankan Aplikasi
+
+**Mode Development (Lokal):**
+
+```bash
+make start
+```
+
+Atau jika PostgreSQL sudah menyala:
+
+```bash
+make dev
+```
+
+**Mode Production (Docker Full-Stack):**
+
+```bash
+make docker-up
+```
+
+---
+
+## Akses Aplikasi
+
+Setelah berjalan, buka di browser:
+
+| Halaman | URL Default | Kegunaan |
+|---|---|---|
+| **Chat AI** | `http://localhost:3000` | Halaman utama percakapan (publik & akun login) |
+| **Login** | `http://localhost:3000/login` | Masuk untuk mengakses SOP internal & dashboard |
+| **Admin Dashboard** | `http://localhost:3000/dashboard` | Kelola FAQ, SOP, Dokumen, User/Admin, AI Config, Audit Log |
+| **Health Check** | `http://localhost:3000/api/health` | Status kesiapan aplikasi & koneksi PostgreSQL (`200 OK`) |
+
+> **Tips:** Jika port `3000` sedang digunakan aplikasi lain saat menjalankan `make dev`, Next.js otomatis berpindah ke `http://localhost:3001`. Cek status dengan `make status`.
+
+---
+
+## Konfigurasi Environment (`.env`)
+
+Template resmi tersedia di [`.env.example`](.env.example).
+
+| Variable | Wajib | Kegunaan |
+|---|---|---|
+| `DATABASE_URL` | Ya | URL koneksi PostgreSQL aplikasi dan migrasi |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Ya | Kredensial provisioning container PostgreSQL di `docker-compose.yml` |
+| `JWT_SECRET` | Ya | Secret penandatanganan token sesi login |
+| `CONFIG_ENCRYPTION_KEY` | Ya | Kunci enkripsi AES-256-GCM untuk API key yang disimpan lewat dashboard |
+| `ROUTER_BASE_URL`, `ROUTER_API_KEY` | Ya (untuk AI) | Endpoint dan API key OpenAI-compatible (`/embeddings` & `/chat/completions`) |
+| `EMBEDDING_MODEL` | Ya (untuk AI) | Model embedding 1536 dimensi (model modern seperti OpenAI v3 & Gemini otomatis dikirim parameter `dimensions: 1536`) |
+| `LLM_MODEL` | Ya (untuk AI) | Model chat completion yang dipakai menjawab pertanyaan |
+
+> **Penting:** Jangan pernah commit `.env`. Simpan salinan `CONFIG_ENCRYPTION_KEY` di secret manager; kehilangan key ini membuat API key AI yang tersimpan di database tidak dapat didekripsi (harus diinput ulang di `/dashboard/config`).
+
+---
+
+## Daftar Perintah Make
+
+Jalankan `make help` kapan saja untuk melihat seluruh perintah yang tersedia.
+
+### Setup & Harian
+```bash
+make help                                       # Tampilkan daftar perintah
+make setup ADMIN_PASSWORD='PasswordKuat12!'     # Setup awal lengkap dari nol
+make start                                      # Nyalakan DB + jalankan dev server
+make dev                                        # Jalankan Next.js dev server saja
+make status                                     # Cek status container & health check
+```
+
+### Database & Knowledge Base
+```bash
+make db-up                                      # Nyalakan PostgreSQL/PGVector
+make db-wait                                    # Tunggu PostgreSQL siap
+make db-down                                    # Hentikan container database
+make migrate                                    # Terapkan migrasi database
+make seed-admin ADMIN_PASSWORD='PasswordKuat12!'# Buat akun Super Admin
+make seed                                       # Seed, publish & embed 61 FAQ + 16 SOP contoh
+make seed-draft                                 # Seed contoh sebagai draft (tanpa API AI)
+make seed-reset                                 # Reset & seed ulang data contoh
+```
+
+### Docker Production
+```bash
+make docker-up                                  # Migrate + build & jalankan app + DB di Docker
+make docker-down                                # Hentikan seluruh container (termasuk app)
+make docker-logs                                # Pantau log aplikasi Docker
+```
+
+### Validasi & Pengujian
+```bash
+make lint                                       # ESLint
+make typecheck                                  # TypeScript type check
+make test                                       # Unit & integration tests (Vitest)
+make test-e2e                                   # Browser E2E tests (Playwright lokal)
+make test-e2e-docker                            # E2E tests via image Playwright resmi
+make eval-retrieval                             # Evaluasi akurasi retrieval
+make build                                      # Build produksi Next.js
+make validate                                   # Jalankan seluruh pemeriksaan sekaligus
+```
+
+> **Aturan Schema:** Migrasi adalah satu-satunya sumber kebenaran schema database. Selalu gunakan `make migrate` atau `npm run db:migrate`; hindari `db:push` pada environment produksi.
+
+---
 
 ## Testing
 
-Unit dan integration tests:
+Menjalankan unit & integration tests dengan environment `.env`:
 
 ```bash
 set -a
@@ -101,108 +199,70 @@ npx playwright install chromium
 make test-e2e
 ```
 
-Jika host tidak memiliki library browser, gunakan runner resmi tanpa memasang
-package OS:
+Atau jalankan tanpa memasang library browser di host menggunakan Docker:
 
 ```bash
 make test-e2e-docker
 ```
 
-Evaluasi kualitas retrieval terhadap knowledge seed:
+Evaluasi kualitas retrieval dijelaskan lebih rinci di [`evaluations/README.md`](evaluations/README.md).
+
+---
+
+## Deployment Production
+
+Langkah cepat menjalankan container produksi lokal/server:
 
 ```bash
-make eval-retrieval
-```
-
-Runner memerlukan knowledge dari `scripts/seed.ts` yang sudah ter-index. Untuk
-knowledge environment lain, gunakan dataset yang sesuai seperti dijelaskan di
-[`evaluations/README.md`](evaluations/README.md).
-
-E2E memulai development server secara otomatis dan memverifikasi:
-
-- chat dapat dibuka tanpa login;
-- dashboard mengarahkan visitor anonim ke login;
-- readiness endpoint sehat dan tidak membuka detail internal.
-
-## Deployment
-
-Build aplikasi:
-
-```bash
-npm run db:migrate
-docker compose --profile app up --build -d
+make docker-up
 curl --fail http://localhost:3000/api/health
 ```
 
-Urutan deployment yang disarankan:
+Urutan deployment production yang disarankan:
+1. Backup database terlebih dahulu.
+2. Sediakan seluruh environment production melalui secret manager.
+3. Jalankan migrasi (`npm run db:migrate`) sebagai one-off job sebelum traffic dialihkan.
+4. Build image dari commit yang sama (`docker compose --profile app build`).
+5. Deploy aplikasi dan verifikasi `GET /api/health` mengembalikan `200 OK`.
+6. Lakukan smoke test: login admin, chat publik, akses SOP internal (`requiresLogin`), dan dashboard.
+7. Jangan pernah menghapus atau mengubah file migrasi yang sudah diterapkan.
 
-1. backup database;
-2. sediakan environment production melalui secret manager;
-3. jalankan migration sebagai one-off job;
-4. build image dari commit yang sama;
-5. deploy aplikasi;
-6. tunggu `/api/health` mengembalikan `200`;
-7. lakukan smoke test login, chat publik, SOP restricted, dan dashboard;
-8. rollback image jika health/smoke test gagal. Migration tidak boleh dihapus
-   atau diubah setelah pernah diterapkan.
+### Checklist Keamanan Production
+- Ganti seluruh kredensial development (`POSTGRES_PASSWORD`, `JWT_SECRET`, `CONFIG_ENCRYPTION_KEY`, password admin).
+- Gunakan HTTPS di balik reverse proxy tepercaya (Nginx/Caddy/Cloudflare).
+- Batasi akses port PostgreSQL (`5432`) agar tidak terbuka ke internet publik.
+- Pastikan model embedding menghasilkan tepat `1536` dimensi.
+- Jalankan audit dependensi produksi (`npm audit --omit=dev`) sebelum rilis.
+- Untuk deployment multi-instance, pindahkan rate limiter dan cache konfigurasi dari in-memory process ke shared store (Redis).
 
-Image production menggunakan Next.js standalone output dan berjalan sebagai
-non-root user. `.env`, `.git`, test output, dan dependency lokal tidak masuk
-build context.
+---
 
-### Production checklist
-
-- Ganti seluruh credential development.
-- Gunakan HTTPS dan reverse proxy tepercaya.
-- Batasi akses PostgreSQL hanya dari jaringan aplikasi.
-- Jalankan migration sebelum traffic dialihkan.
-- Verifikasi akun Super Admin aktif dan password default tidak digunakan.
-- Verifikasi konfigurasi embedding menghasilkan tepat 1536 dimensi.
-- Verifikasi backup dan restore database.
-- Pantau HTTP 5xx, latency AI provider, penggunaan token, audit-log failure,
-  kapasitas database, dan status extraction/indexing.
-- Untuk lebih dari satu instance, pindahkan rate limiter dan cache konfigurasi
-  dari memory process ke shared store.
-
-Audit dependency production harus bersih sebelum release:
-
-```bash
-npm audit --omit=dev
-```
-
-Audit lengkap masih dapat melaporkan advisory pada tool development
-ESLint/Drizzle yang tidak memiliki upgrade kompatibel menurut npm. Tool tersebut
-tidak disalin ke image standalone runtime; jangan menerima saran downgrade mayor
-otomatis tanpa pengujian migration dan lint.
-
-## Arsitektur singkat
+## Arsitektur Singkat
 
 ```text
 Pertanyaan pengguna
-  -> embedding
-  -> filter status, published version, dan hak akses
-  -> PGVector + PostgreSQL full-text search
-  -> reciprocal rank fusion
-  -> retrieval ranking/configuration
-  -> system prompt + behaviour/rules/dictionary
-  -> LLM streaming
-  -> citation dan persistence
+  -> embedding (1536 dimensi)
+  -> filter status published, versi SOP aktif, & hak akses (publik vs login)
+  -> PGVector cosine similarity + PostgreSQL full-text search
+  -> Reciprocal Rank Fusion (RRF) & retrieval ranking
+  -> system prompt + AI persona / rules / dictionary
+  -> LLM streaming response
+  -> sitasi sumber & penyimpanan riwayat percakapan
 ```
 
-SOP restricted difilter sebelum context dibentuk. Attachment hanya masuk
-knowledge base setelah extraction berhasil dan versi SOP dipublikasikan.
+SOP dengan status `requiresLogin = true` difilter di level query sebelum konteks dikirim ke LLM, sehingga konten internal tidak pernah bocor ke sesi visitor anonim. Dokumentasi scope indexing lampiran tersedia di [`docs/enhancement/go2/stage-8-attachment-indexing.md`](docs/enhancement/go2/stage-8-attachment-indexing.md).
+
+---
 
 ## Troubleshooting
 
-| Masalah | Pemeriksaan |
+| Masalah | Solusi |
 |---|---|
-| Database belum siap | `docker compose ps` dan `make db-wait` |
-| Migration gagal | periksa `DATABASE_URL`, lalu `npm run db:migrate` |
-| Login gagal setelah setup | pastikan `ADMIN_PASSWORD` minimal 12 karakter dan akun aktif |
-| Chat tidak menghasilkan jawaban | periksa AI Configuration atau `ROUTER_*` |
-| Dokumen tidak ditemukan retrieval | periksa status publish/indexing dan similarity threshold |
-| Playwright tidak menemukan browser | `npx playwright install chromium` |
-
-Keputusan scope attachment Tahap 8—termasuk format legacy Office dan OCR yang
-ditunda—didokumentasikan di
-[`docs/enhancement/go2/stage-8-attachment-indexing.md`](docs/enhancement/go2/stage-8-attachment-indexing.md).
+| Docker gagal terhubung (`docker.sock`) | Pastikan Docker Desktop / `dockerd` sudah berjalan, lalu cek `docker compose ps`. |
+| Port `3000` sudah dipakai aplikasi lain | Next.js dev server otomatis memakai port `3001` (`http://localhost:3001`), atau hentikan proses lain di port `3000`. |
+| `make seed-admin` ditolak | Pastikan `ADMIN_PASSWORD` minimal 12 karakter, contoh: `make seed-admin ADMIN_PASSWORD='PasswordKuat12!'`. |
+| Database belum siap / migrasi gagal | Jalankan `make db-up && make db-wait`, periksa kecocokan `DATABASE_URL` dengan `POSTGRES_*` di `.env`, lalu `make migrate`. |
+| Chat tidak menjawab / `make seed` gagal embed | Pastikan `ROUTER_BASE_URL`, `ROUTER_API_KEY`, `EMBEDDING_MODEL`, dan `LLM_MODEL` aktif di `.env` atau `/dashboard/config`. |
+| Login ke `/dashboard` gagal | Pastikan akun Super Admin sudah dibuat via `make seed-admin` dan status akun `active`. |
+| Dokumen tidak muncul saat dicari AI | Pastikan status FAQ/SOP sudah `published` (bukan `draft`), tidak terblokir `requiresLogin`, dan similarity threshold di `/dashboard/config` tidak terlalu tinggi. |
+| Playwright gagal mencari browser | Jalankan `npx playwright install chromium` atau gunakan `make test-e2e-docker`. |

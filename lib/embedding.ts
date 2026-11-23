@@ -30,6 +30,12 @@ export async function embed(text: string): Promise<number[]> {
   return embedding ?? [];
 }
 
+export const EMBEDDING_DIMENSIONS = 1536;
+
+function supportsDimensionsParam(model: string): boolean {
+  return !model.includes('text-embedding-ada-002');
+}
+
 /**
  * Generate multiple embeddings (for batch processing)
  *
@@ -43,6 +49,8 @@ export async function embedBatch(inputs: string[]): Promise<number[][]> {
     throw new Error('Embedding base URL not configured');
   }
 
+  const model = config.embeddingModel || 'text-embedding-ada-002';
+
   try {
     const response = await fetch(`${config.embeddingBaseUrl}/embeddings`, {
       method: 'POST',
@@ -52,7 +60,8 @@ export async function embedBatch(inputs: string[]): Promise<number[][]> {
       },
       body: JSON.stringify({
         input: inputs,
-        model: config.embeddingModel || 'text-embedding-ada-002',
+        model,
+        ...(supportsDimensionsParam(model) ? { dimensions: EMBEDDING_DIMENSIONS } : {}),
       }),
     });
 

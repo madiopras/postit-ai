@@ -66,6 +66,7 @@ describe('embedBatch', () => {
     expect(JSON.parse(init.body as string)).toMatchObject({
       model: 'test-model',
       input: ['halo'],
+      dimensions: 1536,
     });
   });
 
